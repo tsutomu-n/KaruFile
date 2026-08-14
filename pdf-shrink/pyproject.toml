@@ -1,0 +1,21 @@
+[project]
+name = "pdf-shrink"
+version = "0.1.0"
+description = "Windows向けPDF一括軽量化ツール（PyMuPDF + qpdf + SQLite）"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "PyMuPDF==1.28.2",
+]
+
+[project.scripts]
+pdf-shrink = "pdf_shrink.cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+]
