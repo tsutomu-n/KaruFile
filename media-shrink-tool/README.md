@@ -1,129 +1,83 @@
-# media-shrink
+# KaruFile image processor
 
-画像・動画・PDF の一括圧縮と重複ファイル削除を、**一発のコマンド**で行う Python ツールです。
+KaruFile の画像専用コンポーネントです。入力画像を変更・削除せず、別の出力フォルダーへ軽量版 JPEG を保存します。通常はリポジトリ直下の `karufile.py` から利用します。
 
-## 対応処理
-
-- **画像**: 横幅 1200px 以下にリサイズ、EXIF/ICC 保持、JPG 変換、HEIC/HEIF 対応
-- **動画**: ffmpeg 経由で H.264/HEVC へのトランスコード、CRF ベース圧縮
-- **PDF**: `pikepdf` で可逆圧縮、`PyMuPDF` で非可逆画像縮小
-- **重複削除**: ファイルサイズ＋ハッシュで完全一致を検出、画像は知覚ハッシュでも検出可能
-
-## インストール
+## セットアップ
 
 ```powershell
-# uv が必要です
-uv sync
+uv sync --project media-shrink-tool
 ```
 
-または、依存を自動で解決しつつ直接実行：
+## 個別CLI
+
+公開サブコマンドは `resize` だけです。
 
 ```powershell
-uv run shrink --help
+uv run --project media-shrink-tool python -m media_shrink resize `
+  -i "D:\資料" `
+  -o "D:\資料_軽量化" `
+  -j 4
 ```
 
-## 使い方
+`-o` を省略した場合は `<input>_resized` を使います。入力と出力が同一、または互いに親子となる指定は処理前に拒否します。
 
-### 一括実行（おすすめ）
+`--dry-run` は画像をデコードして予定を確認します。入力画像と画像出力は書き込みませんが、現在の検査結果を正しく残すため、後述の error CSV は更新します。通常実行で確認入力は求めません。
 
-```powershell
-uv run shrink shrink -i "C:\Users\tn\Downloads\高倉地区復旧治山工事(R6補正)"
-```
+## 固定変換仕様
 
-元画像は別フォルダ `..._resized` に保存され、元フォルダ内の動画・PDF が圧縮されます。重複ファイルも削除されます。
+- 入力候補: JPEG、PNG、TIFF、BMP、GIF、WebP、HEIC、HEIF
+- 出力: JPEG、quality 72、4:2:0、optimize、progressive
+- 寸法: 長辺1280px・短辺960px以内、縦横比維持、拡大・切り抜きなし
+- EXIF Orientation を画素へ適用してからリサイズ
+- 透過は白背景へ合成
+- animated GIF/WebP と multi-page TIFF は先頭フレームだけを使用し、warning を記録
 
-### 元画像も削除して最大限ディスクを空けたい
-
-```powershell
-uv run shrink shrink -i "C:\Users\tn\Downloads\高倉地区復旧治山工事(R6補正)" --remove-source-images
-```
-
-### ドライラン（何が起きるか先に確認）
-
-```powershell
-uv run shrink shrink -i "C:\Users\tn\Downloads\高倉地区復旧治山工事(R6補正)" -n
-```
-
-### 個別コマンド
-
-```powershell
-# 画像のみ
-uv run shrink resize -i "C:\Users\tn\Downloads\高倉地区復旧治山工事(R6補正)" -o "C:\Users\tn\Downloads\縮小写真"
-
-# 動画のみ
-uv run shrink video -i "C:\Users\tn\Downloads\高倉地区復旧治山工事(R6補正)"
-
-# PDF のみ（可逆）
-uv run shrink pdf -i "C:\Users\tn\Downloads\高倉地区復旧治山工事(R6補正)"
-
-# PDF 非可逆（スキャンPDF用）
-uv run shrink pdf -i "C:\Users\tn\Downloads\高倉地区復旧治山工事(R6補正)" --lossy
-
-# 重複削除のみ
-uv run shrink dedup -i "C:\Users\tn\Downloads\高倉地区復旧治山工事(R6補正)"
-```
-
-## 設定ファイル
-
-`shrink.toml` を作るとデフォルト値を上書きできます。
-
-```toml
-[image]
-max_width = 1200
-quality = 85
-format = "jpg"
-
-[video]
-codec = "libx264"
-crf = 23
-preset = "medium"
-max_height = 1080
-
-[pdf]
-mode = "lossless"  # "lossy" にすると画像縮小も行う
-
-[dedup]
-min_size = 1024
-perceptual = false
-```
-
-指定：
-
-```powershell
-uv run shrink shrink -i "..." -c "C:\Users\tn\Downloads\shrink.toml"
-```
-
-## 安全設計
-
-- **DRY-RUN**: `-n` で実際の書き込み・削除を行わずプレビュー
-- **出力検証**: 変換後ファイルが存在しサイズが 0 でないことを確認してから元を削除
-- **ゴミ箱**: 削除は `send2trash` で行い、即削除を避ける（`--no-trash` で変更可能）
-- **ログ**: 処理内容をコンソールに表示
-
-## プロジェクト構成
+JPEG入力は `.jpg` / `.jpeg` を維持します。非JPEG入力は元のファイル名全体へ `.jpg` を追加します。
 
 ```text
-media-shrink-tool/
-├── pyproject.toml
-├── README.md
-└── src/
-    └── media_shrink/
-        ├── cli.py
-        ├── config.py
-        ├── image.py
-        ├── video.py
-        ├── pdf.py
-        ├── dedup.py
-        └── utils.py
+photo.jpg  -> photo.jpg
+photo.jpeg -> photo.jpeg
+photo.png  -> photo.png.jpg
 ```
 
-## 依存
+Windowsで大文字小文字を無視すると出力名が衝突する場合は、処理開始前に相対入力パスの SHA-256 先頭8文字を付けます。
 
-- Pillow
-- pillow-heif
-- imageio-ffmpeg
-- pikepdf
-- PyMuPDF
-- xxhash
-- send2trash
-- imagehash
+上限内のJPEGは、候補が32 KiB以上かつ10%以上小さくなる場合だけ再エンコードし、それ以外は原本を出力へコピーします。KaruFileが生成したJPEGには lowercase の `karufile:image-v1` markerを保存し、marker付き入力は旧recipeでも再エンコードしません。同じ入力size・mtimeと現recipeに一致する完成済み出力も再利用します。
+
+## metadata と warning
+
+EXIF、GPS、DateTimeOriginal、カメラ・レンズ情報、ICC、XMP、JPEG comment、DPIは、PillowでJPEGへ保存できる範囲でbest-effort保持します。完全保持は保証しません。Orientation適用後は古いOrientation値を残しません。CMYK等からRGBへ単純変換した場合は、意味の異なるICCを添付せずwarningを記録します。
+
+代表的なwarning:
+
+- `ANIMATION_DROPPED`
+- `MULTIPAGE_DROPPED`
+- `ALPHA_FLATTENED`
+- `ICC_DROPPED`
+- `OUTPUT_LARGER_THAN_SOURCE`
+
+warningだけなら終了コードは0です。
+
+## エラー
+
+変換失敗は残りの画像を止めず、次のCSVへ記録します。
+
+```text
+<output_dir>.image-errors.csv
+```
+
+列は `source,planned_output,error` です。現在実行の結果で毎回置き換え、エラー0件でもheaderだけへ更新します。
+
+終了コード:
+
+- `0`: 画像エラーなし
+- `1`: 画像エラーあり、レポート更新失敗、または入出力検査失敗
+- `2`: 引数不正
+
+候補JPEGと原本コピーは出力先と同じディレクトリの一時ファイルへ書き、JPEGとして再オープンしてから `os.replace()` で公開します。
+
+## 対象外
+
+動画、PDF、重複削除、知覚ハッシュ、元ファイル削除はこのコンポーネントの対象外です。PDF処理はリポジトリの `pdf-shrink` が唯一の正本です。
+
+実データPilotは環境ごとに別途実施してください。この実装の自動テストは小さな合成画像を使用します。

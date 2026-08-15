@@ -2,6 +2,10 @@
 from __future__ import annotations
 
 import csv
+import os
+import stat
+import tempfile
+from collections.abc import Iterable
 from pathlib import Path
 
 from .state import Record
@@ -22,24 +26,134 @@ REPORT_COLUMNS = [
 ]
 
 
-def write_csv(records: list[Record], output_path: Path) -> None:
+def _is_within(path: Path, parent: Path) -> bool:
+    try:
+        path.relative_to(parent)
+    except ValueError:
+        return False
+    return True
+
+
+def _is_link_or_junction(path: Path) -> bool:
+    if path.is_symlink():
+        return True
+    is_junction = getattr(path, "is_junction", None)
+    if is_junction is not None and is_junction():
+        return True
+    try:
+        attributes = path.lstat().st_file_attributes
+    except (AttributeError, FileNotFoundError):
+        return False
+    return bool(attributes & getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0))
+
+
+def _validate_report_destination(
+    output_path: Path,
+    *,
+    input_root: Path,
+    work_root: Path,
+    protected_sources: Iterable[Path],
+) -> None:
+    work_lexical = Path(os.path.abspath(work_root))
+    output_lexical = Path(os.path.abspath(output_path))
+    if not _is_within(output_lexical, work_lexical):
+        raise ValueError(f"Report destination is outside the PDF work root: {output_path}")
+    if _is_link_or_junction(work_lexical) or _is_link_or_junction(output_lexical):
+        raise ValueError(f"Report destination contains a symlink or junction: {output_path}")
+    work_resolved = work_root.resolve(strict=False)
+    input_resolved = input_root.resolve(strict=True)
+    output_resolved = output_path.resolve(strict=False)
+    if not _is_within(output_resolved, work_resolved):
+        raise ValueError(
+            "Report destination escapes the PDF work root after resolving links: "
+            f"{output_path} -> {output_resolved}"
+        )
+    if _is_within(output_resolved, input_resolved) or _is_within(
+        input_resolved, output_resolved
+    ):
+        raise ValueError(
+            "Report destination overlaps the input after resolving filesystem links: "
+            f"{output_path} -> {output_resolved}"
+        )
+    if output_path.exists():
+        output_stat = output_path.stat()
+        if output_path.is_dir():
+            raise ValueError(f"Report destination is a directory: {output_path}")
+        if output_stat.st_nlink > 1:
+            raise ValueError(f"Report destination is hard-linked: {output_path}")
+        for source in protected_sources:
+            if source.exists() and os.path.samefile(output_path, source):
+                raise ValueError(
+                    "Report destination is a hard link to an input source: "
+                    f"{output_path} == {source}"
+                )
+
+
+def _make_writable(path: Path) -> None:
+    try:
+        mode = path.stat().st_mode
+    except FileNotFoundError:
+        return
+    os.chmod(path, mode | stat.S_IWRITE)
+
+
+def write_csv(
+    records: list[Record],
+    output_path: Path,
+    *,
+    input_root: Path,
+    work_root: Path,
+    protected_sources: Iterable[Path],
+) -> None:
+    protected_sources = tuple(protected_sources)
+    _validate_report_destination(
+        output_path,
+        input_root=input_root,
+        work_root=work_root,
+        protected_sources=protected_sources,
+    )
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    with open(output_path, "w", newline="", encoding="utf-8-sig") as f:
-        writer = csv.DictWriter(f, fieldnames=REPORT_COLUMNS)
-        writer.writeheader()
-        for r in records:
-            writer.writerow({
-                "source_path": r.source_path,
-                "source_size": r.source_size,
-                "output_size": r.output_size,
-                "saved_bytes": r.saved_bytes,
-                "saved_percent": r.saved_percent,
-                "mode": r.mode,
-                "status": r.status,
-                "page_count": r.page_count,
-                "scan_page_ratio": r.scan_page_ratio,
-                "error_message": r.error_message,
-            })
+    _validate_report_destination(
+        output_path,
+        input_root=input_root,
+        work_root=work_root,
+        protected_sources=protected_sources,
+    )
+    descriptor, temp_name = tempfile.mkstemp(
+        prefix=f".{output_path.name}.",
+        suffix=".tmp",
+        dir=output_path.parent,
+    )
+    os.close(descriptor)
+    temp_path = Path(temp_name)
+    try:
+        with temp_path.open("w", newline="", encoding="utf-8-sig") as f:
+            writer = csv.DictWriter(f, fieldnames=REPORT_COLUMNS)
+            writer.writeheader()
+            for r in records:
+                writer.writerow({
+                    "source_path": r.source_path,
+                    "source_size": r.source_size,
+                    "output_size": r.output_size,
+                    "saved_bytes": r.saved_bytes,
+                    "saved_percent": r.saved_percent,
+                    "mode": r.mode,
+                    "status": r.status,
+                    "page_count": r.page_count,
+                    "scan_page_ratio": r.scan_page_ratio,
+                    "error_message": r.error_message,
+                })
+        _validate_report_destination(
+            output_path,
+            input_root=input_root,
+            work_root=work_root,
+            protected_sources=protected_sources,
+        )
+        _make_writable(output_path)
+        os.replace(temp_path, output_path)
+    finally:
+        _make_writable(temp_path)
+        temp_path.unlink(missing_ok=True)
 
 
 def _format_elapsed(seconds: float) -> str:

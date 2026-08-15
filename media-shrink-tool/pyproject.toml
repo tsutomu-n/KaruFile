@@ -1,25 +1,19 @@
 [project]
 name = "media-shrink"
 version = "0.1.0"
-description = "One-shot image/video/PDF compression and duplicate removal tool"
+description = "Non-destructive image resize and JPEG conversion tool for KaruFile"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
     "Pillow>=10.0",
     "pillow-heif>=1.3",
-    "imageio-ffmpeg>=0.5",
-    "pikepdf>=9.0",
-    "PyMuPDF>=1.24",
-    "xxhash>=3.4",
-    "send2trash>=1.8",
-    "imagehash>=4.3",
 ]
 
 [project.optional-dependencies]
-dev = ["pytest", "ruff"]
+dev = ["pytest"]
 
 [project.scripts]
-shrink = "media_shrink.cli:main"
+media-shrink = "media_shrink.cli:main"
 
 [build-system]
 requires = ["hatchling"]

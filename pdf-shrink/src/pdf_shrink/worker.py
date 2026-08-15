@@ -94,7 +94,12 @@ def process_one_file(
         if source.size < cfg.reduction.skip_below_bytes:
             if not cfg.dry_run:
                 recovery_needed = False
-                output.copy_original(source.path, output_path)
+                output.copy_original(
+                    source.path,
+                    output_path,
+                    input_root=cfg.input_dir,
+                    output_root=cfg.output_dir,
+                )
             return _result(
                 output_path,
                 ProcessStatus.SKIPPED_SMALL,
@@ -106,7 +111,12 @@ def process_one_file(
             reason = inspection.skip_reason or "unknown"
             if not cfg.dry_run:
                 recovery_needed = False
-                output.copy_original(source.path, output_path)
+                output.copy_original(
+                    source.path,
+                    output_path,
+                    input_root=cfg.input_dir,
+                    output_root=cfg.output_dir,
+                )
             error = reason if "inspect_error" in reason or "open_failed" in reason else None
             return _result(
                 output_path,
@@ -153,7 +163,13 @@ def process_one_file(
 
         candidate_size = temp_path.stat().st_size
         if _meets_reduction(source.size, candidate_size, inspection.mode, cfg.reduction):
-            output.adopt_candidate(source.path, temp_path, output_path)
+            output.adopt_candidate(
+                source.path,
+                temp_path,
+                output_path,
+                input_root=cfg.input_dir,
+                output_root=cfg.output_dir,
+            )
             status = (
                 ProcessStatus.ADOPTED_LOSSY
                 if inspection.mode is OptimizationMode.LOSSY
@@ -170,7 +186,12 @@ def process_one_file(
             )
 
         recovery_needed = False
-        output.copy_original(source.path, output_path)
+        output.copy_original(
+            source.path,
+            output_path,
+            input_root=cfg.input_dir,
+            output_root=cfg.output_dir,
+        )
         return _result(
             output_path,
             ProcessStatus.UNCHANGED,
@@ -184,7 +205,12 @@ def process_one_file(
         recovered_size: int | None = None
         if recovery_needed:
             try:
-                output.copy_original(source.path, output_path)
+                output.copy_original(
+                    source.path,
+                    output_path,
+                    input_root=cfg.input_dir,
+                    output_root=cfg.output_dir,
+                )
                 recovered_size = output_path.stat().st_size
             except Exception as copy_error:
                 error_message += f"\nrecovery_copy_failed: {copy_error}"

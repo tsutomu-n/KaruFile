@@ -1,44 +1,33 @@
-# shrink-orchestrator
+# KaruFile orchestrator
 
-`pdf-shrink` と `media-shrink-tool` を1回のコマンドで連続実行し、PDF・画像が
-混在するフォルダーをまとめて軽量化するオーケストレータです。各ツールを
-`uv run --project` 経由でサブプロセス実行し、結果を統合サマリーとして表示します。
+`pdf-shrink` と画像専用の `media-shrink-tool` を順番に実行し、結果を KaruFile の開始・終了表示へまとめる薄い統合 CLI です。処理ロジックや共通 DB は持ちません。
 
-サードパーティ依存を持たない単一ファイルスクリプト（[PEP 723](https://peps.python.org/pep-0723/)
-インラインメタデータ付き）です。専用の `.venv` や `uv.lock` は不要です。
-
-設計の詳細は [`docs/shrink_orchestrator_design.md`](docs/shrink_orchestrator_design.md)
-を参照してください。
-
-## 必要環境
-
-- リポジトリ直下に `pdf-shrink/` と `media-shrink-tool/` が存在すること
-- 各プロジェクトで `uv sync` 済みであること
-- `uv` がPATH上にあること
-
-## 実行
+利用者は Repo ルートの `karufile.py` を通常入口として使います。
 
 ```powershell
-uv run --script orchestrator/shrink_all.py -i "C:\...\入力フォルダー" [-o "C:\...\出力先"] [-n] [-v]
+uv run --script karufile.py -i "D:\資料" [-o "D:\資料_軽量化"] [-n] [-v]
 ```
-
-主なオプションは次のとおりです。
 
 | オプション | 説明 |
 |---|---|
 | `-i`, `--input` | 入力ディレクトリ（必須） |
-| `-o`, `--output` | 出力ディレクトリ（未指定時は `<input>_軽量化`） |
-| `--pdf-workers` | `pdf-shrink` の並列数（デフォルト 2） |
-| `--image-workers` | `media-shrink-tool` の並列数（デフォルト 4） |
-| `-n`, `--dry-run` | 書き込みせず計画のみ確認 |
+| `-o`, `--output` | 出力ディレクトリ（省略時は `<input>_軽量化`） |
+| `--pdf-workers` | `pdf-shrink` の並列数（既定 2） |
+| `--image-workers` | 画像 processor の並列数（既定 4） |
+| `-n`, `--dry-run` | 完成出力を作らず判定を確認 |
 | `-v`, `--verbose` | 詳細ログ |
 
-呼び出し先プロジェクトのパスは環境変数 `PDF_SHRINK_ROOT` / `MEDIA_SHRINK_ROOT`
-で上書きできます（未指定時はリポジトリ直下の `pdf-shrink` / `media-shrink-tool`）。
+resolve 後の input/output が同一または親子関係なら、processor 起動前に終了コード `1` で拒否します。PDF を先、画像を後に処理し、片方が失敗しても可能な範囲で他方を実行します。どちらかの終了コードが非0なら KaruFile は `1` を返します。
+
+呼び出し先は既定で Repo 直下の `pdf-shrink/` と `media-shrink-tool/` です。開発・検証時だけ環境変数 `PDF_SHRINK_ROOT` / `MEDIA_SHRINK_ROOT` で差し替えられます。
+
+画像エラーの詳細は `<出力フォルダー>.image-errors.csv`、PDF の詳細は `pdf-shrink` の CSV を参照してください。入力原本は変更・削除しません。
 
 ## 開発と検証
 
 ```powershell
-cd orchestrator
-uv run --with pytest pytest -q
+Push-Location orchestrator
+uv run --with pytest python -m pytest -q
+Pop-Location
+uv run --script karufile.py --help
 ```

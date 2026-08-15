@@ -1,6 +1,7 @@
 """入力ディレクトリの検証、PDF探索、処理前スナップショット。"""
 from __future__ import annotations
 
+import os
 import random
 from pathlib import Path
 
@@ -21,16 +22,59 @@ def validate_directories(input_dir: Path, output_dir: Path) -> None:
         raise ValueError(f"Input directory does not exist: {input_dir}")
     if not input_dir.is_dir():
         raise ValueError(f"Input path is not a directory: {input_dir}")
-    if input_dir == output_dir:
+    input_root = input_dir.resolve(strict=True)
+    output_root = output_dir.resolve(strict=False)
+    if input_root == output_root:
         raise ValueError("Output directory must differ from input directory")
-    if _is_nested(input_dir, output_dir) or _is_nested(output_dir, input_dir):
+    if _is_nested(input_root, output_root) or _is_nested(output_root, input_root):
         raise ValueError("Input and output directories must not be nested")
 
 
+def _is_link_or_junction(path: Path) -> bool:
+    if path.is_symlink():
+        return True
+    is_junction = getattr(path, "is_junction", None)
+    return bool(is_junction is not None and is_junction())
+
+
 def collect_pdfs(input_dir: Path) -> list[Path]:
+    """PDFを探索する。symlink/junctionは追跡せず、fail closedにする。"""
+
+    input_root = input_dir.resolve(strict=True)
+    found: list[Path] = []
+    pending = [input_root]
+    while pending:
+        directory = pending.pop()
+        try:
+            entries = list(os.scandir(directory))
+        except OSError as exc:
+            raise ValueError(f"Could not scan input directory {directory}: {exc}") from exc
+
+        for entry in entries:
+            path = Path(entry.path)
+            if _is_link_or_junction(path):
+                raise ValueError(f"Input symlinks and junctions are not supported: {path}")
+            try:
+                if entry.is_dir(follow_symlinks=False):
+                    pending.append(path)
+                    continue
+                if not entry.is_file(follow_symlinks=False):
+                    continue
+                resolved = path.resolve(strict=True)
+            except OSError as exc:
+                raise ValueError(f"Could not inspect input path {path}: {exc}") from exc
+
+            if not _is_nested(input_root, resolved):
+                raise ValueError(f"Input file resolves outside the input root: {path}")
+            if resolved.suffix.casefold() == ".pdf":
+                found.append(resolved)
+
     return sorted(
-        path for path in input_dir.rglob("*")
-        if path.is_file() and path.suffix.casefold() == ".pdf"
+        found,
+        key=lambda path: (
+            path.relative_to(input_root).as_posix().casefold(),
+            path.relative_to(input_root).as_posix(),
+        ),
     )
 
 
@@ -47,12 +91,15 @@ def select_pilot(files: list[Path], limit: int | None) -> list[Path]:
 
 
 def snapshot(path: Path, input_dir: Path) -> SourceSnapshot:
-    resolved = path.resolve()
+    input_root = input_dir.resolve(strict=True)
+    resolved = path.resolve(strict=True)
+    if not _is_nested(input_root, resolved):
+        raise ValueError(f"Input file resolves outside the input root: {path}")
     file_hash = sha256_file(resolved)
     stat = resolved.stat()
     return SourceSnapshot(
         path=resolved,
-        relative_path=resolved.relative_to(input_dir),
+        relative_path=resolved.relative_to(input_root),
         sha256=file_hash,
         size=stat.st_size,
         mtime_ns=stat.st_mtime_ns,

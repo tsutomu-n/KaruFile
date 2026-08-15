@@ -35,7 +35,10 @@ class SourceSnapshot:
     mtime_ns: int
 
     def output_path(self, output_dir: Path) -> Path:
-        return (output_dir / self.relative_path).resolve()
+        # resolve() は出力配下のjunctionを辿り、入力ファイルそのものへ化け得る。
+        # RunConfig の output_dir は絶対パスなので、ここでは字句的な結合だけを行い、
+        # link解決後の安全性はrunnerと公開境界で検証する。
+        return output_dir / self.relative_path
 
 
 @dataclass(frozen=True)

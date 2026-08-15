@@ -1,3 +1,3 @@
-"""media-shrink: one-shot media compression toolkit."""
+"""KaruFile の非破壊画像変換コンポーネント。"""
 
 __version__ = "0.1.0"

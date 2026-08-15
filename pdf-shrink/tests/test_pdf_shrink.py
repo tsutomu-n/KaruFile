@@ -36,7 +36,12 @@ def test_validate_identical_pdf(sample_pdfs: dict[str, Path]) -> None:
 
 def test_transform_copy_original(tmp_path: Path, sample_pdfs: dict[str, Path]) -> None:
     dst = tmp_path / "out" / "text_copy.pdf"
-    output.copy_original(sample_pdfs["text"], dst)
+    output.copy_original(
+        sample_pdfs["text"],
+        dst,
+        input_root=tmp_path / "PDF",
+        output_root=tmp_path / "out",
+    )
     assert dst.exists()
     assert sha256_file(sample_pdfs["text"]) == sha256_file(dst)
 

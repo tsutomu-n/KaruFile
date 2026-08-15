@@ -1,74 +1,45 @@
-"""設定ファイル読み込みとデフォルト値。"""
+"""KaruFile v1 の固定画像レシピ。"""
 from __future__ import annotations
 
+import hashlib
+from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
 
 
-def default_config() -> dict[str, Any]:
-    return {
-        "input_dir": ".",
-        "output_dir": "{input_dir}_resized",
-        "dry_run": False,
-        "trash": True,
-        "workers": 4,
-        "image": {
-            "max_width": 1200,
-            "quality": 85,
-            "format": "jpg",
-            "skip_if_smaller": True,
-            "preserve_exif": True,
-            "preserve_icc": True,
-        },
-        "video": {
-            "codec": "libx264",
-            "crf": 23,
-            "preset": "medium",
-            "max_height": 1080,
-            "audio_codec": "aac",
-            "audio_bitrate": "128k",
-        },
-        "pdf": {
-            "mode": "lossless",  # lossless | lossy
-            "dpi": 150,
-            "text_threshold": 100,
-        },
-        "dedup": {
-            "min_size": 1024,
-            "perceptual": False,
-            "hash_threshold": 5,
-        },
-    }
+RECIPE_LINES = (
+    "max_long=1280",
+    "max_short=960",
+    "quality=72",
+    "subsampling=4:2:0",
+    "alpha=white",
+    "orientation=apply",
+)
+RECIPE_HASH = hashlib.sha256("\n".join(RECIPE_LINES).encode("ascii")).hexdigest()
 
 
-def load_config(path: Path | None = None, input_dir: Path | None = None) -> dict[str, Any]:
-    cfg = default_config()
-    if path and path.exists():
-        try:
-            import tomllib
-        except ImportError:
-            import tomli as tomllib
-        with path.open("rb") as f:
-            user_cfg = tomllib.load(f)
-        cfg = _merge(cfg, user_cfg)
+@dataclass(frozen=True, slots=True)
+class ImageConfig:
+    """出力品質に関わる値は製品契約として固定する。"""
 
-    if input_dir:
-        cfg["input_dir"] = str(input_dir)
+    workers: int = 4
+    dry_run: bool = False
+    max_long: int = field(default=1280, init=False)
+    max_short: int = field(default=960, init=False)
+    quality: int = field(default=72, init=False)
+    subsampling: int = field(default=2, init=False)  # Pillow の 2 は JPEG 4:2:0。
+    optimize: bool = field(default=True, init=False)
+    progressive: bool = field(default=True, init=False)
 
-    # output_dir の {input_dir} プレースホルダを展開
-    cfg["output_dir"] = cfg["output_dir"].format(input_dir=cfg["input_dir"])
-    return cfg
+    def __post_init__(self) -> None:
+        if self.workers < 1:
+            raise ValueError("workers must be at least 1")
 
-
-def _merge(base: dict[str, Any], override: dict[str, Any]) -> dict[str, Any]:
-    result = base.copy()
-    for key, value in override.items():
-        if key in result and isinstance(result[key], dict) and isinstance(value, dict):
-            result[key] = _merge(result[key], value)
-        else:
-            result[key] = value
-    return result
+    @property
+    def recipe_hash(self) -> str:
+        return RECIPE_HASH
 
 
-def get_output_dir(cfg: dict[str, Any]) -> Path:
-    return Path(cfg["output_dir"])
+def default_output_dir(input_dir: Path) -> Path:
+    """個別 CLI の既存既定値 ``<input>_resized`` を維持する。"""
+
+    return Path(f"{input_dir}_resized")

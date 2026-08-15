@@ -1,94 +1,36 @@
-# shrink_orchestrator 設計書
+# KaruFile orchestrator 設計
 
-## 1. 目的
+## 責務
 
-`pdf-shrink`（PDF 軽量化）と `media-shrink-tool`（画像リサイズ）を 1 回のコマンドで連続実行し、混在したメディアフォルダー（PDF + 画像）をまとめて軽量化する。
+Repo ルートの `karufile.py` から委譲され、PDF と画像の processor を subprocess で順次実行する。PDF・画像の変換、状態管理、候補検証は複製しない。
 
-## 2. 配置
-
-- 設計書: `orchestrator/docs/shrink_orchestrator_design.md`
-- 実装: `orchestrator/shrink_all.py`（サードパーティ依存を持たない単一ファイル、PEP 723）
-- 呼び出し対象（リポジトリ直下、環境変数 `PDF_SHRINK_ROOT` / `MEDIA_SHRINK_ROOT` で上書き可）:
-  - `<repo>/pdf-shrink`
-  - `<repo>/media-shrink-tool`
-
-## 3. CLI インターフェース
-
-```
-uv run --script orchestrator/shrink_all.py \
-  -i "C:\Users\tn\Downloads\安全会議資料および議事録\安全会議資料および議事録" \
-  [-o "C:\Users\tn\Downloads\安全会議資料および議事録\安全会議資料および議事録_軽量化"] \
-  [--pdf-workers 2] \
-  [--image-workers 4] \
-  [-n] \
-  [-v]
+```text
+karufile.py
+  └─ orchestrator/shrink_all.py
+       ├─ pdf-shrink        PDF の唯一の処理経路
+       └─ media-shrink-tool 画像 resize のみ
 ```
 
-| オプション | 説明 |
-|---|---|
-| `-i`, `--input` | 入力ディレクトリ（必須） |
-| `-o`, `--output` | 出力ディレクトリ（未指定時は `<input>_軽量化`） |
-| `--pdf-workers` | `pdf-shrink` の並列数（デフォルト 2） |
-| `--image-workers` | `media-shrink-tool` の並列数（デフォルト 4） |
-| `-n`, `--dry-run` | 書き込みせず計画のみ確認 |
-| `-v`, `--verbose` | 詳細ログ |
+## 実行順序
 
-## 4. 処理フロー
+1. input/output を resolve し、存在・同一・親子関係を検査する。
+2. 対象 PDF・画像の件数と原本保持を表示する。
+3. PDF がある場合だけ `pdf-shrink` を実行する。
+4. `media-shrink-tool resize` を実行し、0件のときも画像エラー CSV を現在実行の内容へ更新する。
+5. processor の CSV と標準出力から取得できる値だけを集計する。
+6. 原本変更なし、削除0件、エラー数、画像エラー CSV の場所を表示する。
+7. どちらかの processor が失敗した場合は終了コード `1` を返す。
 
-1. **入力検証**
-   - 入力ディレクトリの存在確認
-   - 対象ファイルの粗略カウント（PDF / 画像）
+## 境界
 
-2. **PDF 軽量化**
-   - `pdf-shrink` をサブプロセスで実行
-   - コマンド: `uv run --project <pdf-shrink> python -m pdf_shrink run --input <input> --output <output> --workers <n>`
-   - 結果は `<output_parent>/report.csv` に保存される
+- PDF と画像は同じ出力フォルダーへ相対構造を維持して保存する。
+- PDF の状態・詳細レポートは `pdf-shrink` が所有する。
+- 画像の再利用判定とエラー CSV は `media-shrink-tool` が所有する。
+- orchestrator は共通 DB、worker pool、structured IPC を追加しない。
+- 動画、dedup、元ファイル削除は呼び出さない。
 
-3. **画像リサイズ**
-   - `media-shrink-tool resize` をサブプロセスで実行
-   - コマンド: `uv run --project <media-shrink-tool> python -m media_shrink resize -i <input> -o <output> -j <n>`
-   - 出力は `<output>` 内に元のディレクトリ構造を維持して配置される
+## 制約
 
-4. **結果集計**
-   - PDF: `report.csv` をパース
-   - 画像: 入力画像の合計サイズと出力 `.jpg` の合計サイズを比較
-   - 両方を足した総合サマリーを表示
-
-5. **終了コード**
-   - `pdf-shrink` と `media-shrink-tool` 両方が正常終了したら `0`
-   - いずれかが失敗したら `1`
-
-## 5. 出力戦略
-
-- PDF と画像の両方を **同じ出力ディレクトリ** にミラー配置する。
-- これにより、軽量化済みファイルが 1 箇所にまとまり、運用が簡潔になる。
-- `pdf-shrink` のデフォルト出力先 (`<input>_軽量化`) に合わせる。
-
-## 6. エラー処理
-
-- 各ステップを `subprocess.run(..., check=False)` で実行。
-- PDF 失敗でも画像処理に進み、逆も同様。
-- 最後に両方の成否を表示。
-- ツール内部で発生したエラーは、ツール自体がログ/レポートに記録する。
-
-## 7. 状態管理・再実行
-
-- PDF: `pdf-shrink` 内の SQLite 状態 DB (`<output_parent>/.pdf-shrink/state.sqlite3`) により、変更のないファイルは自動スキップされる。
-- 画像: `media-shrink-tool` は現時点で状態 DB を持たないため、再実行時はすべて再処理する。これを回避するには将来 `shrink-orchestrator` 側で簡易な JSON 状態ファイルを追加することを検討する。
-
-## 8. レポート
-
-- コンソールに統合サマリーを表示。
-- PDF 詳細は `pdf-shrink` が生成する `report.csv` を参照。
-- 画像詳細は標準出力のサマリーを参考にする。
-
-## 9. 拡張性
-
-- 動画や重複削除を追加する場合は、`media-shrink-tool` の `video` / `dedup` サブコマンドを同様に呼び出す段を追加する。
-- 設定ファイルを導入する場合は、TOML/JSON を読み込み、各ツールの設定を注入する。
-
-## 10. 制約事項
-
-- ツールは uv 経由で呼び出すため、実行環境に `uv` と両プロジェクトの `.venv` が必要。
-- 画像処理は全て `.jpg` へ変換される。元の `.png` などが透過を必要とする場合は別途対応が必要。
-- `media-shrink-tool` が HEIC/HEIF を処理できるかは `pillow-heif` の有無に依存する。
+- 実行環境に `uv` と各 project の lock 済み依存が必要。
+- stdout の画像サマリーを取得できない場合だけ、出力の `.jpg` と `.jpeg` から概算する。
+- dry-run は完成 PDF・画像を作らないが、processor の状態・レポート更新を禁止しない。

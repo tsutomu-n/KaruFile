@@ -1,6 +1,8 @@
 """一括処理ユースケースのオーケストレーション。"""
 from __future__ import annotations
 
+import os
+import stat
 import time
 import traceback
 from concurrent.futures import ProcessPoolExecutor, as_completed
@@ -52,6 +54,114 @@ def _prepare_tools(cfg: RunConfig) -> tuple[RunConfig, Path | None]:
     return cfg.with_tool_versions(pymupdf=_pymupdf_version(), qpdf=version), executable
 
 
+def _is_within(path: Path, parent: Path) -> bool:
+    try:
+        path.relative_to(parent)
+    except ValueError:
+        return False
+    return True
+
+
+def _overlaps(first: Path, second: Path) -> bool:
+    return _is_within(first, second) or _is_within(second, first)
+
+
+def _is_link_or_junction(path: Path) -> bool:
+    if path.is_symlink():
+        return True
+    is_junction = getattr(path, "is_junction", None)
+    if is_junction is not None and is_junction():
+        return True
+    try:
+        attributes = path.lstat().st_file_attributes
+    except (AttributeError, FileNotFoundError):
+        return False
+    return bool(attributes & getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0))
+
+
+def _has_link_component(root: Path, candidate: Path) -> bool:
+    try:
+        relative = candidate.relative_to(root)
+    except ValueError:
+        return True
+    current = root
+    if _is_link_or_junction(current):
+        return True
+    for part in relative.parts:
+        current = current / part
+        if _is_link_or_junction(current):
+            return True
+    return False
+
+
+def _validate_workspace_paths(
+    cfg: RunConfig,
+    paths: WorkspacePaths,
+    sources: list[SourceSnapshot],
+    protected_sources: tuple[Path, ...],
+) -> None:
+    """状態・一時・reportの派生writeが入力やPDF出力と衝突しないか検証する。"""
+
+    input_root = cfg.input_dir.resolve(strict=True)
+    output_root = cfg.output_dir.resolve(strict=False)
+    work_root = Path(os.path.abspath(cfg.output_dir.parent))
+    work_root_resolved = work_root.resolve(strict=False)
+    derived: list[tuple[str, Path]] = [
+        ("state directory", paths.state_dir),
+        ("temporary directory", paths.temp_root),
+        ("state database", paths.database),
+        ("state database journal", Path(f"{paths.database}-journal")),
+        ("state database WAL", Path(f"{paths.database}-wal")),
+        ("state database shared memory", Path(f"{paths.database}-shm")),
+        ("report", work_root / "report.csv"),
+        ("dry-run report", work_root / "report.dry-run.csv"),
+    ]
+    derived.extend(
+        (
+            "per-source temporary directory",
+            paths.temp_root / source.relative_path.parent,
+        )
+        for source in sources
+    )
+    for label, candidate in derived:
+        candidate_lexical = Path(os.path.abspath(candidate))
+        if not _is_within(candidate_lexical, work_root):
+            raise ValueError(f"{label} is outside the PDF work root: {candidate}")
+        if _has_link_component(work_root, candidate_lexical):
+            raise ValueError(f"{label} contains a symlink or junction: {candidate}")
+        resolved = candidate.resolve(strict=False)
+        if not _is_within(resolved, work_root_resolved):
+            raise ValueError(
+                f"{label} escapes the PDF work root after resolving links: "
+                f"{candidate} -> {resolved}"
+            )
+        if _overlaps(resolved, input_root):
+            raise ValueError(
+                f"{label} overlaps the input after resolving filesystem links: "
+                f"{candidate} -> {resolved}"
+            )
+        if _overlaps(resolved, output_root):
+            raise ValueError(
+                f"{label} overlaps the PDF output root: {candidate} -> {resolved}"
+            )
+        if candidate.exists():
+            candidate_stat = candidate.stat()
+            if not candidate.is_dir() and candidate_stat.st_nlink > 1:
+                raise ValueError(f"{label} is hard-linked: {candidate}")
+            for source_path in protected_sources:
+                try:
+                    same_file = os.path.samefile(candidate, source_path)
+                except OSError as exc:
+                    raise ValueError(
+                        f"Could not verify {label} identity for {candidate}: {exc}"
+                    ) from exc
+                if same_file:
+                    raise ValueError(
+                        f"{label} is a hard link to an input source: "
+                        f"{candidate} == {source_path}"
+                    )
+
+
 def _worker_crash_result(
     source: SourceSnapshot,
     cfg: RunConfig,
@@ -62,7 +172,12 @@ def _worker_crash_result(
     recovered_size: int | None = None
     if not cfg.dry_run:
         try:
-            output.copy_original(source.path, destination)
+            output.copy_original(
+                source.path,
+                destination,
+                input_root=cfg.input_dir,
+                output_root=cfg.output_dir,
+            )
             recovered_size = destination.stat().st_size
         except Exception as copy_error:
             error_message += f"\nrecovery_copy_failed: {copy_error}"
@@ -128,15 +243,40 @@ def _execute(
 def run(cfg: RunConfig) -> int:
     try:
         discovery.validate_directories(cfg.input_dir, cfg.output_dir)
-    except ValueError as exc:
+    except (OSError, RuntimeError, ValueError) as exc:
         logger.error("%s", exc)
         return 1
 
     paths = WorkspacePaths.from_config(cfg)
-    ensure_dir(paths.state_dir)
-    if not cfg.dry_run:
-        ensure_dir(cfg.output_dir)
-        ensure_dir(paths.temp_root)
+    try:
+        files = discovery.collect_pdfs(cfg.input_dir)
+        logger.info("Found %d PDF files", len(files))
+        selected = discovery.select_pilot(files, cfg.limit)
+        if cfg.limit is not None:
+            logger.info("Limited to %d files for pilot run", len(selected))
+        sources = [discovery.snapshot(path, cfg.input_dir) for path in selected]
+        # --limit の未選択PDFもhardlink保護対象。未選択原本へのchmod/置換も禁止する。
+        protected_sources = tuple(files)
+        for source in sources:
+            output.validate_destination(
+                source.output_path(cfg.output_dir),
+                input_root=cfg.input_dir,
+                output_root=cfg.output_dir,
+                protected_sources=protected_sources,
+            )
+        _validate_workspace_paths(cfg, paths, sources, protected_sources)
+    except (OSError, RuntimeError, ValueError) as exc:
+        logger.error("PDF preflight failed: %s", exc)
+        return 1
+
+    try:
+        ensure_dir(paths.state_dir)
+        if not cfg.dry_run:
+            ensure_dir(cfg.output_dir)
+            ensure_dir(paths.temp_root)
+    except OSError as exc:
+        logger.error("Failed to create PDF workspace directories: %s", exc)
+        return 1
 
     try:
         cfg, qpdf_exe = _prepare_tools(cfg)
@@ -147,18 +287,24 @@ def run(cfg: RunConfig) -> int:
     processing_hash = config_hash(cfg)
     logger.info("Config hash: %s", processing_hash[:16])
 
-    files = discovery.collect_pdfs(cfg.input_dir)
-    logger.info("Found %d PDF files", len(files))
-    selected = discovery.select_pilot(files, cfg.limit)
-    if cfg.limit is not None:
-        logger.info("Limited to %d files for pilot run", len(selected))
     try:
-        sources = [discovery.snapshot(path, cfg.input_dir) for path in selected]
-    except (OSError, ValueError) as exc:
-        logger.error("Failed to read an input PDF: %s", exc)
+        for source in sources:
+            output.validate_destination(
+                source.output_path(cfg.output_dir),
+                input_root=cfg.input_dir,
+                output_root=cfg.output_dir,
+                protected_sources=protected_sources,
+            )
+        _validate_workspace_paths(cfg, paths, sources, protected_sources)
+    except (OSError, RuntimeError, ValueError) as exc:
+        logger.error("PDF preflight changed before state initialization: %s", exc)
         return 1
 
-    conn = state.init_db(paths.database)
+    try:
+        conn = state.init_db(paths.database)
+    except Exception as exc:
+        logger.error("Failed to initialize PDF state database: %s", exc)
+        return 1
     try:
         to_process: list[SourceSnapshot] = []
         for source in sources:
@@ -207,7 +353,17 @@ def run(cfg: RunConfig) -> int:
     finally:
         conn.close()
 
-    report.write_csv(records, paths.report)
+    try:
+        report.write_csv(
+            records,
+            paths.report,
+            input_root=cfg.input_dir,
+            work_root=cfg.output_dir.parent,
+            protected_sources=files,
+        )
+    except Exception as exc:
+        logger.error("Failed to write PDF report: %s", exc)
+        return 1
     report.print_summary(records, elapsed_seconds=elapsed)
     logger.info("Report saved to %s", paths.report)
     return 1 if any(record.status == ProcessStatus.ERROR for record in records) else 0

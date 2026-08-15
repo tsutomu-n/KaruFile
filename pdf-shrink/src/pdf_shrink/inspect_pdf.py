@@ -9,22 +9,7 @@ import pymupdf as fitz  # PyMuPDF
 from .config import ScanOptions
 from .models import InspectionResult, OptimizationMode
 
-
-def _is_visible_color(color: Any) -> bool:
-    """白または白に近い色は不可視とみなす。"""
-    if isinstance(color, int):
-        red, green, blue = fitz.sRGB_to_rgb(color)
-        return (red + green + blue) / 3 < 0.99 * 255
-    if not isinstance(color, (list, tuple)):
-        return True
-    if len(color) == 3:
-        maximum = 255 if any(float(component) > 1 for component in color) else 1
-        return sum(float(component) for component in color) / 3 < 0.99 * maximum
-    if len(color) == 4:
-        # CMYKの白は (0, 0, 0, 0)。いずれかのインク成分があれば可視とする。
-        return any(float(component) > 0.01 for component in color)
-    else:
-        return True
+_SCAN_DPI_THRESHOLD = 450.0
 
 
 def _bbox_area(bbox: Any) -> float:
@@ -39,24 +24,69 @@ def _bbox_area(bbox: Any) -> float:
         return 0.0
 
 
-def _page_image_area_ratio(page: fitz.Page) -> float:
+def _bbox_dimensions(bbox: Any) -> tuple[float, float]:
+    try:
+        x0, y0, x1, y1 = bbox
+        return (
+            max(float(x1) - float(x0), 0.0),
+            max(float(y1) - float(y0), 0.0),
+        )
+    except Exception:
+        return 0.0, 0.0
+
+
+def _effective_image_dpi(info: dict[str, Any]) -> float:
+    displayed_width, displayed_height = _bbox_dimensions(info.get("bbox"))
+    if displayed_width <= 0 or displayed_height <= 0:
+        return 0.0
+
+    try:
+        pixel_width = float(info.get("width", 0))
+        pixel_height = float(info.get("height", 0))
+    except (TypeError, ValueError):
+        return 0.0
+    if pixel_width <= 0 or pixel_height <= 0:
+        return 0.0
+
+    direct = min(
+        pixel_width * 72 / displayed_width,
+        pixel_height * 72 / displayed_height,
+    )
+    swapped = min(
+        pixel_width * 72 / displayed_height,
+        pixel_height * 72 / displayed_width,
+    )
+    return max(direct, swapped)
+
+
+def _page_largest_image_metrics(page: fitz.Page) -> tuple[float, float]:
     try:
         infos = page.get_image_info()
     except Exception:
         infos = []
-    img_area = 0.0
+
+    largest_info: dict[str, Any] | None = None
+    largest_area = 0.0
     for info in infos:
         bbox = info.get("bbox")
         if bbox is None:
             continue
-        img_area += _bbox_area(bbox)
+        area = _bbox_area(bbox)
+        if area > largest_area:
+            largest_info = info
+            largest_area = area
+
     page_area = page.rect.width * page.rect.height
-    if page_area <= 0:
-        return 0.0
-    return min(img_area / page_area, 1.0)
+    if page_area <= 0 or largest_info is None:
+        return 0.0, 0.0
+    return (
+        min(largest_area / page_area, 1.0),
+        _effective_image_dpi(largest_info),
+    )
 
 
-def _page_visible_text_len(page: fitz.Page) -> int:
+def _page_visible_text_len_from_dict(page: fitz.Page) -> int:
+    """``get_texttrace()`` が使えない場合の保守的なフォールバック。"""
     try:
         text_dict = page.get_text("dict", flags=fitz.TEXTFLAGS_TEXT)
     except Exception:
@@ -67,9 +97,31 @@ def _page_visible_text_len(page: fitz.Page) -> int:
             continue
         for line in block.get("lines", []):
             for span in line.get("spans", []):
-                if _is_visible_color(span.get("color")):
-                    length += len(span.get("text", ""))
+                # 色だけでは可視性を判断できないため、白色文字も数える。
+                length += len(span.get("text", ""))
     return length
+
+
+def _page_visible_text_len(page: fitz.Page) -> int:
+    try:
+        texttrace = page.get_texttrace()
+        length = 0
+        for span in texttrace:
+            if span.get("type") == 3:
+                continue
+            try:
+                opacity = float(span.get("opacity", 1))
+            except (TypeError, ValueError):
+                opacity = 1.0
+            if opacity <= 0:
+                continue
+            chars = span.get("chars")
+            if chars is None:
+                raise ValueError("texttrace span has no chars")
+            length += len(chars)
+        return length
+    except Exception:
+        return _page_visible_text_len_from_dict(page)
 
 
 def inspect_file(path: Path, scan: ScanOptions, *, safe: bool) -> InspectionResult:
@@ -132,11 +184,12 @@ def inspect_file(path: Path, scan: ScanOptions, *, safe: bool) -> InspectionResu
         scan_pages = 0
         for i in range(page_count):
             page = doc.load_page(i)
-            img_ratio = _page_image_area_ratio(page)
+            img_ratio, effective_dpi = _page_largest_image_metrics(page)
             text_len = _page_visible_text_len(page)
             if (
                 img_ratio >= scan.page_image_ratio
                 and text_len <= scan.max_visible_text
+                and effective_dpi > _SCAN_DPI_THRESHOLD
             ):
                 scan_pages += 1
 
