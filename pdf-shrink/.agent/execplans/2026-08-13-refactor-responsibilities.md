@@ -1,5 +1,9 @@
 # pdf-shrink 責務分離リファクタリング
 
+> **状態: 完了済みの履歴資料。** この文書は2026-08-13時点の判断と検証を記録します。
+> 現行のPDF契約は [pdf-shrink README](../../README.md)、KaruFile全体の文書体系は
+> [文書ガイド](../../../docs/README.md)を参照してください。
+
 この文書は living document である。実装中は Progress、Discoveries、
 Decision Log、Validation、Outcomes を継続的に更新する。
 

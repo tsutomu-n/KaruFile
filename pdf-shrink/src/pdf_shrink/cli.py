@@ -36,7 +36,11 @@ def build_parser() -> argparse.ArgumentParser:
         help="出力PDFを作らず、判定結果だけを記録する",
     )
     run_parser.add_argument("--safe", action="store_true", help="非可逆画像縮小を無効化しqpdf可逆のみ")
-    run_parser.add_argument("--limit", type=int, help="パイロット実行：上位N/2 + ランダムN/2")
+    run_parser.add_argument(
+        "--limit",
+        type=int,
+        help="パイロット実行：サイズ上位floor(N/2)件 + 残りから固定seedでN-floor(N/2)件",
+    )
     run_parser.add_argument("--retry-errors", action="store_true", help="前回ERRORを再処理")
     run_parser.add_argument("--qpdf-path", help="qpdf.exe のパス")
     run_parser.add_argument("-v", "--verbose", action="store_true", help="詳細ログ")

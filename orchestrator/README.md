@@ -1,29 +1,70 @@
 # KaruFile orchestrator
 
-`pdf-shrink` と画像専用の `media-shrink-tool` を順番に実行し、結果を KaruFile の開始・終了表示へまとめる薄い統合 CLI です。処理ロジックや共通 DB は持ちません。
+`pdf-shrink` と `media-shrink-tool` を順に呼び、開始・終了表示と終了コードをまとめる
+薄い統合CLIです。変換処理や共通DBは持ちません。
 
-利用者は Repo ルートの `karufile.py` を通常入口として使います。
+通常の利用手順は [KaruFile 利用者マニュアル](../MANUAL.md)を参照し、リポジトリ直下の
+`karufile.py` を使ってください。この文書は統合処理の契約と開発用情報を扱います。
+
+## CLI
+
+リポジトリ直下で実行します。
 
 ```powershell
-uv run --script karufile.py -i "D:\資料" [-o "D:\資料_軽量化"] [-n] [-v]
+uv run --script karufile.py `
+  -i "D:\作業\資料" `
+  -o "D:\作業\資料_軽量化"
 ```
 
-| オプション | 説明 |
+| オプション | 意味 |
 |---|---|
-| `-i`, `--input` | 入力ディレクトリ（必須） |
-| `-o`, `--output` | 出力ディレクトリ（省略時は `<input>_軽量化`） |
-| `--pdf-workers` | `pdf-shrink` の並列数（既定 2） |
-| `--image-workers` | 画像 processor の並列数（既定 4） |
+| `-i`, `--input` | 入力フォルダー。必須 |
+| `-o`, `--output` | 出力フォルダー。省略時は `<input>_軽量化` |
+| `--pdf-workers` | PDFの並列数。既定値は2、最小値は1 |
+| `--image-workers` | 画像の並列数。既定値は4、最小値は1 |
 | `-n`, `--dry-run` | 完成出力を作らず判定を確認 |
 | `-v`, `--verbose` | 詳細ログ |
 
-resolve 後の input/output が同一または親子関係なら、processor 起動前に終了コード `1` で拒否します。PDF を先、画像を後に処理し、片方が失敗しても可能な範囲で他方を実行します。どちらかの終了コードが非0なら KaruFile は `1` を返します。
+## 実行契約
 
-呼び出し先は既定で Repo 直下の `pdf-shrink/` と `media-shrink-tool/` です。開発・検証時だけ環境変数 `PDF_SHRINK_ROOT` / `MEDIA_SHRINK_ROOT` で差し替えられます。
+1. 入出力と、予定されるPDF・画像・レポート・状態DBの保存先を検査します。
+2. PDFを処理します。
+3. 画像を処理します。
+4. 現在実行で更新されたレポートと画像サマリーを照合します。
+5. PDFと画像の結果を統合して表示します。
 
-画像エラーの詳細は `<出力フォルダー>.image-errors.csv`、PDF の詳細は `pdf-shrink` の CSV を参照してください。入力原本は変更・削除しません。
+入力と出力が同一または親子関係の場合、処理コンポーネント起動前に終了コード `1` で拒否します。
+シンボリックリンク、ジャンクション、ハードリンク、出力名の衝突によって入力や別の出力へ書き込む可能性がある
+場合も拒否します。
 
-## 開発と検証
+PDFと画像の片方が失敗しても、可能な範囲でもう片方を実行します。子処理コンポーネントの終了コード、
+エラー件数、入力件数、更新されたレポートが一致しない場合は成功として扱いません。
+どちらかが失敗した場合、統合CLIは `1` を返します。引数不正は `2` です。
+
+## 保存先
+
+出力が `D:\作業\資料_軽量化` の場合:
+
+| 内容 | 保存先 |
+|---|---|
+| PDFと画像 | `D:\作業\資料_軽量化\` |
+| PDFレポート（PDFがある場合） | `D:\作業\report.csv` |
+| dry-run PDFレポート（PDFがある場合） | `D:\作業\report.dry-run.csv` |
+| PDF状態DB（PDFがある場合） | `D:\作業\.pdf-shrink\state.sqlite3` |
+| 画像エラーCSV | `D:\作業\資料_軽量化.image-errors.csv` |
+
+統合サマリーで正確な値を取得できない場合、その項目は `unknown` と表示します。
+dry-runは完成したPDF・画像を作りませんが、状態とレポートは更新される場合があります。
+
+## 処理コンポーネントの場所
+
+既定では、リポジトリ直下の `pdf-shrink/` と `media-shrink-tool/` を使います。
+開発・テスト時だけ、次の環境変数で差し替えられます。
+
+- `PDF_SHRINK_ROOT`
+- `MEDIA_SHRINK_ROOT`
+
+## 開発検証
 
 ```powershell
 Push-Location orchestrator
@@ -31,3 +72,5 @@ uv run --with pytest python -m pytest -q
 Pop-Location
 uv run --script karufile.py --help
 ```
+
+内部構造と責務境界は [設計文書](docs/shrink_orchestrator_design.md)を参照してください。

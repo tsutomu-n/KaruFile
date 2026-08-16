@@ -1,0 +1,238 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "KaruFile 実行時アーキテクチャ",
+    "output": "karufile-runtime.html",
+    "quality_profile": "showcase",
+    "repository": {
+      "url": "https://github.com/tsutomu-n/KaruFile",
+      "revision": "935f7bb05cc628575e314b3bcf4cff8cc4e4840e"
+    },
+    "legend": {
+      "mode": "auto",
+      "entries": {
+        "frontend": { "label": "CLI" },
+        "backend": { "label": "処理コンポーネント" },
+        "database": { "label": "状態・レポート" },
+        "external": { "label": "利用者・外部要素" }
+      }
+    }
+  },
+  "components": [
+    {
+      "id": "user",
+      "type": "external",
+      "label": "利用者",
+      "sublabel": "PowerShell",
+      "pos": [40, 310],
+      "size": [130, 64]
+    },
+    {
+      "id": "cli",
+      "type": "frontend",
+      "label": "karufile.py",
+      "sublabel": "通常のCLI入口",
+      "pos": [230, 310],
+      "size": [150, 64],
+      "sources": [
+        { "path": "karufile.py", "label": "CLI入口" }
+      ]
+    },
+    {
+      "id": "orchestrator",
+      "type": "backend",
+      "label": "orchestrator",
+      "sublabel": "検査・順次実行・集計",
+      "tag": "PDF → 画像",
+      "pos": [450, 305],
+      "size": [180, 74],
+      "sources": [
+        { "path": "orchestrator/shrink_all.py", "label": "統合処理" }
+      ]
+    },
+    {
+      "id": "input",
+      "type": "external",
+      "label": "入力フォルダー",
+      "sublabel": "PDF・対応形式の画像",
+      "tag": "変更・削除しない",
+      "pos": [455, 80],
+      "size": [170, 72]
+    },
+    {
+      "id": "pdf",
+      "type": "backend",
+      "label": "pdf-shrink",
+      "sublabel": "PDF候補生成・検証・公開",
+      "pos": [715, 190],
+      "size": [185, 76],
+      "sources": [
+        { "path": "pdf-shrink/src/pdf_shrink/runner.py", "label": "一括処理" },
+        { "path": "pdf-shrink/src/pdf_shrink/worker.py", "label": "1 PDF処理" }
+      ]
+    },
+    {
+      "id": "image",
+      "type": "backend",
+      "label": "media-shrink-tool",
+      "sublabel": "画像をJPEGへ変換・公開",
+      "pos": [715, 430],
+      "size": [185, 76],
+      "sources": [
+        { "path": "media-shrink-tool/src/media_shrink/cli.py", "label": "画像CLI" },
+        { "path": "media-shrink-tool/src/media_shrink/image.py", "label": "画像処理" }
+      ]
+    },
+    {
+      "id": "pdf_engines",
+      "type": "external",
+      "label": "PDF処理エンジン",
+      "sublabel": "PyMuPDF 1.28.2 / qpdf 12.3.2",
+      "pos": [710, 45],
+      "size": [195, 72],
+      "sources": [
+        { "path": "pdf-shrink/pyproject.toml", "label": "PyMuPDF" },
+        { "path": "pdf-shrink/src/pdf_shrink/qpdf.py", "label": "qpdf" }
+      ]
+    },
+    {
+      "id": "pdf_state",
+      "type": "database",
+      "label": "PDF状態・レポート",
+      "sublabel": ".pdf-shrink/state.sqlite3・report.csv",
+      "pos": [965, 125],
+      "size": [220, 82],
+      "sources": [
+        { "path": "pdf-shrink/src/pdf_shrink/state.py", "label": "状態DB" },
+        { "path": "pdf-shrink/src/pdf_shrink/report.py", "label": "CSV" }
+      ]
+    },
+    {
+      "id": "output",
+      "type": "external",
+      "label": "出力フォルダー",
+      "sublabel": "PDF・JPEGの相対構造を維持",
+      "pos": [1000, 310],
+      "size": [185, 72]
+    },
+    {
+      "id": "image_report",
+      "type": "database",
+      "label": "画像エラーCSV",
+      "sublabel": "<output>.image-errors.csv",
+      "pos": [980, 500],
+      "size": [205, 72],
+      "sources": [
+        { "path": "media-shrink-tool/src/media_shrink/image.py", "label": "CSV公開" }
+      ]
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "region",
+      "label": "KaruFile",
+      "wraps": ["cli", "orchestrator", "pdf", "image"],
+      "pad": 26
+    }
+  ],
+  "connections": [
+    {
+      "id": "user_starts_cli",
+      "from": "user",
+      "to": "cli",
+      "label": "uv run --script karufile.py",
+      "labelAt": [200, 388],
+      "variant": "emphasis"
+    },
+    {
+      "id": "cli_delegates",
+      "from": "cli",
+      "to": "orchestrator",
+      "label": "引数を委譲",
+      "variant": "emphasis"
+    },
+    {
+      "id": "input_scanned",
+      "from": "input",
+      "to": "orchestrator",
+      "label": "再帰走査・安全性検査",
+      "labelAt": [540, 166]
+    },
+    {
+      "id": "run_pdf_first",
+      "from": "orchestrator",
+      "to": "pdf",
+      "label": "1. PDF処理",
+      "variant": "emphasis"
+    },
+    {
+      "id": "run_image_second",
+      "from": "orchestrator",
+      "to": "image",
+      "label": "2. 画像処理",
+      "variant": "emphasis"
+    },
+    {
+      "id": "pdf_uses_engines",
+      "from": "pdf",
+      "to": "pdf_engines",
+      "label": "候補生成・検証"
+    },
+    {
+      "id": "pdf_writes_state",
+      "from": "pdf",
+      "to": "pdf_state",
+      "label": "状態・結果を保存",
+      "labelAt": [900, 280]
+    },
+    {
+      "id": "pdf_publishes",
+      "from": "pdf",
+      "to": "output",
+      "label": "PDFを原子的に公開"
+    },
+    {
+      "id": "image_publishes",
+      "from": "image",
+      "to": "output",
+      "label": "JPEGを原子的に公開"
+    },
+    {
+      "id": "image_writes_report",
+      "from": "image",
+      "to": "image_report",
+      "label": "現在実行のエラーを保存",
+      "labelAt": [940, 586]
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "主要経路",
+      "items": [
+        "利用者 → karufile.py → orchestrator",
+        "PDFを先、画像を後に処理",
+        "現在実行の結果を統合して終了コードを返す"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "入力保護",
+      "items": [
+        "入力ファイルを変更・削除しない",
+        "危険な入出力関係とリンクを拒否",
+        "検証済み一時ファイルから正式出力へ公開"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "補助ファイル",
+      "items": [
+        "PDF状態DBとレポートは出力の親へ保存",
+        "画像エラーCSVは <output>.image-errors.csv",
+        "dry-runでも状態・レポートは更新され得る"
+      ]
+    }
+  ]
+}

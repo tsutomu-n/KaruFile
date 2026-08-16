@@ -641,7 +641,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "-n", "--dry-run", action="store_true",
-        help="書き込みせず計画のみ確認",
+        help="完成PDF・画像を作らず判定を確認（状態・レポートは更新される場合あり）",
     )
     parser.add_argument("-v", "--verbose", action="store_true", help="詳細ログ")
     return parser
