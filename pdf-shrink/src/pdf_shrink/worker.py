@@ -106,7 +106,12 @@ def process_one_file(
                 output_size=None if cfg.dry_run else output_path.stat().st_size,
             )
 
-        inspection = inspect_file(source.path, cfg.scan, safe=cfg.safe)
+        inspection = inspect_file(
+            source.path,
+            cfg.scan,
+            safe=cfg.safe,
+            dpi_target=cfg.lossy.dpi_target,
+        )
         if not inspection.ok:
             reason = inspection.skip_reason or "unknown"
             if not cfg.dry_run:

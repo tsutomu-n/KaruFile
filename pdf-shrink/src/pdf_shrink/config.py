@@ -26,6 +26,9 @@ class LossyOptions:
     color: bool = True
     gray: bool = True
     set_to_gray: bool = False
+    # rewrite_images ではなく配置実効DPIで差し替える実装の識別子。
+    # 値を変えると再開用 config_hash が変わり、旧UNCHANGED結果を再処理する。
+    algorithm: str = "placed-effective-dpi-v2"
 
 
 @dataclass(frozen=True)

@@ -616,7 +616,14 @@ def test_white_text_on_dark_background_counts_as_visible(tmp_path: Path) -> None
         text_color=(1, 1, 1),
     )
 
-    assert _inspect_mode(path) is OptimizationMode.LOSSLESS
+    result = inspect_pdf.inspect_file(
+        path,
+        config.default_config().scan,
+        safe=False,
+    )
+    assert result.ok
+    assert result.scan_page_ratio == 0
+    assert result.mode is OptimizationMode.LOSSY
 
 
 def test_multiple_small_images_are_not_combined_for_scan_detection(tmp_path: Path) -> None:
@@ -634,7 +641,14 @@ def test_multiple_small_images_are_not_combined_for_scan_detection(tmp_path: Pat
     document.save(path)
     document.close()
 
-    assert _inspect_mode(path) is OptimizationMode.LOSSLESS
+    result = inspect_pdf.inspect_file(
+        path,
+        config.default_config().scan,
+        safe=False,
+    )
+    assert result.ok
+    assert result.scan_page_ratio == 0
+    assert result.mode is OptimizationMode.LOSSY
 
 
 def test_full_page_300_dpi_image_is_not_lossy_candidate(tmp_path: Path) -> None:

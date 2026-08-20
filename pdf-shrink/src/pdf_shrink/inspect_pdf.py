@@ -59,11 +59,28 @@ def _effective_image_dpi(info: dict[str, Any]) -> float:
     return max(direct, swapped)
 
 
-def _page_largest_image_metrics(page: fitz.Page) -> tuple[float, float]:
+def _page_image_infos(page: fitz.Page) -> list[dict[str, Any]]:
     try:
-        infos = page.get_image_info()
+        infos = page.get_image_info(xrefs=True)
+    except TypeError:
+        try:
+            infos = page.get_image_info()
+        except Exception:
+            return []
     except Exception:
-        infos = []
+        return []
+    return [info for info in infos if isinstance(info, dict)]
+
+
+def _page_max_effective_dpi(page: fitz.Page) -> float:
+    max_dpi = 0.0
+    for info in _page_image_infos(page):
+        max_dpi = max(max_dpi, _effective_image_dpi(info))
+    return max_dpi
+
+
+def _page_largest_image_metrics(page: fitz.Page) -> tuple[float, float]:
+    infos = _page_image_infos(page)
 
     largest_info: dict[str, Any] | None = None
     largest_area = 0.0
@@ -124,9 +141,15 @@ def _page_visible_text_len(page: fitz.Page) -> int:
         return _page_visible_text_len_from_dict(page)
 
 
-def inspect_file(path: Path, scan: ScanOptions, *, safe: bool) -> InspectionResult:
+def inspect_file(
+    path: Path,
+    scan: ScanOptions,
+    *,
+    safe: bool,
+    dpi_target: int = 300,
+) -> InspectionResult:
     """
-    PDFを開いて、処理可否・スキャン主体判定を行う。
+    PDFを開いて、処理可否・スキャン主体判定・lossy要否を行う。
 
     Returns:
         検査結果。処理不可の場合は ``skip_reason`` を含む。
@@ -180,16 +203,18 @@ def inspect_file(path: Path, scan: ScanOptions, *, safe: bool) -> InspectionResu
             except Exception as exc:
                 return rejected(f"page_load_failed: {exc}")
 
-        # スキャン判定
+        # スキャン判定（レポート用）と、配置実効DPIによるlossy要否
         scan_pages = 0
+        max_effective_dpi = 0.0
         for i in range(page_count):
             page = doc.load_page(i)
-            img_ratio, effective_dpi = _page_largest_image_metrics(page)
+            img_ratio, largest_dpi = _page_largest_image_metrics(page)
+            max_effective_dpi = max(max_effective_dpi, _page_max_effective_dpi(page))
             text_len = _page_visible_text_len(page)
             if (
                 img_ratio >= scan.page_image_ratio
                 and text_len <= scan.max_visible_text
-                and effective_dpi > _SCAN_DPI_THRESHOLD
+                and largest_dpi > _SCAN_DPI_THRESHOLD
             ):
                 scan_pages += 1
 
@@ -198,7 +223,7 @@ def inspect_file(path: Path, scan: ScanOptions, *, safe: bool) -> InspectionResu
         # safe モードでは非可逆を無効
         if safe:
             mode = OptimizationMode.LOSSLESS
-        elif scan_ratio >= scan.scan_page_ratio:
+        elif dpi_target > 0 and max_effective_dpi > dpi_target:
             mode = OptimizationMode.LOSSY
         else:
             mode = OptimizationMode.LOSSLESS

@@ -30,6 +30,8 @@ source deletion, and a GUI are outside KaruFile v1.
 - Root defaults: output `<input>_軽量化`, PDF workers `2`, image workers `4`.
 - Image recipe: long side `1280`, short side `960`, quality `72`, JPEG `4:2:0`, white alpha,
   EXIF Orientation applied, no upscale or crop.
+- PDF placed images: cap effective DPI at `300` from display size, no upscale, keep vector
+  text. Do not use JPEG xres/yres. 1-bit and soft-mask images are left unchanged.
 - Image metadata is best-effort, not a sanitization guarantee.
 - Root dry-run creates no completed PDF/image outputs but may update state and reports.
 - PDF report/state paths are based on the output parent. Image errors use `<output>.image-errors.csv`.
