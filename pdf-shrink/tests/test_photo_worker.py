@@ -66,6 +66,7 @@ def test_photo_compares_original_based_candidates_and_uses_smaller_valid_one(tmp
     result = worker.process_one_file(source, cfg, tmp_path / "temp", Path("qpdf"))
     assert result.status is ProcessStatus.ADOPTED_LOSSY
     assert result.profile == "photo"
+    assert result.photo_dpi == 200
     assert result.candidate_size == 350_000 and result.candidate_saved_bytes == 150_000
     assert result.images_changed == 2
     assert [c.selected for c in result.candidate_details] == [True, False]
@@ -84,6 +85,7 @@ def test_visual_rejection_falls_back_without_hiding_candidate_reason(tmp_path, m
     assert result.status is ProcessStatus.ADOPTED_LOSSLESS
     assert result.mode is OptimizationMode.LOSSLESS
     assert result.decision_reason == "fallback_lossless"
+    assert result.photo_dpi == 200
     assert result.candidate_details[0].reason == "quality_rejected"
     assert result.candidate_details[1].selected
     assert result.candidate_size == 350_000  # Primary attempt, not adopted size.
@@ -96,6 +98,7 @@ def test_small_document_standard_adopts_20k_lossless_gain_but_rejects_lossy_gain
         dst.write_bytes(b"L" * 480_000))
     result = worker.process_one_file(source, cfg, tmp_path / "temp", Path("qpdf"))
     assert result.status is ProcessStatus.ADOPTED_LOSSLESS
+    assert result.photo_dpi is None
     assert result.decision_reason == "fallback_lossless"
     assert result.candidate_details[0].reason == "reduction_below_threshold"
     assert result.candidate_saved_percent == .3
@@ -109,6 +112,7 @@ def test_real_candidate_failure_remains_error_with_recovery_copy(tmp_path, monke
     monkeypatch.setattr(worker.validate, "validate", lambda *a, **k: (False, failure))
     result = worker.process_one_file(source, cfg, tmp_path / "temp", Path("qpdf"))
     assert result.status is ProcessStatus.ERROR
+    assert result.photo_dpi == 200
     assert failure in result.error_message
     assert result.candidate_details[0].reason == "processing_error"
     assert result.output_path.read_bytes() == source.path.read_bytes()
@@ -121,6 +125,29 @@ def test_photo_inspection_failure_is_error_not_unsupported_skip(tmp_path, monkey
     ))
     result = worker.process_one_file(source, cfg, tmp_path / "temp", None)
     assert result.status is ProcessStatus.ERROR
+    assert result.photo_dpi == 200
     assert result.decision_reason == "processing_error"
     assert "placements" in result.error_message
     assert result.output_path.read_bytes() == source.path.read_bytes()
+
+
+@pytest.mark.parametrize("dpi", [150, 180, 300])
+@pytest.mark.parametrize("dry_run", [False, True])
+def test_requested_photo_dpi_reaches_transform_and_all_result_paths(tmp_path, monkeypatch, dpi, dry_run):
+    source, cfg = _case(tmp_path, monkeypatch)
+    cfg = replace(cfg, photo_dpi=dpi, dry_run=dry_run)
+    called = []
+
+    def lossy(src, dst, options):
+        called.append(options.dpi_target)
+        assert options.quality == 80
+        dst.write_bytes(b"J" * 350_000)
+        return 2
+
+    monkeypatch.setattr(worker.transform, "optimize_lossy", lossy)
+    result = worker.process_one_file(source, cfg, tmp_path / "temp", None if dry_run else Path("qpdf"))
+    assert result.photo_dpi == dpi
+    assert called == ([] if dry_run else [dpi])
+    assert result.status is (ProcessStatus.DRY_RUN_LOSSY if dry_run else ProcessStatus.ADOPTED_LOSSY)
+    if dry_run:
+        assert result.output_size is None and not result.output_path.exists()

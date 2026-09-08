@@ -94,3 +94,4 @@ class ProcessResult:
     images_changed: int = 0
     candidate_details: tuple[CandidateResult, ...] = ()
     lossless_jpeg_requested: bool = False
+    photo_dpi: int | None = None

@@ -11,6 +11,8 @@
 - 入力、出力、予定出力、状態DB、レポートの保存先を事前検査する。
 - `pdf-shrink`、`media-shrink-tool`、compact時の `video-shrink` の順にsubprocessで実行する。
 - `--pdf-photo-pattern`をPDF子CLIの`--photo-pattern`へ渡し、レポートのprofileを相対入力パスと照合する。
+- `--pdf-photo-dpi`（150〜300、既定200）をPDF子CLIへ委譲し、photo行の要求DPIを検証する。
+- `--pdf-preview`と反復`--pdf-preview-dpi`をPDF子CLIへ委譲し、独立manifestを照合する。
 - `--pdf-lossless-jpeg`/`--pdf-jpegtran-path`をPDF子CLIへだけ委譲する。既定OFF、パスだけでは有効化しない。
 - 現在実行の原子的レポートを入力・出力の実ファイルへ照合し、統合サマリーと終了コードを返す。
 
@@ -32,12 +34,13 @@ karufile.py
    link解決後の衝突を検査する。
 4. 全対象のstable identityとSHA-256を開始時baselineとして取得する。
 5. PDF/動画状態DBとSQLite sidecar、PDF/動画レポート、画像エラーCSV、normal/dry-run画像manifestの
-   保存先を検査する。
+   保存先を検査する。PDF比較指定時は`pdf-preview/`とnormal/dry-run比較manifestも検査する。
 6. 通常実行だけ出力フォルダーを作り、予定出力と派生保存先を再検査する。
-7. PDFがある場合だけ `pdf-shrink` を実行する。
+7. PDFがある場合、またはPDF比較を指定した場合に `pdf-shrink` を実行する。
 8. 画像が0件の場合も `media-shrink-tool` を実行し、画像エラーCSVと画像manifestの更新を試みる。
 9. compact動画がある場合だけ `video-shrink` を実行する。
 10. 現在実行で更新されたPDF/画像/動画レポートを入力集合と実ファイルへ照合する。
+    PDF比較指定時は独立manifestの設定・対象・HTMLのpath/hashも照合する。
 11. 全入力をbaselineと再照合し、各SHA検証後に全identityを最終確認する。
 12. 取得できた値を統合サマリーへ表示し、全体の終了コードを返す。
 
@@ -49,6 +52,12 @@ karufile.py
   実出力に照合する。一次候補の診断値は完成出力の集計に使用しない。
   可逆採用は16 KiBかつ2%以上。全行の`lossless_jpeg_requested`が`true`/`false`で実行指定に
   一致することを要求し、旧CSVの欠落、不正表記、不一致は拒否する。
+  `photo_dpi`列も必須で、photo行は要求DPIと同じ整数、それ以外は空欄でなければ拒否する。
+- PDF比較manifestは通常`pdf-preview.json`、dry-run`pdf-preview.dry-run.json`を使う。
+  schema 1、requested/dry_run、photo_dpi/preview_dpis、入出力root、現在のphoto行集合と
+  source/output SHA-256・PDF status、比較statusを照合する。normalのHTMLは`pdf-preview/<runid>/index.html`
+  に限定し、保存先の安全性とSHA-256を確認する。古いmanifest、欠落、不整合は終了コード1。
+  比較側ERRORだけで正常PDFの集計を破棄せず、完成PDF結果を保持したまま全体を失敗とする。
 - 画像manifestは入力との1:1対応、予定出力、preset/recipe、source/outputの安定したsizeとSHA-256、
   action別shape、寸法上限、画像エラーCSVとの対応を検査する。統合集計はmanifestのexact totalsを
   使い、子プロセスのstdoutサマリーは使用しない。
@@ -65,6 +74,9 @@ karufile.py
 - PDF、画像、compact動画は同じ出力フォルダーへ入力内の相対構造を維持して保存する。
 - PDFの処理、状態DB、詳細レポートは `pdf-shrink` が所有する。
   写真用の候補生成、300 DPIの細部比較、可逆候補への切り替えもPDF側が担当する。
+  `preview.py`と静的`preview.html`による比較資料・追加DPI候補・独立manifestもPDF側が所有する。
+  比較候補は通常の採用結果・成功stateへ反映しない。HTMLは原本・完成出力・候補PDFとPNGを含む
+  実行フォルダーで持ち運べ、サーバー/CDNを使わない。
 - 画像の処理、再利用判定、画像エラーCSV、normal/dry-run画像manifestは `media-shrink-tool` が所有する。
 - 動画のprobe、変換、検証、state、reportは `video-shrink` が所有する。
 - orchestratorは共通DB、worker pool、structured IPCを追加しない。
@@ -74,11 +86,17 @@ karufile.py
 `*`は`/`にも一致する。空、絶対パス、`..`を含むパターンは引数不正にする。複数指定はOR条件で、
 画像・動画のpresetを変えない。内容の自動分類やDPIによるOCR要否判定は行わない。
 
+写真用DPIの明示指定とpreviewには写真パターンを要求する。preview追加DPIにはpreviewを要求し、
+150〜300の整数を重複除去・降順に正規化し、5種類を超えた場合は引数不正にする。
+写真用DPIは通常処理hashへ含めるが、previewの有無と追加DPIは含めない。
+
 ## 実行環境とdry-run
 
 - 実行環境には `uv` と、lockfileに従って準備した各projectの依存関係が必要である。
 - dry-runは完成PDF・画像・動画と変換用一時ファイルを作らない。
 - dry-runでもPDF状態DB、dry-runレポート、画像エラーCSV、画像dry-run manifestは更新される場合がある。
+- PDF比較のdry-runは要求manifestだけで、HTML・PNG・比較PDF・追加外部tool実行を行わない。
+  対象PDFが0件でも比較指定時は空PDF report/stateとmanifestを用意する。normalは対象なしHTMLも作成する。
 - video dry-runはstate workspace・空DBを初期化する場合があるが、通常実行の成功recordは
   読み書きしない。
 - processorのstdout/stderrは画面へ逐次転送し、memoryには固定長tailだけを保持する。

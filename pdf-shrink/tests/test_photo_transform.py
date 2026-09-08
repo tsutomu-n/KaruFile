@@ -83,6 +83,26 @@ def test_photo_resizes_284_dpi_jpeg_and_preserves_text_and_paths(tmp_path: Path)
         assert original[0].get_drawings() == optimized[0].get_drawings()
 
 
+@pytest.mark.parametrize("pixels,target,expected", [
+    (568, 150, 300), (568, 180, 360), (568, 200, 400),
+    (568, 299, 568), (800, 300, 600), (200, 150, 200),
+])
+def test_selected_photo_dpi_resizes_without_upscale_or_layout_change(
+    tmp_path: Path, pixels: int, target: int, expected: int,
+) -> None:
+    source, candidate = tmp_path / "source.pdf", tmp_path / "candidate.pdf"
+    _make_image_pdf(source, width=pixels)
+    changed = transform.optimize_lossy(source, candidate, config.photo_lossy_options(target))
+    assert changed == int(expected != pixels)
+    assert _images(candidate)[0][:2] == (expected, expected)
+    with fitz.open(source) as original, fitz.open(candidate) as optimized:
+        assert original[0].get_text() == optimized[0].get_text()
+        assert original[0].get_drawings() == optimized[0].get_drawings()
+        assert [i["transform"] for i in original[0].get_image_info()] == [
+            i["transform"] for i in optimized[0].get_image_info()
+        ]
+
+
 @pytest.mark.parametrize("pixel_size", [238, 400])
 def test_photo_preserves_jpeg_at_or_below_200_dpi(
     tmp_path: Path, pixel_size: int,

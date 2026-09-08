@@ -39,6 +39,7 @@ REPORT_COLUMNS = [
     "images_changed",
     "candidate_details",
     "lossless_jpeg_requested",
+    "photo_dpi",
 ]
 
 UNCHANGED_REASON_LABELS = {
@@ -217,6 +218,7 @@ def staged_csv(
                     "images_changed": r.images_changed,
                     "candidate_details": candidate_details_json(r.candidate_details),
                     "lossless_jpeg_requested": "true" if r.lossless_jpeg_requested else "false",
+                    "photo_dpi": r.photo_dpi,
                 })
         yield temp_path
     finally:

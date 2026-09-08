@@ -15,6 +15,9 @@
 --video-workers N        動画の並列処理数。既定値は1
 --preset NAME            standardまたはcompact。既定値はstandard
 --pdf-photo-pattern PATTERN  一致するPDFだけphoto profileを適用。反復可
+--pdf-photo-dpi DPI       photoの目標DPI。150〜300の整数、既定200。photo-pattern必須
+--pdf-preview             写真PDFのローカル比較HTMLを作成。既定OFF、photo-pattern必須
+--pdf-preview-dpi DPI     比較専用DPI候補。150〜300、反復可、最大5種類。preview必須
 --pdf-lossless-jpeg       JPEG可逆候補を追加。既定OFF
 --pdf-jpegtran-path PATH  jpegtran 3.2.0を明示。パスだけでは有効化しない
 --ffmpeg-path PATH       compact動画用ffmpeg。省略時はPATH
@@ -49,6 +52,9 @@
 | dry-runのPDFレポート | `D:\作業\report.dry-run.csv` |
 | PDF状態DB | `D:\作業\.pdf-shrink\state.sqlite3` |
 | PDF一時ファイル | `D:\作業\.pdf-shrink\temp\` |
+| PDF比較資料（指定時のみ） | `D:\作業\pdf-preview\<runid>\index.html`および同じ実行フォルダー内のPDF・PNG |
+| PDF比較manifest | `D:\作業\pdf-preview.json` |
+| PDF比較dry-run manifest | `D:\作業\pdf-preview.dry-run.json` |
 | 画像エラーCSV | `D:\作業\資料_軽量化.image-errors.csv` |
 | 通常実行の画像manifest | `D:\作業\資料_軽量化.image-manifest.csv` |
 | dry-runの画像manifest | `D:\作業\資料_軽量化.image-manifest.dry-run.csv` |
@@ -57,8 +63,11 @@
 | 動画状態DB | `D:\作業\資料_軽量化.video-state\state.sqlite3` |
 | 動画一時ファイル | `D:\作業\資料_軽量化.video-state\temp\` |
 
-PDFレポート、状態DB、一時ファイルはPDFがある場合だけ使用します。PDFがない実行では
-作成・更新せず、以前の実行で同じ場所にあるファイルも削除しません。PDFレポートと状態DBは、
+PDFレポート、状態DB、一時領域はPDFがある場合、または`--pdf-preview`を指定した場合に使用します。
+PDFがなく比較指定もない実行では作成・更新せず、以前のファイルも削除しません。
+比較指定があれば対象0件でも空のPDFレポート・状態領域と比較manifestを用意し、通常実行では
+対象なしの比較HTMLも作成します。対象0件のためだけにqpdf・jpegtranを準備することはありません。
+PDFレポートと状態DBは、
 複数の出力フォルダーが同じ親フォルダーにある場合、同じ保存先を使います。レポートは状態DB
 全体ではなく、現在選択した入力だけを対象に更新します。
 
@@ -255,6 +264,9 @@ PDF dry-runではqpdfを使用しません。
 1つ以上のパターンに一致するPDFにだけ`photo`を適用します。`preset`は`standard`または`compact`
 のままです。一致しないPDF、単独画像・動画のpresetは変わりません。
 
+統合CLIの`--pdf-photo-dpi DPI`、PDF個別CLIの`--photo-dpi DPI`は150〜300の整数で、既定200です。
+明示指定には写真パターンが必要です。写真用DPIを変えてもstandard/compactの固定300 DPIは変わりません。
+
 - 入力フォルダーからの相対パスを対象とし、大文字小文字を区別しません。
 - `\`は`/`へ正規化し、重複する区切りと`.`を除きます。`*`は区切り`/`にも一致します。
   例: `*.pdf`はサブフォルダーを含む全PDF、`写真/*.pdf`は写真フォルダー以下に一致します。
@@ -269,8 +281,8 @@ photoの画像候補条件:
   複雑な色空間、xrefのないinline画像は書き換えません。
 - 同じ画素内容が複数xrefに対応し、画像参照の同定が曖昧な群も保持します。
 - 同じxrefの全配置で、画像のX/Y軸ごとに最小の実効DPIを使います。JPEGのxres/yresは使いません。
-- 200 DPIを超える軸の寸法は`ceil(元pixel寸法 × 200 / 最小実効DPI)`へ縮小します。
-  丸めで200 DPI未満にしないため、目標は約200 DPIです。元から200 DPI以下の軸は寸法を維持し、
+- 目標DPIを超える軸の寸法は`ceil(元pixel寸法 × 目標DPI / 最小実効DPI)`へ縮小します。
+  ceilで丸めるため、実効DPIは目標を少し上回る場合があります。元から目標DPI以下の軸は寸法を維持し、
   拡大しません。どちらの寸法も縮まないJPEGは同寸法再圧縮をしません。
 - 候補JPEG qualityは80です。片軸だけを縮小する場合もJPEG全体を再エンコードします。
 - 元PDF内の対象画像を置換し、ベクター文字・線を維持します。PDF→HTML→PDFは使いません。
@@ -340,13 +352,15 @@ JPEG progressive、非可逆の順です。候補の画質検査や非可逆の�
 新しい内容を誤って処理済みと記録せず、次回に再処理します。ただし、処理中の入力自体は
 ロックしません。出力SHA-256を持たない旧recordは一度再処理します。
 
-出力先、presetで選ばれた画像処理値、写真選択パターンとphoto recipe、tool versionは設定hashに
-含みます。standard/compactまたは写真選択を切り替えると再処理します。候補診断と可逆候補への
-切り替えと任意JPEG可逆候補を導入した現行版は`processing_schema=3`をhashに含み、以前のstateを一度再処理します。
+出力先、presetで選ばれた画像処理値、写真選択パターン、`photo_dpi`とphoto recipe、tool versionは
+設定hashに含みます。standard/compact、写真選択、写真用DPIを切り替えると再処理します。
+現行版は`processing_schema=4`をhashに含み、以前のstateを一度再処理します。
 採用下限、JPEG有効状態、固定レシピ・検証規則、jpegtranのversion・SHA-256もhashへ含めます。
 SQLiteは列の追加移行で旧行を保持します。無効時のjpegtranパスは処理結果へ影響しません。
 SQLiteは診断列を追加して移行し、既存行は削除しません。旧行の未記録候補サイズは`NULL`、
-profileと理由は空文字、候補履歴は空配列として扱います。
+profileと理由は空文字、候補履歴は空配列として扱います。追加列`photo_dpi`は旧行で`NULL`です。
+`preview`と`preview_dpis`は通常処理のhashに含めません。比較資料だけの設定変更は正常PDFの
+再処理を要求せず、現在の原本と実際の完成出力から比較資料を改めて作ります。
 
 ### PDFレポートのstatus
 
@@ -366,7 +380,7 @@ profileと理由は空文字、候補履歴は空配列として扱います。
 PDFレポートの列:
 
 ```text
-source_path,source_size,source_sha256,output_path,output_size,output_sha256,saved_bytes,saved_percent,preset,mode,status,page_count,scan_page_ratio,error_message,profile,decision_reason,candidate_size,candidate_saved_bytes,candidate_saved_percent,images_changed,candidate_details,lossless_jpeg_requested
+source_path,source_size,source_sha256,output_path,output_size,output_sha256,saved_bytes,saved_percent,preset,mode,status,page_count,scan_page_ratio,error_message,profile,decision_reason,candidate_size,candidate_saved_bytes,candidate_saved_percent,images_changed,candidate_details,lossless_jpeg_requested,photo_dpi
 ```
 
 ### PDFレポートの診断列
@@ -379,6 +393,7 @@ JPEG可逆の採用statusは`ADOPTED_LOSSLESS`、採用理由は`adopted_jpeg_lo
 |---|---|
 | `preset` | 起動時に指定した`standard`または`compact` |
 | `profile` | ファイルに適用した`standard`・`compact`・`photo`。統合CLIは相対パスと指定パターンから検証 |
+| `photo_dpi` | photo行の要求目標DPI（150〜300の整数）。原本・可逆採用でも要求値を記録。他profileは空欄。統合CLIは列の欠落・指定不一致を拒否 |
 | `decision_reason` | 最終的な採否理由 |
 | `candidate_size` | 一次候補のbyte数。生成していない場合は空欄 |
 | `candidate_saved_bytes` | 入力byte数−一次候補byte数。増大した候補では負数 |
@@ -418,6 +433,54 @@ JPEG可逆の採用statusは`ADOPTED_LOSSLESS`、採用理由は`adopted_jpeg_lo
 安全上の除外では`encrypted`、`signed`などの検査理由を記録します。最終理由だけで複数候補の
 棄却経緯を説明しきれない場合は`candidate_details`を確認してください。
 
+### 任意のPDF比較HTML
+
+統合CLIの`--pdf-preview`、PDF個別CLIの`--preview`は写真パターン必須で、既定OFFです。
+PDF処理と状態・CSV保存の後に、現在選択したphoto行を対象として独立に比較資料を生成します。
+PDFの`ERROR`・`SKIPPED_*`は描画せず、比較側の`SKIPPED`と理由を記録します。
+対象なしも有効な結果です。
+
+- 比較の基準は原本と**実際の完成出力**です。指定DPIの一次候補が採用されたとは仮定しません。
+- `--pdf-preview-dpi DPI` / `--preview-dpi DPI`は150〜300の整数を反復指定でき、重複を除いて
+  降順へ正規化します。上限は5種類で、preview指定が必要です。追加候補の既定は空です。
+- 各追加DPI候補を原本から独立に生成し、photoの画像条件と既存の構造・画質検証を使います。
+  通常の採用結果・DB・CSVの`candidate_details`へは追加しません。
+- 画質検証を通った比較候補は、容量が増大した場合や削減量が採用条件未満の場合も表示できます。
+  画質棄却は比較候補の`REJECTED`で、比較PDF・描画は公開しません。
+  縮小対象がない候補は`no_image_savings`として原本を表示します。
+  ツール・構造・I/O等の実処理失敗は比較側`ERROR`です。
+- PyMuPDFで全ページを144 DPI RGB、画像の配置領域を300 DPI RGBでPNGへ描画します。
+  各版の同じ領域を同じ寸法で表示し、倍率・スクロール位置を同期します。OCRは行いません。
+- 1冊の上限は100ページ、画像配置領域500件、1描画32,000,000 pixel、全版の累積600,000,000 pixel、
+  300秒です。ページ・領域数を先に確認します。時間上限は呼出し間で確認する協調的な予算であり、
+  実行中の個々の変換・検証・描画を即時停止する保証はありません。上限超過は比較側`ERROR`です。
+- 原本と完成出力のsize・SHA-256・安全な保存先を検査し、比較処理後にも変化がないことを確認します。
+  比較資料は入力・完成出力ツリーと分け、link・junction・hardlinkによる危険な保存先を拒否します。
+- 新しい`<output-parent>/pdf-preview/<runid>/`へ`index.html`、ローカルJS、PNGと比較用PDFを格納します。
+  原本・実際の完成出力もこの実行フォルダーへコピーし、外部サーバー・CDNは使用しません。
+  持ち運びには実行フォルダー全体が必要です。HTML・manifestは検査した一時ファイルから原子的に公開します。
+- 比較資料の失敗は完成PDFのstatusや成功stateを変更せず、終了コード1へ反映します。他PDFは続行します。
+  再実行では前の比較フォルダーを上書きせず、最新manifestだけを更新します。
+- dry-runは要求設定を`pdf-preview.dry-run.json`へ記録し、HTML・PNG・比較PDFを作りません。
+  比較用の外部ツールは実行しません。通常実行の`pdf-preview.json`とは別です。
+
+比較manifestの`schema`は1です。主要フィールド:
+
+| フィールド | 契約 |
+|---|---|
+| `requested` / `dry_run` | `true` / 現在実行のdry-run指定 |
+| `photo_dpi` / `preview_dpis` | 通常写真処理の要求DPI / 降順・重複なしの追加比較DPI配列 |
+| `input_root` / `output_root` | 現在実行の絶対パス |
+| `status` / `errors` | 通常`COMPLETE`、dry-run`DRY_RUN`、失敗`ERROR` / エラー文字列配列 |
+| `run_dir` / `index_path` / `index_sha256` | 比較実行ディレクトリ、HTML、SHA-256。dry-runは全て`null` |
+| `items` | 現在のphoto行と1対1に対応する配列。対象なしは空 |
+
+各itemは入力相対パス、source/outputのパスとSHA-256、`pdf_status`、比較側`status`、`reason`を持ちます。
+比較側のstatusは`READY`・`SKIPPED`・`ERROR`です。`variants`は原本・完成出力・追加DPIごとの
+サイズ、リンク、`READY`・`REJECTED`・`ERROR`と理由、`views`はページ・領域と各PNGへの相対参照を持ちます。
+統合CLIはmanifestが現在実行で更新されたこと、要求設定・photo入力集合・検証済みPDFレポートとの
+整合、HTMLの保存先とSHA-256を照合します。欠落・古いmanifest・不一致・危険なパスは終了コード1です。
+
 ### PDF個別CLI
 
 ```text
@@ -433,6 +496,9 @@ JPEG可逆の採用statusは`ADOPTED_LOSSLESS`、採用理由は`adopted_jpeg_lo
 --qpdf-path PATH      qpdf.exeを明示
 --preset NAME         standardまたはcompact。既定値standard
 --photo-pattern PATTERN  一致するPDFをphoto profileにする入力相対パターン。反復可
+--photo-dpi DPI        photoの目標DPI。150〜300の整数、既定200。photo-pattern必須
+--preview              写真PDFのローカル比較HTMLを作成。既定OFF、photo-pattern必須
+--preview-dpi DPI      比較専用DPI候補。150〜300、反復可、最大5種類。preview必須
 -v, --verbose         詳細ログ
 ```
 

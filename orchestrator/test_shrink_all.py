@@ -82,6 +82,7 @@ def _image_manifest_row(
 
 PDF_REPORT_FIELDS = (
     "lossless_jpeg_requested",
+    "photo_dpi",
     "source_path",
     "source_size",
     "source_sha256",
@@ -106,7 +107,12 @@ def _write_pdf_report(path: Path, rows: list[dict[str, object]]) -> None:
     with path.open("w", newline="", encoding="utf-8") as stream:
         writer = csv.DictWriter(stream, fieldnames=PDF_REPORT_FIELDS)
         writer.writeheader()
-        writer.writerows({"profile": row.get("preset"), "lossless_jpeg_requested": "false", **row} for row in rows)
+        writer.writerows({
+            "profile": row.get("preset"),
+            "lossless_jpeg_requested": "false",
+            "photo_dpi": 200 if row.get("profile") == "photo" else "",
+            **row,
+        } for row in rows)
 
 
 VIDEO_REPORT_FIELDNAMES = (
@@ -1269,7 +1275,7 @@ def test_main_sends_photo_patterns_only_to_pdf_and_matches_each_profile(
     assert calls == ["pdf-shrink", "media-shrink"]
 
 
-@pytest.mark.parametrize("missing", ["profile", "lossless_jpeg_requested"])
+@pytest.mark.parametrize("missing", ["profile", "lossless_jpeg_requested", "photo_dpi"])
 def test_parse_pdf_report_rejects_legacy_report_without_required_column(tmp_path: Path, missing: str) -> None:
     report = tmp_path / "report.csv"
     report.write_text(

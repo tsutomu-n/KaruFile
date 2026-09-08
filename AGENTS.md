@@ -62,11 +62,28 @@ The root CLI's `standard` preset does not discover or copy videos. The standalon
 - Explicit photo selection uses root `--pdf-photo-pattern` / PDF `--photo-pattern`, repeatable input-relative
   globs. Match case-insensitively, normalize separators, allow `*` across directories, reject empty/absolute/`..`
   patterns, and reject photo selection with PDF `--safe`. Do not infer photo content or OCR need from DPI.
-- Selected PDFs use `photo` profile: only simple 8-bit DeviceRGB/DeviceGray DCT JPEGs, quality `80`, about
-  `200` DPI. Preserve non-JPEG, 1-bit, masks, complex color/Decode transforms, and ambiguous image-reference
+- Selected PDFs use `photo` profile: only simple 8-bit DeviceRGB/DeviceGray DCT JPEGs, quality `80`, and
+  root `--pdf-photo-dpi` / PDF `--photo-dpi` integer `150` to `300`, default `200`. Explicit DPI requires
+  photo patterns and does not change the standard/compact `300` DPI target.
+  Preserve non-JPEG, 1-bit, masks, complex color/Decode transforms, and ambiguous image-reference
   groups. Photo placement inspection failures are `ERROR`. Use the minimum placement
-  DPI per shared-xref axis and ceil pixel dimensions; keep axes at or below 200 DPI unchanged and do not
+  DPI per shared-xref axis and ceil pixel dimensions; keep axes at or below the target DPI unchanged and do not
   recompress when neither dimension shrinks. Never upscale or rebuild PDF through HTML.
+- Optional root `--pdf-preview` / PDF `--preview` requires photo patterns and defaults OFF. The PDF processor
+  creates static local HTML/JS and PNGs comparing originals with actual completed outputs at matched scale.
+  Repeated `--pdf-preview-dpi` / `--preview-dpi` accepts 150 to 300, at most five distinct values, deduplicated
+  in descending order. Generate those comparison-only candidates independently from the original;
+  they never change normal candidate selection or successful processing state.
+  Bundle copied original/output/candidate PDFs and images under `<output-parent>/pdf-preview/<runid>/`.
+  Keep the entire run directory for portable viewing; no server or CDN is required.
+  Preview limits per PDF: 100 pages, 500 image regions, 32 MP per render, 600 MP cumulative, 300 seconds
+  cooperative budget. Render whole pages at 144 DPI and image regions at 300 DPI RGB. Preview failures
+  remain separate ERRORs with exit 1, preserve completed PDF results, and continue independent files.
+  Write `pdf-preview.json` or `pdf-preview.dry-run.json` in the output parent. Dry-run writes requests only,
+  with no HTML, PNG, comparison PDF, or additional external-tool execution.
+- PDF processing schema is `4`; include `photo_dpi` in the processing hash and retain old DB rows through
+  additive migration. CSV/DB `photo_dpi` is the requested integer for photo rows and empty/NULL otherwise;
+  root rejects missing or mismatched values. Preview options are excluded from the processing hash.
 - Photo candidates add bounded 300 DPI changed-placement validation; this does not guarantee readability
   or OCR accuracy. Photo lossy adoption requires `64 KiB` and `5%`; other lossy candidates require `256 KiB`
   and `5%`, lossless candidates `16 KiB` and `2%`. The below-256-KiB PDF skip remains in every profile.

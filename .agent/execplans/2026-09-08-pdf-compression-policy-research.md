@@ -635,3 +635,59 @@ PDF圧縮/JPEG可逆/層別圧縮の概念語で検索後、1回だけcodec名�
 - 現行コードとPilot CSVを再読込し数値再計算。独立agentが入力5件と出力5件の現在SHA-256をCSVと照合し全て一致。
 - 製品コード・依存関係・PDF出力は変更なし。JPEG/JPX/MRC/Ghostscriptの追加実行結果はない。過去438テスト成功を今回の新方式の検証成功とは扱わない。
 - 調査記録の`git diff --check`成功。次の最小行動は写真2冊のJPEG可逆最適化を原本から独立試験し、元画像と一致かつ実際に小さい候補だけを評価すること。実装依頼はまだ受けていない。
+## 追加実装: 選択DPIと静的目視比較（2026-09-09）
+
+利用者は150 DPIの実資料比較を許容し、CLIだけの通常処理と任意の比較HTMLを同じCLIで提供する方針を承認した。HTMLは生成済み画像を表示する静的HTMLとJavaScriptとし、HTMX・サーバー・CDNは追加しない。
+
+### CP-014: 写真DPIと処理状態
+- Status: Complete
+- Objective: 明示写真指定で150〜300の整数DPIを選択し、既定200・品質80・非写真300を維持する。
+- Actions: PDF/root CLI、型付き設定、追加DB移行、全CSVのphoto_dpi、処理schema4/hashと照合を同時更新する。
+- Validation: 境界、既定/明示指定、旧DB保持、hash再処理、古い/不一致CSV拒否を合成試験する。
+- Failure / Recovery: 非写真のrecipeや安全性検査を変更しない。既存記録を削除せず再処理する。
+
+### CP-015: 任意比較HTML
+- Status: Complete
+- Objective: 原本と実際の完成出力を同倍率で比較し、明示した最大5種類の追加DPIも選択できる。
+- Actions: --pdf-preview / --preview、反復可能な--pdf-preview-dpi / --preview-dpiを追加。通常report確定後に独立bundleを生成する。追加候補は原本から既存photo生成/検証で作り、採用選択には影響させない。
+- Contract: <PDF output parent>/pdf-preview/<new run id>/index.htmlとpdf-preview[.dry-run].json。既定比較は原本と実際出力のみ。dry-runは要求manifestのみ。比較設定は通常処理hashから除外し、検証済み出力を再利用できる。
+- Validation: 候補棄却/失敗、空対象、原本/出力同一性、別run保存、dry-run、HTML escaping、同倍率/同期スクロール/回転ページ、manifest照合。
+- Limits: 1冊100ページ、500配置領域、1描画32 MP、累積600 MP、300秒協調的上限。全ページ144 DPI RGB、配置領域300 DPI。
+- Failure / Recovery: 比較失敗は独立ERROR・終了1として正常PDFを保持し、他ファイルを続行する。リンク/hardlink/入力や出力との衝突を拒否する。原本、既存出力、以前の比較bundleを変更しない。
+
+### CP-016: 文書・実資料・最終検証
+- Status: In progress（全テスト・実資料・比較HTML確認済み、文書/構成図の最終同期中）
+- Objective: CLI、文書、構成図、合成/実資料の証拠を一致させる。
+- Actions: MANUAL/REFERENCE/README/AGENTS/構成図を同期。archifyで生成・検証・light/dark目視。全suite、compileall、両CLI help、diff check。実資料5冊を新規別出力で通常/比較/再実行/dry-runし入力と旧出力hash保持を確認する。
+- Completion: 原本/実際出力/複数DPIのHTMLを開き表示と操作を確認。結果、所要時間、採用理由と残る限界を記録する。commit/pushなし。
+- Scope: 同一デコーダ描画は全ビューアー互換性やOCR精度保証とは扱わない。以前のCP-009〜011のEdge確認未了は別途残す。
+
+### CP-014〜016 実装・検証記録（2026-09-09）
+
+- 基準revision: `4e5f135360c179aa08d15bf2b9a5831475f901f4`と今回working tree。利用者の既存出力や無関係な変更の巻き戻し、commit/pushは行っていない。
+- PDF `RunConfig`/CLI、root CLI、DB追加列/CSV `photo_dpi`、schema4の再開判定を実装。preview有無/追加DPIは処理hashに含めない。通常の候補診断契約と可逆優先のサイズ選択を維持。
+- `pdf_shrink.preview`と同梱`preview.html`を追加。通常PDF報告確定後に、原本/実際出力のコピーと追加候補/PNGを新規bundleへ保存する。重い処理の間で予算を検査し、比較エラーでも確定PDF状態を保持する。
+- 独立レビューで派生write検査の親root包含と、完成PDF自身を保護集合に含めた自己同一性拒否を発見して修正。兄弟入出力と完成PDF再利用の回帰試験を追加。ページ/領域上限を全画像検査・コピーより前へ移した。
+- 最終全suite: PDF **290**（実jpegtran4件含めskipなし）、画像 **64**、動画 **104**、orchestrator **230**、合計 **688 passed**。規定の全compileall、root `uv run --script karufile.py --help`、PDF `run --help`、`git diff --check`成功。
+- wheel/sdist build成功。wheelの`preview.py`/`preview.html`が現行sourceとbyte一致し、sdistにもHTMLを同梱。追加Python/JavaScript依存なし。wheel SHA-256 `2a96c5db561fc9e30fafff319878de4c3517df6b74b6f4df020fdcd7dd2d7970`。
+- 実資料記録: `C:\Users\tn\Downloads\KaruFile_DPI_CLI検証_20260909\summary.json`。使用qpdf12.3.2、PyMuPDF1.28.2。写真patternは`2.*.pdf`/`5.*.pdf`、通常目標150、standard、jpegtran追加なし。
+
+| 実CLI | 時間 | 結果 |
+|---|---:|---|
+| 通常150 DPI、5冊 | 14.949秒 | exit0、photo2冊と可逆3冊を採用 |
+| 同じ出力に原本/実際出力の比較を追加 | 14.730秒 | exit0、5冊のSHA・mtime・DB全行(processed_at含む)不変 |
+| 同じ出力に200/180/150比較を追加 | 94.431秒 | exit0、5冊再利用、旧比較bundle保持 |
+| 別出力でdry-run比較 | 2.283秒 | exit0、要求manifestのみ、完成PDF/HTML/run_dirなし |
+
+| 実資料 | 原本bytes | 採用bytes | 採用 |
+|---|---:|---:|---|
+| 1.現地調査報告書 | 340536 | 279191 | ADOPTED_LOSSLESS |
+| 2.現地写真 | 3556324 | 1588343 | ADOPTED_LOSSY、photo150 |
+| 3.試料採取箇所 | 588304 | 570958 | ADOPTED_LOSSLESS |
+| 4.アスベスト分析報告書 | 1517266 | 1477813 | ADOPTED_LOSSLESS |
+| 5.採取写真 | 2539782 | 1228846 | ADOPTED_LOSSY、photo150 |
+
+- 原本5冊と以前の出力548ファイル、計553ファイルのSHA-256がbaselineと完全一致。写真2冊の17ページ+48配置領域、全65viewで実際出力と独立150 DPI候補のPNG SHA-256が完全一致。
+- 比較HTML: `normal150\pdf-preview\20260908T224519Z-c9296a09a162\index.html`（上記実資料parent配下）。Chromeで2資料×2範囲×4候補×3倍率(50/100/250%)の48条件を操作し、全条件で画像ロードと左右寸法・上端一致。全65viewの切替ロードも成功。250%拡大の双方向スクロール位置一致を確認。
+- desktopと狭い画面（実測innerWidth502px）を目視確認し、ページ横overflowなし。HTMLは外部script/iframe/通信コードなし。接続ブラウザーにfile URL同一origin制限のconsole errorが1件記録されたが、画像ロード・操作失敗は再現せず、console無エラーとは報告しない。
+- 画質許容は利用者が事前比較で判断した写真2冊の結果であり、全資料/OCR/全PDF viewerへの保証には拡張しない。比較は静的な表示資料で、HTMLから圧縮を再実行しない。

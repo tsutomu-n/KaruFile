@@ -38,6 +38,9 @@ uv run --project pdf-shrink pdf-shrink run `
 | `--workers N` | 並列プロセス数。既定値は2、最小値は1 |
 | `--preset standard|compact` | 圧縮プリセット。既定値は `standard` |
 | `--photo-pattern PATTERN` | 一致するPDFだけphoto profileにする入力相対パターン。反復可 |
+| `--photo-dpi DPI` | photoの目標DPI。150〜300の整数、既定200。photo-pattern必須 |
+| `--preview` | 原本と実際の完成出力を比べるローカルHTMLを作成。既定OFF、photo-pattern必須 |
+| `--preview-dpi DPI` | 比較専用DPI候補。150〜300、反復可、最大5種類。preview必須 |
 | `--dry-run` | 出力PDFを作らず、判定結果を記録 |
 | `--safe` | 非可逆処理を無効化し、可逆候補だけを作成 |
 | `--lossless-jpeg` | JPEG可逆候補を追加。既定OFF、safeと併用可能 |
@@ -72,6 +75,9 @@ uv run --project pdf-shrink pdf-shrink run --input "C:\作業\PDF" --output "C:\
 | dry-runのレポート | `C:\作業\report.dry-run.csv` |
 | 状態DB | `C:\作業\.pdf-shrink\state.sqlite3` |
 | 一時ファイル | `C:\作業\.pdf-shrink\temp\` |
+| 比較資料（指定時のみ） | `C:\作業\pdf-preview\<runid>\index.html`と同じ実行フォルダー内のPDF・PNG |
+| 比較manifest | `C:\作業\pdf-preview.json` |
+| 比較dry-run manifest | `C:\作業\pdf-preview.dry-run.json` |
 
 dry-runでも状態DBと `report.dry-run.csv` を更新する場合があります。完成PDFと処理用の
 一時PDFは作りません。レポートは状態DB全体ではなく、現在選択した入力だけを対象にします。
@@ -79,9 +85,31 @@ dry-runでも状態DBと `report.dry-run.csv` を更新する場合がありま�
 状態DBには入力と完成出力のSHA-256を保存します。処理中に入力または出力が変わった場合は、
 新しい内容を誤って処理済みと記録せず、次回に再処理します。ただし、処理中の入力自体は
 ロックしません。
-プリセットの画像処理値、写真選択パターンとphoto recipeは再開判定用の設定ハッシュに含みます。
-任意JPEG可逆と採用下限変更を導入した版は`processing_schema=3`を含むため、以前のstateも
-一度再処理します。状態DBは診断列の追加で移行し、既存行は削除しません。
+プリセットの画像処理値、写真選択パターン、`photo_dpi`とphoto recipeは再開判定用の設定ハッシュに
+含みます。現行版は`processing_schema=4`を含むため、以前のstateも一度再処理します。
+状態DBは`photo_dpi`などの列追加で移行し、既存行は削除しません。
+`preview`・`preview_dpis`は通常処理のhashから除外し、比較資料だけの変更では正常PDFを再処理しません。
+
+## 任意の写真比較
+
+```powershell
+uv run --project pdf-shrink pdf-shrink run --input "C:\作業\PDF" --output "C:\作業\比較\PDF_軽量化" --photo-pattern "*写真*.pdf" --photo-dpi 200 --preview --preview-dpi 180 --preview-dpi 150
+```
+
+`--preview`は通常PDF処理後に、原本と実際の完成出力をローカルHTMLで比較できる資料を作ります。
+`--preview-dpi`は重複を除いて降順に揃えた最大5種類です。原本から独立に比較候補を作り、
+通常の採用結果・成功state・CSV候補履歴へ影響させません。画質検証に合格した候補は容量が増大しても
+表示でき、画質棄却は`REJECTED`と理由だけを残します。通常PDFの`ERROR`・`SKIPPED_*`は描画しません。
+
+全ページ144 DPI・画像領域300 DPIのRGB PNGを、倍率とスクロール位置を同期して表示します。
+上限は1冊100ページ、500画像配置、1描画32 MP、全版累積600 MP、300秒の協調的予算です。
+超過・処理失敗は比較側`ERROR`として終了コード1へ反映し、完成PDFの結果を保持して他PDFを続行します。
+
+新しい`pdf-preview/<runid>/`に原本・完成出力・候補PDFもコピーします。サーバー・CDNは不要です。
+保存・共有には`index.html`だけでなく実行フォルダー全体を使います。結果は出力の親の
+`pdf-preview.json`へ記録します。dry-runは`pdf-preview.dry-run.json`だけで、HTML・PNG・比較PDFは作りません。
+PDFが0件でも比較指定時は空report・状態領域・manifestを用意し、通常実行では対象なしHTMLを作ります。
+仕様の詳細は[PDF比較HTML](../docs/REFERENCE.md#任意のpdf比較html)を参照してください。
 
 ## 圧縮対象の判定
 
@@ -112,16 +140,17 @@ dry-runでも状態DBと `report.dry-run.csv` を更新する場合がありま�
 - 可視テキストが多くても、300DPI超の画像があれば非可逆候補を作ります。
 - `--safe` では可逆候補だけを作ります。qpdf単独に加え、明示時のみJPEG可逆候補も比較します。
 
-photoでは単純な8bit DeviceRGB/DeviceGrayのDCT JPEGだけを約200 DPI・quality 80へ縮小します。
+photoでは単純な8bit DeviceRGB/DeviceGrayのDCT JPEGだけを指定DPI・quality 80へ縮小します。
+`--photo-dpi`は150〜300の整数で既定200です。明示指定には`--photo-pattern`が必要です。
 非JPEG、1bit、Mask/SMask、Decode/DecodeParms、複雑な色空間、画像参照の同定が曖昧な群は
 書き換えません。photoで配置の検査処理が失敗した場合は`ERROR`にします。同じxrefの
-全配置から軸ごとの最小DPIを求め、200 DPI超の軸を`ceil(元pixel寸法 × 200 / 最小DPI)`へ縮小し、
-200 DPI以下の軸は寸法を維持します。どちらも縮まなければ再圧縮せず、拡大もしません。
+全配置から軸ごとの最小DPIを求め、目標DPI超の軸を`ceil(元pixel寸法 × 目標DPI / 最小DPI)`へ縮小し、
+目標DPI以下の軸は寸法を維持します。どちらも縮まなければ再圧縮せず、拡大もしません。
 ベクター文字・線を維持し、PDF→HTML→PDFによる再構成は行いません。
 
 非可逆候補を作る場合は、元PDFから可逆候補も作って比較します。
 可逆候補または原本を採用した出力には、入力由来の高DPI画像が残ることがあります。
-300 DPI・200 DPIは検証前候補の目標であり、画質gateを無効化する強制上限ではありません。
+300 DPIや写真用DPIは検証前候補の目標であり、画質gateを無効化する強制上限ではありません。
 
 ## 候補の検証と採用
 
@@ -177,15 +206,17 @@ I/Oの失敗は回復コピーが成功しても`ERROR`です。出力は同じ�
 | `ERROR` | 処理に失敗。可能な場合は原本を復旧コピー |
 
 現在選択した入力に `ERROR` が1件以上あれば終了コードは `1`、それ以外は `0` です。
-入力・出力検査、qpdf準備、レポート更新の失敗も `1`、不正な数値オプションは `2` です。
+入力・出力検査、qpdf準備、レポート更新、比較資料生成の失敗も `1`、不正な数値オプションは `2` です。
 
 レポート列:
 
 ```text
-source_path,source_size,source_sha256,output_path,output_size,output_sha256,saved_bytes,saved_percent,preset,mode,status,page_count,scan_page_ratio,error_message,profile,decision_reason,candidate_size,candidate_saved_bytes,candidate_saved_percent,images_changed,candidate_details,lossless_jpeg_requested
+source_path,source_size,source_sha256,output_path,output_size,output_sha256,saved_bytes,saved_percent,preset,mode,status,page_count,scan_page_ratio,error_message,profile,decision_reason,candidate_size,candidate_saved_bytes,candidate_saved_percent,images_changed,candidate_details,lossless_jpeg_requested,photo_dpi
 ```
 
 `profile`はファイルに適用した`standard`・`compact`・`photo`です。`preset`は起動時の値を維持します。
+`photo_dpi`はphoto行の要求目標DPIで、それ以外はCSVで空欄、DBで`NULL`です。原本・可逆候補を
+採用しても要求値を維持します。統合CLIは旧CSVでの列欠落、不正値、指定不一致を拒否します。
 `candidate_*`と`images_changed`は一次候補の診断値です。非可逆候補を試した場合はそれを一次とし、
 可逆候補を後から採用しても記録を置き換えません。`candidate_saved_percent`と`saved_percent`は
 0.05が5%の割合です。候補未生成のサイズは空欄であり、0 byteとは異なります。
@@ -212,6 +243,7 @@ DBは旧行を保持した列追加移行。hashには採用下限、JPEG有効�
 | `inspect_pdf.py` | 安全性検査とスキャン主体判定 |
 | `transform.py` | 可逆・非可逆候補の生成 |
 | `lossless_jpeg.py` | 任意jpegtran検出、JPEG可逆stream生成、原寸画素・完全描画検査 |
+| `preview.py` / `preview.html` | 任意のローカル比較資料生成・比較専用候補・独立manifest / 静的viewer |
 | `validate.py` | 元PDFと候補の構造・内容比較 |
 | `output.py` | 原本または検証済み候補の原子的な公開 |
 | `state.py` | SQLite永続化と再開判定 |

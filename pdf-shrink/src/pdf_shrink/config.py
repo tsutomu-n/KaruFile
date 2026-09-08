@@ -12,6 +12,34 @@ from typing import Any
 
 PDF_IMAGE_DPI_TARGET = 300
 PHOTO_IMAGE_DPI_TARGET = 200
+PHOTO_DPI_MIN = 150
+PHOTO_DPI_MAX = 300
+PREVIEW_MAX_DPIS = 5
+
+
+def validate_photo_dpi(value: Any, *, option: str = "--photo-dpi") -> int:
+    if (
+        isinstance(value, bool) or not isinstance(value, int)
+        or not PHOTO_DPI_MIN <= value <= PHOTO_DPI_MAX
+    ):
+        raise ValueError(
+            f"{option} must be an integer between {PHOTO_DPI_MIN} and {PHOTO_DPI_MAX}"
+        )
+    return value
+
+
+def normalize_preview_dpis(values: Any) -> tuple[int, ...]:
+    try:
+        values = tuple(values)
+    except TypeError as exc:
+        raise ValueError("--preview-dpi must contain integer DPI values") from exc
+    normalized = tuple(sorted(
+        {validate_photo_dpi(value, option="--preview-dpi") for value in values},
+        reverse=True,
+    ))
+    if len(normalized) > PREVIEW_MAX_DPIS:
+        raise ValueError(f"--preview-dpi supports at most {PREVIEW_MAX_DPIS} distinct DPI values")
+    return normalized
 
 
 class CompressionPreset(StrEnum):
@@ -45,10 +73,14 @@ class LossyOptions:
     algorithm: str = "placed-effective-dpi-v4-axis-safe-decode-fixed"
 
     def __post_init__(self) -> None:
-        target = PHOTO_IMAGE_DPI_TARGET if self.photo_mode else PDF_IMAGE_DPI_TARGET
-        if self.dpi_target != target:
+        if self.photo_mode:
+            validate_photo_dpi(self.dpi_target)
+        elif (
+            isinstance(self.dpi_target, bool) or not isinstance(self.dpi_target, int)
+            or self.dpi_target != PDF_IMAGE_DPI_TARGET
+        ):
             raise ValueError(
-                f"PDF image DPI target is fixed at {target} for this profile"
+                f"PDF image DPI target is fixed at {PDF_IMAGE_DPI_TARGET} for this profile"
             )
         if not 0 <= self.jpeg_recompress_min_percent < 1:
             raise ValueError("JPEG recompression minimum must be between 0 and 1")
@@ -66,14 +98,14 @@ def lossy_options_for_preset(
     return LossyOptions()
 
 
-def photo_lossy_options() -> LossyOptions:
+def photo_lossy_options(dpi: int = PHOTO_IMAGE_DPI_TARGET) -> LossyOptions:
     """Explicitly selected viewing copies; never infer OCR need from DPI."""
     return LossyOptions(
-        dpi_target=PHOTO_IMAGE_DPI_TARGET,
+        dpi_target=dpi,
         quality=80,
         photo_mode=True,
         lossless=False,
-        algorithm="photo-jpeg-200dpi-min-placement-v1",
+        algorithm="photo-jpeg-selectable-dpi-min-placement-v2",
     )
 
 
@@ -131,6 +163,9 @@ class RunConfig:
     pymupdf_version: str = ""
     qpdf_version: str = ""
     photo_patterns: tuple[str, ...] = ()
+    photo_dpi: int = PHOTO_IMAGE_DPI_TARGET
+    preview: bool = False
+    preview_dpis: tuple[int, ...] = ()
     lossless_jpeg: bool = False
     jpegtran_path: Path | None = None
     jpegtran_version: str = ""
@@ -138,6 +173,16 @@ class RunConfig:
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "photo_patterns", normalize_photo_patterns(self.photo_patterns))
+        validate_photo_dpi(self.photo_dpi)
+        object.__setattr__(self, "preview_dpis", normalize_preview_dpis(self.preview_dpis))
+        if not isinstance(self.preview, bool):
+            raise ValueError("--preview must be a boolean")
+        if self.photo_dpi != PHOTO_IMAGE_DPI_TARGET and not self.photo_patterns:
+            raise ValueError("--photo-dpi requires --photo-pattern")
+        if self.preview and not self.photo_patterns:
+            raise ValueError("--preview requires --photo-pattern")
+        if self.preview_dpis and not self.preview:
+            raise ValueError("--preview-dpi requires --preview")
         if self.safe and self.photo_patterns:
             raise ValueError("--safe cannot be combined with --photo-pattern")
 
@@ -151,6 +196,9 @@ def default_config(
     output_dir: Path | str | None = None,
     preset: CompressionPreset | str = CompressionPreset.STANDARD,
     photo_patterns: tuple[str, ...] = (),
+    photo_dpi: int = PHOTO_IMAGE_DPI_TARGET,
+    preview: bool = False,
+    preview_dpis: tuple[int, ...] = (),
 ) -> RunConfig:
     selected_preset = CompressionPreset(preset)
     input_path = Path(input_dir).resolve()
@@ -165,6 +213,9 @@ def default_config(
         preset=selected_preset,
         lossy=lossy_options_for_preset(selected_preset),
         photo_patterns=photo_patterns,
+        photo_dpi=photo_dpi,
+        preview=preview,
+        preview_dpis=preview_dpis,
     )
 
 
@@ -194,6 +245,10 @@ def build_config(args: Any) -> RunConfig:
     safe = bool(getattr(args, "safe", False))
     if safe and preset is CompressionPreset.COMPACT:
         raise ValueError("--safe cannot be combined with --preset compact")
+    photo_patterns = tuple(getattr(args, "photo_pattern", None) or ())
+    photo_dpi = getattr(args, "photo_dpi", None)
+    if photo_dpi is not None and not photo_patterns:
+        raise ValueError("--photo-dpi requires --photo-pattern")
 
     return RunConfig(
         input_dir=input_dir,
@@ -206,7 +261,10 @@ def build_config(args: Any) -> RunConfig:
         retry_errors=bool(getattr(args, "retry_errors", False)),
         qpdf_path=Path(qpdf_arg).expanduser().resolve() if qpdf_arg else None,
         lossy=lossy_options_for_preset(preset),
-        photo_patterns=tuple(getattr(args, "photo_pattern", None) or ()),
+        photo_patterns=photo_patterns,
+        photo_dpi=PHOTO_IMAGE_DPI_TARGET if photo_dpi is None else photo_dpi,
+        preview=bool(getattr(args, "preview", False)),
+        preview_dpis=tuple(getattr(args, "preview_dpi", None) or ()),
         lossless_jpeg=bool(getattr(args, "lossless_jpeg", False)),
         jpegtran_path=Path(args.jpegtran_path).expanduser().resolve() if getattr(args, "jpegtran_path", None) else None,
     )
@@ -222,7 +280,7 @@ def config_for_path(cfg: RunConfig, relative_path: Path) -> RunConfig:
         return cfg
     return replace(
         cfg,
-        lossy=photo_lossy_options(),
+        lossy=photo_lossy_options(cfg.photo_dpi),
         reduction=replace(cfg.reduction, lossy_min_bytes=64 * 1024),
     )
 
@@ -237,14 +295,15 @@ def config_hash(cfg: RunConfig) -> str:
         lossy.pop("recompress_existing_jpeg")
         lossy.pop("jpeg_recompress_min_percent")
     relevant = {
-        # Diagnostics and multi-candidate selection must not reuse legacy results.
-        "processing_schema": 3,
+        # Legacy rows lack the requested photo DPI and must run once again.
+        "processing_schema": 4,
         "lossless_jpeg": cfg.lossless_jpeg,
         "jpeg_recipe": RECIPE,
         "jpegtran_version": cfg.jpegtran_version if cfg.lossless_jpeg else "",
         "jpegtran_sha256": cfg.jpegtran_sha256 if cfg.lossless_jpeg else "",
         "photo_patterns": cfg.photo_patterns,
-        "photo_recipe": asdict(photo_lossy_options()) if cfg.photo_patterns else None,
+        "photo_dpi": cfg.photo_dpi,
+        "photo_recipe": asdict(photo_lossy_options(cfg.photo_dpi)) if cfg.photo_patterns else None,
         # DBの主キーは入力パスだけなので、出力先も再開条件へ含める。
         "output_dir": str(cfg.output_dir),
         "safe": cfg.safe,
@@ -256,5 +315,7 @@ def config_hash(cfg: RunConfig) -> str:
         "pymupdf_version": cfg.pymupdf_version,
         "qpdf_version": cfg.qpdf_version,
     }
+    # Preview is a separate artifact: requesting it must reuse valid PDF output.
+    # Neither preview nor preview_dpis participates in the processing hash.
     data = json.dumps(relevant, sort_keys=True, ensure_ascii=False)
     return hashlib.sha256(data.encode("utf-8")).hexdigest()

@@ -11,7 +11,7 @@
 | [2026-08-20-pdf-300dpi-placed-images.md](2026-08-20-pdf-300dpi-placed-images.md) | 完了・履歴 | PDF配置画像を300DPIへ縮小 |
 | [2026-09-04-compact-preset.md](2026-09-04-compact-preset.md) | 中断・再開待ち | compact presetと安全な動画処理 |
 | [2026-09-04-compact-preset-handoff.md](2026-09-04-compact-preset-handoff.md) | 再開用 | 中断時点、残るP2、検証証拠、再開手順 |
-| [2026-09-08-pdf-compression-policy-research.md](2026-09-08-pdf-compression-policy-research.md) | CP-001〜008・CP-012〜013完了、CP-009〜011実装・検証済／Edge表示確認待ち | 写真profile、任意JPEG可逆、16 KiB採用下限、200/180/150 DPI比較 |
+| [2026-09-08-pdf-compression-policy-research.md](2026-09-08-pdf-compression-policy-research.md) | CP-014〜016実装・最終検証中。CP-001〜008・CP-012〜013完了、CP-009〜011実装・検証済／Edge表示確認待ち | 写真DPIの150〜300選択と任意の静的HTML比較、写真profile、任意JPEG可逆、16 KiB採用下限 |
 
 PDF責務分離の完了記録は
 [pdf-shrink側のExecPlan](../../pdf-shrink/.agent/execplans/2026-08-13-refactor-responsibilities.md)にあります。

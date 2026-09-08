@@ -200,6 +200,12 @@ def _validate_workspace_paths(
         ("report", work_root / "report.csv"),
         ("dry-run report", work_root / "report.dry-run.csv"),
     ]
+    if cfg.preview:
+        derived.extend([
+            ("preview directory", work_root / "pdf-preview"),
+            ("preview report", work_root / "pdf-preview.json"),
+            ("dry-run preview report", work_root / "pdf-preview.dry-run.json"),
+        ])
     derived.extend(
         (
             "per-source temporary directory",
@@ -252,6 +258,7 @@ def _worker_crash_result(
     exc: BaseException,
 ) -> ProcessResult:
     destination = source.output_path(cfg.output_dir)
+    profile = profile_for_path(cfg, source.relative_path)
     error_message = f"{exc}\n{traceback.format_exc()}"
     recovered_size: int | None = None
     if (
@@ -283,9 +290,10 @@ def _worker_crash_result(
         saved_bytes=0,
         saved_percent=0.0,
         error_message=error_message,
-        profile=profile_for_path(cfg, source.relative_path),
+        profile=profile,
         decision_reason="processing_error",
         lossless_jpeg_requested=cfg.lossless_jpeg,
+        photo_dpi=cfg.photo_dpi if profile == "photo" else None,
     )
 
 
@@ -374,7 +382,16 @@ def run(cfg: RunConfig) -> int:
         return 1
 
     try:
-        cfg, qpdf_exe = _prepare_tools(cfg)
+        if sources:
+            cfg, qpdf_exe = _prepare_tools(cfg)
+        else:
+            # Empty runs still publish current empty reports, without resolving,
+            # executing, or downloading optional external tools.
+            cfg = replace(
+                cfg, pymupdf_version="", qpdf_version="",
+                jpegtran_version="", jpegtran_sha256="",
+            )
+            qpdf_exe = None
     except Exception as exc:
         logger.error("Failed to prepare PDF tools: %s", exc)
         return 1
@@ -482,4 +499,18 @@ def run(cfg: RunConfig) -> int:
         conn.close()
     report.print_summary(records, elapsed_seconds=elapsed)
     logger.info("Report saved to %s", paths.report)
+    if cfg.preview:
+        # Preview is a separate publication after PDF state/report commit. Its
+        # failure must never roll back already verified normal PDF results.
+        try:
+            from . import preview
+
+            if not preview.generate(cfg, sources, records, qpdf_exe, protected_sources):
+                logger.error("PDF preview failed; completed PDF report/state are retained")
+                return 1
+        except Exception as exc:
+            logger.error(
+                "PDF preview failed; completed PDF report/state are retained: %s", exc,
+            )
+            return 1
     return 1 if any(record.status == ProcessStatus.ERROR for record in records) else 0

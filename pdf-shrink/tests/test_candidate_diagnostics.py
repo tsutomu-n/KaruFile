@@ -54,6 +54,7 @@ def test_diagnostics_migration_preserves_legacy_rows_and_is_repeatable(tmp_path:
             assert record.images_changed == 0
             assert record.candidate_details == ()
             assert record.lossless_jpeg_requested is False
+            assert record.photo_dpi is None
         finally:
             conn.close()
 
@@ -99,6 +100,7 @@ def test_candidate_diagnostics_survive_state_and_csv_without_replacing_output_me
         images_changed=2,
         candidate_details=details,
         lossless_jpeg_requested=requested,
+        photo_dpi=180,
     )
     database = tmp_path / "state.sqlite3"
     conn = state.init_db(database)
@@ -116,6 +118,7 @@ def test_candidate_diagnostics_survive_state_and_csv_without_replacing_output_me
         assert record is not None
         assert record.profile == "photo"
         assert record.lossless_jpeg_requested is requested
+        assert record.photo_dpi == 180
         assert record.decision_reason == "quality_rejected"
         assert record.candidate_size == candidate_size
         assert record.candidate_saved_bytes == candidate_saved
@@ -138,6 +141,7 @@ def test_candidate_diagnostics_survive_state_and_csv_without_replacing_output_me
         assert row["status"] == "UNCHANGED"
         assert row["profile"] == "photo"
         assert row["lossless_jpeg_requested"] == ("true" if requested else "false")
+        assert row["photo_dpi"] == "180"
         assert row["decision_reason"] == "quality_rejected"
         assert row["candidate_size"] == (str(candidate_size) if candidate_size is not None else "")
         assert row["candidate_saved_bytes"] == (str(candidate_saved) if candidate_saved is not None else "")

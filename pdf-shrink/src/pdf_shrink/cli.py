@@ -38,7 +38,19 @@ def build_parser() -> argparse.ArgumentParser:
     )
     run_parser.add_argument(
         "--photo-pattern", action="append", default=[], metavar="PATTERN",
-        help="写真中心PDFを相対globで明示選択し約200 DPI・JPEG品質80の閲覧用候補を作る（反復可）",
+        help="写真中心PDFを相対globで明示選択し指定DPI・JPEG品質80の閲覧用候補を作る（反復可）",
+    )
+    run_parser.add_argument(
+        "--photo-dpi", type=int, default=None, metavar="DPI",
+        help="写真候補の目標DPI（150〜300の整数、既定200。--photo-pattern必須）",
+    )
+    run_parser.add_argument(
+        "--preview", action="store_true",
+        help="写真PDFのローカルHTML比較も出力する（--photo-pattern必須）",
+    )
+    run_parser.add_argument(
+        "--preview-dpi", type=int, action="append", default=[], metavar="DPI",
+        help="HTML比較用DPI（150〜300、反復可・最大5種類。--preview必須）",
     )
     run_parser.add_argument(
         "--dry-run",

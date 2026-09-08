@@ -186,6 +186,7 @@ def process_one_file(
             images_changed=primary.images_changed if primary else 0,
             candidate_details=tuple(candidates),
             lossless_jpeg_requested=cfg.lossless_jpeg,
+            photo_dpi=cfg.photo_dpi if profile == "photo" else None,
         )
 
     try:

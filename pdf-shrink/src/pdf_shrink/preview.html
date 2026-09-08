@@ -1,0 +1,310 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>KaruFile | 写真PDFの目視比較</title>
+  <style>
+    :root { font: 15px/1.65 "Yu Gothic UI", Meiryo, sans-serif; color: #18332f; background: #f3f6f4; }
+    * { box-sizing: border-box; }
+    body { margin: 0; }
+    header, main, footer { max-width: 1600px; margin: auto; padding: 24px 32px; }
+    header { padding-bottom: 12px; }
+    main { padding-top: 8px; }
+    h1 { margin: 6px 0 10px; font-size: clamp(24px, 3vw, 34px); line-height: 1.4; }
+    h2 { margin: 0 0 8px; font-size: 19px; }
+    p { margin: 6px 0 12px; }
+    .eyebrow { color: #346b59; font-size: 12px; font-weight: 700; letter-spacing: .13em; }
+    .muted, .note { color: #536860; }
+    .note { font-size: 13px; }
+    .tag { display: inline-block; padding: 2px 9px; border-radius: 4px; font-size: 12px; font-weight: 700; background: #e1eee7; color: #245942; }
+    .tag.trial { color: #76531a; background: #f8edcf; }
+    .intro { max-width: 1000px; }
+    .toolbar, .summary, .notice { padding: 16px 18px; border: 1px solid #d7e2db; border-radius: 10px; background: white; }
+    .toolbar { display: flex; flex-wrap: wrap; align-items: end; gap: 14px 18px; margin: 14px 0; }
+    .control { display: flex; flex-direction: column; gap: 4px; min-width: 110px; }
+    .control.document { flex: 1 1 320px; min-width: 0; }
+    .control label { font-size: 12px; font-weight: 700; color: #4c655a; }
+    select, button { min-height: 39px; padding: 7px 10px; border: 1px solid #afc4b7; border-radius: 6px; font: inherit; background: white; color: #18332f; }
+    select { max-width: 100%; }
+    button { cursor: pointer; }
+    button:hover { background: #eaf3ee; }
+    button:disabled, select:disabled { cursor: default; color: #718078; background: #f2f4f2; }
+    :focus-visible { outline: 3px solid #ba810e; outline-offset: 3px; }
+    input[type="range"] { accent-color: #28744f; width: 160px; }
+    .zoom { display: flex; gap: 10px; align-items: center; min-height: 39px; }
+    output { font-variant-numeric: tabular-nums; min-width: 45px; }
+    .summary { margin-bottom: 18px; }
+    .file-title { font-size: 17px; font-weight: 700; overflow-wrap: anywhere; }
+    .metrics { display: flex; flex-wrap: wrap; gap: 12px 30px; margin: 14px 0 6px; }
+    .metric { display: flex; flex-direction: column; }
+    .metric span { color: #61766a; font-size: 12px; }
+    .metric strong { font-size: 21px; font-variant-numeric: tabular-nums; }
+    .notice { margin: 12px 0; background: #fff9ec; border-color: #e4d2a4; color: #70531d; overflow-wrap: anywhere; }
+    .notice.error { background: #fff2ee; border-color: #e2b5a5; color: #813a25; }
+    [hidden] { display: none !important; }
+    .compare-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; }
+    .panel { min-width: 0; border: 1px solid #c9d7cf; border-radius: 10px; overflow: hidden; background: #e0e8e3; }
+    .caption { height: 64px; padding: 9px 14px; background: white; border-bottom: 1px solid #d1ded5; overflow: hidden; }
+    .caption strong, .caption span { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .caption span { font-size: 12px; color: #5a7063; }
+    .viewport { height: 68vh; min-height: 350px; max-height: 950px; overflow: auto; overscroll-behavior: contain; }
+    .canvas { position: relative; min-width: 100%; min-height: 100%; }
+    .canvas img { display: block; max-width: none; background: white; box-shadow: 0 1px 8px #233b2d18; }
+    .image-message { padding: 24px; color: #50695a; max-width: 560px; overflow-wrap: anywhere; }
+    .table-wrap { overflow-x: auto; margin-top: 12px; border: 1px solid #d7e2db; border-radius: 8px; }
+    table { width: 100%; border-collapse: collapse; text-align: left; background: white; font-size: 13px; }
+    th, td { padding: 10px 13px; border-bottom: 1px solid #e4ebe6; vertical-align: top; }
+    th { color: #4c655a; background: #f8faf8; white-space: nowrap; }
+    tr:last-child td { border-bottom: 0; }
+    td.number { white-space: nowrap; font-variant-numeric: tabular-nums; }
+    td.explanation { min-width: 200px; overflow-wrap: anywhere; }
+    a { color: #1b6550; text-underline-offset: 3px; }
+    details { margin-top: 20px; }
+    summary { cursor: pointer; font-weight: 700; }
+    .status-text { color: #5c7265; font-size: 12px; }
+    footer { padding-top: 8px; padding-bottom: 32px; }
+    noscript { display: block; padding: 20px; background: #fff0d9; }
+    @media (max-width: 760px) {
+      header, main, footer { padding-left: 16px; padding-right: 16px; }
+      .compare-grid { grid-template-columns: minmax(0, 1fr); }
+      .viewport { height: 58vh; min-height: 280px; }
+      .toolbar { gap: 12px; }
+      .control.document { flex-basis: 100%; }
+      .control { flex: 1 1 130px; }
+      .metrics { gap: 12px 20px; }
+      .metric strong { font-size: 18px; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="eyebrow">KaruFile / PDF PHOTO REVIEW</div>
+    <h1>同じ位置・倍率で、写真の細部を確認。</h1>
+    <p class="intro muted">左は原本、右は実際に保存された完成出力です。ページや写真範囲を選んで確認できます。左右のスクロールと倍率は連動します。</p>
+    <p class="note"><span class="tag">実際の完成出力</span> はCLIの採用結果です。<span class="tag trial">比較専用候補</span> へ切り替えても、採用結果や完成PDFは変更されません。</p>
+  </header>
+  <main>
+    <noscript>比較画像の切り替えにはJavaScriptが必要です。通信やローカルサーバーは使用しません。</noscript>
+    <div id="errors" class="notice error" role="status" hidden></div>
+    <div id="empty" class="notice" role="status" hidden></div>
+    <div class="toolbar" id="toolbar">
+      <div class="control document"><label for="document">資料</label><select id="document"></select></div>
+      <div class="control"><label for="page">ページ</label><select id="page"></select></div>
+      <div class="control"><label for="region">表示範囲</label><select id="region"></select></div>
+      <div class="control"><label for="variant">右側の比較対象</label><select id="variant"></select></div>
+      <div class="control"><label for="zoom">表示倍率</label><div class="zoom"><input id="zoom" type="range" min="50" max="250" step="25" value="100"><output id="zoom-value" for="zoom">100%</output></div></div>
+      <button type="button" id="reset">100%・左上に戻す</button>
+    </div>
+    <section id="summary" class="summary" aria-label="資料の処理結果">
+      <div id="file-title" class="file-title"></div>
+      <div class="metrics">
+        <div class="metric"><span>原本</span><strong id="source-size">—</strong></div>
+        <div class="metric"><span>実際の完成出力</span><strong id="output-size">—</strong></div>
+        <div class="metric"><span>原本からの削減</span><strong id="saving">—</strong></div>
+      </div>
+      <p id="decision" class="note"></p>
+      <p id="item-status" class="note"></p>
+    </section>
+    <div class="compare-grid" id="comparison">
+      <section class="panel" aria-label="原本">
+        <div class="caption"><strong>原本</strong><span id="left-caption">変更前のPDF</span></div>
+        <div class="viewport" id="left-scroll" tabindex="0" aria-label="原本の比較画像。スクロールすると右側も移動します">
+          <div class="canvas"><img id="left-image" alt="" hidden><div id="left-message" class="image-message" role="status"></div></div>
+        </div>
+      </section>
+      <section class="panel" aria-label="処理結果・比較候補">
+        <div class="caption"><strong id="right-title">実際の完成出力</strong><span id="right-caption">CLIが保存した採用結果</span></div>
+        <div class="viewport" id="right-scroll" tabindex="0" aria-label="処理結果の比較画像。スクロールすると左側も移動します">
+          <div class="canvas"><img id="right-image" alt="" hidden><div id="right-message" class="image-message" role="status"></div></div>
+        </div>
+      </section>
+    </div>
+    <p id="view-note" class="note" aria-live="polite"></p>
+    <p class="note">100%はPDFの1 inchを96 CSS pxで表示します。画面上の物理寸法は端末設定に依存します。左右の表示寸法は共通です。倍率を上げても画像情報は増えません。</p>
+    <details id="candidate-details" open>
+      <summary>候補ごとの容量と検査結果</summary>
+      <p class="note">追加DPI候補は目視比較専用です。棄却・対象外・エラーの場合は理由を表示します。</p>
+      <div class="table-wrap"><table><thead><tr><th scope="col">対象</th><th scope="col">容量</th><th scope="col">原本からの削減</th><th scope="col">状態・理由</th><th scope="col">PDF</th></tr></thead><tbody id="candidate-rows"></tbody></table></div>
+    </details>
+  </main>
+  <footer class="note">この比較画面は表示用のラスター画像です。細字の可読性・OCR精度・すべてのPDFビューアーの互換性を保証するものではありません。必要に応じてPDF自体も確認してください。<br>後から開く場合は、index.htmlと画像・PDFを含む比較フォルダー全体を保存してください。外部への通信は行いません。</footer>
+  <script type="application/json" id="preview-data">__PREVIEW_DATA__</script>
+  <script>
+    "use strict";
+    (() => {
+      const $ = id => document.getElementById(id);
+      const bytes = value => Number.isFinite(value) && value >= 0
+        ? `${(value / 1000000).toFixed(3)} MB (${value.toLocaleString("ja-JP")} B)` : "—";
+      const reduction = (original, result) => Number.isFinite(original) && original > 0 && Number.isFinite(result)
+        ? `${((original - result) / original * 100).toFixed(1)}%` : "—";
+      const message = (element, value) => { element.textContent = value; element.hidden = !value; };
+      const safeRelative = value => typeof value === "string" && value.length > 0
+        && !/^[\\/]|^[a-z][a-z\d+.-]*:/i.test(value) && !value.split(/[\\/]/).includes("..");
+      const option = (label, value) => new Option(label, String(value));
+      let data;
+      try { data = JSON.parse($("preview-data").textContent); }
+      catch (error) {
+        message($("errors"), "比較データを読み込めません。比較フォルダーを作り直してください。");
+        $("toolbar").hidden = $("summary").hidden = $("comparison").hidden = $("candidate-details").hidden = true;
+        return;
+      }
+      const items = Array.isArray(data.items) ? data.items : [];
+      message($("errors"), Array.isArray(data.errors) && data.errors.length
+        ? `比較処理で問題が発生しました。${data.errors.join(" / ")}` : "");
+      if (!items.length) {
+        message($("empty"), "写真指定に一致するPDFはありません。入力と写真パターンを確認してください。");
+        $("toolbar").hidden = $("summary").hidden = $("comparison").hidden = $("candidate-details").hidden = true;
+        return;
+      }
+      items.forEach((item, index) => $("document").add(option(item.relative_path, index)));
+      const current = () => items[Number($("document").value)];
+      const views = () => Array.isArray(current().views) ? current().views : [];
+      const variants = () => Array.isArray(current().variants) ? current().variants : [];
+      const activeView = () => views().find(view => String(view.page) === $("page").value && String(view.region) === $("region").value);
+      const position = () => ({ left: $("left-scroll").scrollLeft, top: $("left-scroll").scrollTop });
+      const scrollTo = (left, top) => {
+        for (const id of ["left-scroll", "right-scroll"]) { $(id).scrollLeft = left; $(id).scrollTop = top; }
+      };
+      const sync = (source, destination) => {
+        if (destination.scrollLeft !== source.scrollLeft) destination.scrollLeft = source.scrollLeft;
+        if (destination.scrollTop !== source.scrollTop) destination.scrollTop = source.scrollTop;
+      };
+      $("left-scroll").addEventListener("scroll", () => sync($("left-scroll"), $("right-scroll")), { passive: true });
+      $("right-scroll").addEventListener("scroll", () => sync($("right-scroll"), $("left-scroll")), { passive: true });
+
+      function renderTable() {
+        const item = current();
+        $("candidate-rows").replaceChildren();
+        for (const candidate of variants()) {
+          const row = document.createElement("tr");
+          const title = candidate.key === "original" ? "原本"
+            : candidate.key === "output" ? "実際の完成出力" : `${candidate.label} · 比較専用`;
+          const columns = [title, bytes(candidate.size), reduction(item.source_size, candidate.size),
+            [candidate.status, candidate.reason].filter(Boolean).join(" / ")];
+          columns.forEach((value, index) => {
+            const cell = document.createElement("td");
+            cell.textContent = value;
+            if (index === 1 || index === 2) cell.className = "number";
+            if (index === 3) cell.className = "explanation";
+            row.append(cell);
+          });
+          const linkCell = document.createElement("td");
+          if (safeRelative(candidate.href)) {
+            const link = document.createElement("a");
+            link.href = candidate.href;
+            link.textContent = "開く";
+            link.setAttribute("aria-label", `${title}のPDFを開く`);
+            linkCell.append(link);
+          } else { linkCell.textContent = "—"; }
+          row.append(linkCell);
+          $("candidate-rows").append(row);
+        }
+      }
+
+      function setImage(side, key, view, label) {
+        const image = $(`${side}-image`), notice = $(`${side}-message`);
+        image.hidden = true;
+        image.removeAttribute("src");
+        image.onerror = null;
+        const source = view && view.images && view.images[key];
+        if (!view || !safeRelative(source)) {
+          const candidate = variants().find(value => value.key === key);
+          message(notice, ["この対象の比較画像はありません。", candidate && candidate.reason, current().reason].filter(Boolean).join(" "));
+          return;
+        }
+        const width = Number(view.css_width) * Number($("zoom").value) / 100;
+        const height = width * Number(view.pixel_height) / Number(view.pixel_width);
+        if (!(width > 0 && height > 0 && Number.isFinite(width) && Number.isFinite(height))) {
+          message(notice, "比較画像の寸法を読み込めません。");
+          return;
+        }
+        image.width = view.pixel_width;
+        image.height = view.pixel_height;
+        image.style.width = `${width}px`;
+        image.style.height = `${height}px`;
+        image.alt = `${current().relative_path} · ${view.page}ページ · ${view.label} · ${label}`;
+        image.onerror = () => {
+          image.hidden = true;
+          message(notice, "画像を読み込めません。index.htmlと画像を含む比較フォルダー全体を保存しているか確認してください。");
+        };
+        message(notice, "");
+        image.hidden = false;
+        image.src = source;
+      }
+
+      function render(resetPosition = false) {
+        const previous = position(), view = activeView(), key = $("variant").value || "output";
+        const candidate = variants().find(value => value.key === key);
+        const label = key === "output" ? "実際の完成出力" : `${candidate ? candidate.label : key} · 比較専用候補`;
+        $("right-title").textContent = label;
+        $("right-title").title = label;
+        $("right-caption").textContent = key === "output"
+          ? "CLIが保存した採用結果" : "目視比較専用 · 採用結果は変更しません";
+        $("left-caption").textContent = view ? `${view.page}ページ · ${view.label}` : "変更前のPDF";
+        setImage("left", "original", view, "原本");
+        setImage("right", key, view, label);
+        $("zoom-value").value = `${$("zoom").value}%`;
+        $("view-note").textContent = view
+          ? `表示用画像は${view.render_dpi} DPIで描画しています。写真圧縮の指定値（${data.photo_dpi} DPI）とは別の値です。右側：${label}。`
+          : `目視比較：${current().status || "対象外"}。${current().reason || "表示できるページはありません。"}`;
+        scrollTo(resetPosition ? 0 : previous.left, resetPosition ? 0 : previous.top);
+      }
+
+      function selectRegion() {
+        const previous = $("region").value;
+        $("region").replaceChildren();
+        views().filter(view => String(view.page) === $("page").value)
+          .forEach(view => $("region").add(option(view.label, view.region)));
+        if ([...$("region").options].some(value => value.value === previous)) $("region").value = previous;
+        $("region").disabled = !$("region").options.length;
+        render(true);
+      }
+
+      function selectDocument() {
+        const item = current();
+        $("file-title").textContent = item.relative_path;
+        $("source-size").textContent = bytes(item.source_size);
+        $("output-size").textContent = bytes(item.output_size);
+        $("saving").textContent = reduction(item.source_size, item.output_size);
+        $("decision").textContent = [
+          `写真の目標：${data.photo_dpi} DPI / JPEG品質80`,
+          `PDFの処理結果：${item.pdf_status}`,
+          item.selected_kind ? `採用候補：${item.selected_kind}` : "",
+          item.decision_reason,
+        ].filter(Boolean).join(" / ");
+        $("item-status").textContent = [`目視比較：${item.status}`, item.reason].filter(Boolean).join(" / ");
+        $("page").replaceChildren();
+        [...new Set(views().map(view => String(view.page)))].forEach(page => $("page").add(option(`${page}ページ`, page)));
+        $("page").disabled = !$("page").options.length;
+        $("variant").replaceChildren();
+        const choices = variants().filter(value => value.key !== "original");
+        if (!choices.some(value => value.key === "output")) choices.unshift({ key: "output", label: "実際の完成出力" });
+        choices.forEach(candidate => $("variant").add(option(
+          candidate.key === "output" ? "実際の完成出力" : `${candidate.label} · 比較専用`, candidate.key)));
+        $("variant").value = "output";
+        renderTable();
+        selectRegion();
+      }
+      $("document").addEventListener("change", selectDocument);
+      $("page").addEventListener("change", selectRegion);
+      $("region").addEventListener("change", () => render(true));
+      $("variant").addEventListener("change", () => render(false));
+      let previousZoom = Number($("zoom").value);
+      $("zoom").addEventListener("input", () => {
+        const previous = position(), scale = Number($("zoom").value) / previousZoom;
+        render(false);
+        scrollTo(previous.left * scale, previous.top * scale);
+        previousZoom = Number($("zoom").value);
+      });
+      $("reset").addEventListener("click", () => {
+        $("zoom").value = "100";
+        previousZoom = 100;
+        render(true);
+      });
+      selectDocument();
+    })();
+  </script>
+</body>
+</html>

@@ -21,6 +21,7 @@ import codecs
 import csv
 from fnmatch import fnmatchcase
 import hashlib
+import json
 import logging
 import math
 import os
@@ -94,6 +95,7 @@ IMAGE_EXACT_COPY_ACTIONS = frozenset(
 PDF_REPORT_REQUIRED_COLUMNS = frozenset(
     {
         "lossless_jpeg_requested",
+        "photo_dpi",
         "source_path",
         "source_size",
         "source_sha256",
@@ -465,6 +467,32 @@ def _pdf_photo_pattern(value: str) -> str:
     return normalized
 
 
+def _pdf_photo_dpi(value: str) -> int:
+    if not isinstance(value, str) or not re.fullmatch(r"[0-9]+", value):
+        raise argparse.ArgumentTypeError("must be an integer between 150 and 300")
+    parsed = int(value)
+    if not 150 <= parsed <= 300:
+        raise argparse.ArgumentTypeError("must be an integer between 150 and 300")
+    return parsed
+
+
+class _ArgumentParser(argparse.ArgumentParser):
+    def parse_args(self, args=None, namespace=None):
+        parsed = super().parse_args(args, namespace)
+        if parsed.pdf_photo_dpi is not None and not parsed.pdf_photo_pattern:
+            self.error("--pdf-photo-dpi requires --pdf-photo-pattern")
+        if parsed.pdf_preview and not parsed.pdf_photo_pattern:
+            self.error("--pdf-preview requires --pdf-photo-pattern")
+        if parsed.pdf_preview_dpi and not parsed.pdf_preview:
+            self.error("--pdf-preview-dpi requires --pdf-preview")
+        parsed.pdf_preview_dpi = sorted(set(parsed.pdf_preview_dpi), reverse=True)
+        if len(parsed.pdf_preview_dpi) > 5:
+            self.error("--pdf-preview-dpi accepts at most 5 distinct DPI values")
+        if parsed.pdf_photo_dpi is None:
+            parsed.pdf_photo_dpi = 200
+        return parsed
+
+
 def _pdf_profile(relative: Path, preset: str, photo_patterns: list[str]) -> str:
     path = relative.as_posix().casefold()
     if any(fnmatchcase(path, pattern.casefold()) for pattern in photo_patterns):
@@ -695,6 +723,8 @@ def validate_derived_write_paths(
     pdf_files: list[Path],
     image_files: list[Path],
     video_files: list[Path] | None = None,
+    *,
+    pdf_preview: bool = False,
 ) -> None:
     """processorが出力mirror外へ書く状態・reportパスの衝突を拒否する。"""
 
@@ -707,7 +737,7 @@ def validate_derived_write_paths(
         ("image manifest", Path(f"{output_dir}.image-manifest.csv")),
         ("image dry-run manifest", Path(f"{output_dir}.image-manifest.dry-run.csv")),
     ]
-    if pdf_files:
+    if pdf_files or pdf_preview:
         state_dir = work_root / ".pdf-shrink"
         temp_root = state_dir / "temp"
         derived.extend(
@@ -729,6 +759,14 @@ def validate_derived_write_paths(
             )
             for source in pdf_files
         )
+        if pdf_preview:
+            derived.extend(
+                [
+                    ("PDF preview directory", work_root / "pdf-preview"),
+                    ("PDF preview manifest", work_root / "pdf-preview.json"),
+                    ("PDF preview dry-run manifest", work_root / "pdf-preview.dry-run.json"),
+                ]
+            )
 
     if video_files:
         video_state_dir = Path(f"{output_dir}.video-state")
@@ -909,6 +947,155 @@ def _has_stable_pdf_header(path: Path) -> bool:
     return b"%PDF-" in header and _file_signature(path) == signature
 
 
+def validate_pdf_preview_manifest(
+    path: Path,
+    *,
+    previous: tuple[int, int, int, int, int, int] | None,
+    report_result: dict[str, Any],
+    input_dir: Path,
+    output_dir: Path,
+    photo_dpi: int,
+    preview_dpis: list[int],
+    dry_run: bool,
+) -> dict[str, Any] | None:
+    """Accept only a fresh preview matching the already verified PDF report."""
+    try:
+        if not _was_updated(path, previous):
+            return None
+        rows = report_result.get("rows")
+        if not isinstance(rows, list):
+            return None
+        protected = [Path(row["source_path"]) for row in rows]
+        protected.extend(
+            Path(row["output_path"]) for row in rows if row["output_sha256"]
+        )
+        work_root = Path(os.path.abspath(output_dir.parent))
+        expected_manifest = work_root / (
+            "pdf-preview.dry-run.json" if dry_run else "pdf-preview.json"
+        )
+        if path != expected_manifest or _has_link_component(work_root, path):
+            return None
+        if not _is_safe_result_file(path, protected):
+            return None
+        signature = _file_signature(path)
+        with path.open("r", encoding="utf-8") as stream:
+            data = json.load(stream)
+        if _file_signature(path) != signature or not isinstance(data, dict):
+            return None
+        if not {
+            "schema", "requested", "dry_run", "photo_dpi", "preview_dpis",
+            "input_root", "output_root", "status", "run_dir", "index_path",
+            "index_sha256", "items", "errors",
+        }.issubset(data):
+            return None
+        if (
+            type(data.get("schema")) is not int or data["schema"] != 1
+            or data.get("requested") is not True
+            or data.get("dry_run") is not dry_run
+            or type(data.get("photo_dpi")) is not int
+            or data["photo_dpi"] != photo_dpi
+            or data.get("preview_dpis") != preview_dpis
+            or any(type(dpi) is not int for dpi in data["preview_dpis"])
+        ):
+            return None
+        for field, expected in (("input_root", input_dir), ("output_root", output_dir)):
+            reported_root = data.get(field)
+            if not isinstance(reported_root, str) or not Path(reported_root).is_absolute():
+                return None
+            if Path(reported_root) != expected.resolve(strict=False):
+                return None
+        errors = data.get("errors")
+        if not isinstance(errors, list) or any(not isinstance(error, str) or not error for error in errors):
+            return None
+        status = data.get("status")
+        if status not in ({"DRY_RUN", "ERROR"} if dry_run else {"COMPLETE", "ERROR"}):
+            return None
+        if (status == "ERROR") != bool(errors):
+            return None
+        expected_rows = {
+            str(Path(row["source_path"])).casefold(): row
+            for row in rows if row["profile"] == "photo"
+        }
+        items = data.get("items")
+        if not isinstance(items, list) or len(items) != len(expected_rows):
+            return None
+        seen: set[str] = set()
+        item_has_error = False
+        for item in items:
+            if not isinstance(item, dict):
+                return None
+            if not {
+                "source_path", "relative_path", "source_sha256", "output_path",
+                "output_sha256", "pdf_status", "status", "reason",
+            }.issubset(item):
+                return None
+            source_name = item.get("source_path")
+            if not isinstance(source_name, str) or not Path(source_name).is_absolute():
+                return None
+            key = str(Path(source_name)).casefold()
+            if key in seen or key not in expected_rows:
+                return None
+            seen.add(key)
+            row = expected_rows[key]
+            relative = Path(row["source_path"]).relative_to(input_dir).as_posix()
+            if (
+                item.get("relative_path") != relative
+                or item.get("source_sha256") != row["source_sha256"]
+                or item.get("output_path") != row["output_path"]
+                or item.get("output_sha256") != (row["output_sha256"] or None)
+                or item.get("pdf_status") != row["status"]
+                or not isinstance(item.get("reason"), str)
+            ):
+                return None
+            item_status = item.get("status")
+            if item_status not in {"READY", "SKIPPED", "ERROR"}:
+                return None
+            if dry_run and item_status == "READY":
+                return None
+            if item_status == "READY" and (row["status"] == "ERROR" or not row["output_sha256"]):
+                return None
+            if item_status == "ERROR":
+                item_has_error = True
+                if not item["reason"]:
+                    return None
+        if item_has_error and status != "ERROR":
+            return None
+        run_dir, index_path, index_sha256 = (
+            data.get("run_dir"), data.get("index_path"), data.get("index_sha256")
+        )
+        if dry_run or run_dir is None:
+            if any(value is not None for value in (run_dir, index_path, index_sha256)):
+                return None
+            if not dry_run and status != "ERROR":
+                return None
+        else:
+            if not isinstance(run_dir, str) or not Path(run_dir).is_absolute():
+                return None
+            run_path = Path(run_dir)
+            preview_root = work_root / "pdf-preview"
+            if run_path.parent != preview_root or _has_link_component(work_root, run_path):
+                return None
+            if not run_path.is_dir() or run_path.resolve(strict=True).parent != preview_root.resolve(strict=True):
+                return None
+            if index_path is None:
+                if status != "ERROR" or index_sha256 is not None:
+                    return None
+            else:
+                if not isinstance(index_path, str) or Path(index_path) != run_path / "index.html":
+                    return None
+                index = Path(index_path)
+                if not _is_safe_result_file(index, protected) or _has_link_component(work_root, index):
+                    return None
+                size, digest = _stable_file_size_and_sha256(index)
+                if size == 0 or digest != index_sha256:
+                    return None
+        if _file_signature(path) != signature or not _is_safe_result_file(path, protected):
+            return None
+        return data
+    except (OSError, RuntimeError, TypeError, ValueError, KeyError):
+        return None
+
+
 def parse_pdf_report(report_path: Path) -> dict[str, Any]:
     total_in = 0
     total_out = 0
@@ -976,6 +1163,13 @@ def parse_pdf_report(report_path: Path) -> dict[str, Any]:
                     raise ValueError("PDF report lossless_jpeg_requested must be true or false")
                 if profile not in {"standard", "compact", "photo"}:
                     raise ValueError(f"unknown PDF report profile: {profile!r}")
+                raw_photo_dpi = row.get("photo_dpi")
+                if profile == "photo":
+                    photo_dpi = _pdf_photo_dpi(raw_photo_dpi)
+                else:
+                    if raw_photo_dpi != "":
+                        raise ValueError("non-photo PDF report photo_dpi must be empty")
+                    photo_dpi = None
                 source_sha256 = (row.get("source_sha256") or "").lower()
                 output_sha256 = (row.get("output_sha256") or "").lower()
                 if not re.fullmatch(r"[0-9a-f]{64}", source_sha256):
@@ -998,6 +1192,7 @@ def parse_pdf_report(report_path: Path) -> dict[str, Any]:
                         "status": status,
                         "preset": preset,
                         "profile": profile,
+                        "photo_dpi": photo_dpi,
                         "lossless_jpeg_requested": lossless_jpeg_requested == "true",
                     }
                 )
@@ -1027,6 +1222,7 @@ def pdf_report_matches_inputs(
     dry_run: bool,
     photo_patterns: list[str] | None = None,
     lossless_jpeg_requested: bool = False,
+    photo_dpi: int = 200,
 ) -> bool:
     """Verify PDF report rows against current source and output bytes."""
 
@@ -1067,6 +1263,11 @@ def pdf_report_matches_inputs(
             if row.get("lossless_jpeg_requested") is not lossless_jpeg_requested:
                 return False
             if row["profile"] != _pdf_profile(relative, preset, photo_patterns or []):
+                return False
+            expected_dpi = photo_dpi if row["profile"] == "photo" else None
+            if row.get("photo_dpi") != expected_dpi or (
+                expected_dpi is not None and type(row.get("photo_dpi")) is not int
+            ):
                 return False
 
             source_size, source_sha256 = _stable_file_size_and_sha256(source)
@@ -1916,7 +2117,7 @@ def parse_image_summary(lines: list[str]) -> dict[str, Any] | None:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(
+    parser = _ArgumentParser(
         prog="karufile",
         description="PDF・画像・対応動画を、原本を変更せず別フォルダーへ軽量化する",
     )
@@ -1950,9 +2151,21 @@ def build_parser() -> argparse.ArgumentParser:
         default=[],
         metavar="PATTERN",
         help=(
-            "指定した写真中心PDFに閲覧用200 DPI・JPEG品質80候補を許可（画質劣化あり）。"
+            "指定した写真中心PDFに閲覧用DPI縮小・JPEG品質80候補を許可（画質劣化あり）。"
             "入力相対パスのglob、大小文字を区別せず、*は/も含む。反復可"
         ),
+    )
+    parser.add_argument(
+        "--pdf-photo-dpi", type=_pdf_photo_dpi, metavar="DPI",
+        help="写真PDFの目標DPI（150〜300の整数、既定200、--pdf-photo-pattern必須）",
+    )
+    parser.add_argument(
+        "--pdf-preview", action="store_true",
+        help="写真PDFの原本と完成出力を比較する静的HTMLを追加（--pdf-photo-pattern必須）",
+    )
+    parser.add_argument(
+        "--pdf-preview-dpi", type=_pdf_photo_dpi, action="append", default=[], metavar="DPI",
+        help="目視比較用の追加DPI候補（150〜300、反復可、最大5種類、--pdf-preview必須）",
     )
     parser.add_argument("--pdf-lossless-jpeg", action="store_true", help="jpegtran 3.2.0のJPEG可逆候補を追加（既定OFF、手動準備）")
     parser.add_argument("--pdf-jpegtran-path", help="PDFで使うjpegtran実行ファイル。指定だけでは有効化しない")
@@ -1996,7 +2209,8 @@ def main(argv: list[str] | None = None) -> int:
             input_dir, output_dir, pdf_files, image_files, video_files
         )
         validate_derived_write_paths(
-            input_dir, output_dir, pdf_files, image_files, video_files
+            input_dir, output_dir, pdf_files, image_files, video_files,
+            pdf_preview=args.pdf_preview,
         )
         source_baseline = _capture_source_baseline(
             [*pdf_files, *image_files, *video_files]
@@ -2012,7 +2226,8 @@ def main(argv: list[str] | None = None) -> int:
                 input_dir, output_dir, pdf_files, image_files, video_files
             )
             validate_derived_write_paths(
-                input_dir, output_dir, pdf_files, image_files, video_files
+                input_dir, output_dir, pdf_files, image_files, video_files,
+                pdf_preview=args.pdf_preview,
             )
         except OSError as exc:
             logging.error("出力ディレクトリを作成できません: %s", exc)
@@ -2041,6 +2256,11 @@ def main(argv: list[str] | None = None) -> int:
     report_name = "report.dry-run.csv" if args.dry_run else "report.csv"
     pdf_report_path = output_dir.parent / report_name
     pdf_report_before = _file_signature(pdf_report_path)
+    pdf_preview_path = output_dir.parent / (
+        "pdf-preview.dry-run.json" if args.dry_run else "pdf-preview.json"
+    )
+    pdf_preview_before = _file_signature(pdf_preview_path) if args.pdf_preview else None
+    pdf_preview_index: str | None = None
     image_error_report = Path(f"{output_dir}.image-errors.csv")
     image_report_before = _file_signature(image_error_report)
     image_manifest_path = Path(
@@ -2059,7 +2279,7 @@ def main(argv: list[str] | None = None) -> int:
     # 1. PDF 軽量化
     pdf_exit = 0
     pdf_result = _empty_result()
-    if pdf_files:
+    if pdf_files or args.pdf_preview:
         pdf_args = [
             "python", "-m", "pdf_shrink", "run",
             "--input", str(input_dir),
@@ -2068,6 +2288,12 @@ def main(argv: list[str] | None = None) -> int:
             "--preset", args.preset,
         ]
         pdf_args.extend(f"--photo-pattern={pattern}" for pattern in args.pdf_photo_pattern)
+        if args.pdf_photo_pattern:
+            pdf_args.extend(["--photo-dpi", str(args.pdf_photo_dpi)])
+        if args.pdf_preview:
+            pdf_args.append("--preview")
+            for dpi in args.pdf_preview_dpi:
+                pdf_args.extend(["--preview-dpi", str(dpi)])
         if args.pdf_lossless_jpeg:
             pdf_args.append("--lossless-jpeg")
         if args.pdf_jpegtran_path:
@@ -2090,6 +2316,7 @@ def main(argv: list[str] | None = None) -> int:
                 dry_run=args.dry_run,
                 photo_patterns=args.pdf_photo_pattern,
                 lossless_jpeg_requested=args.pdf_lossless_jpeg,
+                photo_dpi=args.pdf_photo_dpi,
             ):
                 pdf_result = parsed_pdf
                 if parsed_pdf.get("errors", 0) > 0:
@@ -2105,6 +2332,26 @@ def main(argv: list[str] | None = None) -> int:
             logging.error("PDF report was not updated by this run: %s", pdf_report_path)
             pdf_result = _unavailable_result()
             pdf_exit = pdf_exit or 1
+
+        if args.pdf_preview:
+            preview = validate_pdf_preview_manifest(
+                pdf_preview_path,
+                previous=pdf_preview_before,
+                report_result=pdf_result,
+                input_dir=input_dir,
+                output_dir=output_dir,
+                photo_dpi=args.pdf_photo_dpi,
+                preview_dpis=args.pdf_preview_dpi,
+                dry_run=args.dry_run,
+            )
+            if preview is None:
+                logging.error("PDF preview manifest is missing, stale, unsafe, or inconsistent: %s", pdf_preview_path)
+                pdf_exit = pdf_exit or 1
+            elif preview["status"] == "ERROR":
+                logging.error("PDF preview generation failed: %s", "; ".join(preview["errors"]))
+                pdf_exit = pdf_exit or 1
+            else:
+                pdf_preview_index = preview["index_path"]
 
     # 2. 画像リサイズ
     image_args = [
@@ -2277,6 +2524,8 @@ def main(argv: list[str] | None = None) -> int:
         else:
             print(f"{video_report_path} (not updated this run)")
     print(f"Elapsed: {elapsed:.2f}s")
+    if pdf_preview_index:
+        print(f"PDF preview: {pdf_preview_index}")
 
     if args.dry_run:
         print("\n[DRY-RUN] PDF・画像・動画出力は作成しません。状態とレポートは更新される場合があります。")
