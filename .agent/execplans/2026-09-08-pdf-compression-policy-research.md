@@ -1,5 +1,22 @@
 # PDF圧縮方針の調査と実データ診断
 
+## 2026-09-08 追加比較: 写真200 DPI / 180 DPI
+
+利用者の「比較したい」を受け、現地写真・採取写真を原本から独立して200 / 180 DPI、品質80で生成する。
+50%縮小や80%下限のハイブリッドは今回実装せず、製品CLIの200 DPI固定条件も変更しない。
+
+### CP-012: 写真DPIの独立比較
+
+- Status: In progress
+- Objective: 同じ表示寸法で容量と細部を比較し、180 DPI導入を判断できる資料を用意する。
+- Dependencies: 現行photo transform、検証規則、原本2冊、既存200 DPI出力の再確認。
+- Files or components: `pdf-shrink/experiments/compare_photo_dpi.py`、新規検証parent、当計画。
+- Actions: 実験専用optionsで既存の対象判定・共有xref処理・ceil丸めを再利用。原本から4候補を独立生成し、全ページ比較HTMLと300 DPI写真領域を用意する。既存工程にないqpdf再最適化を加えない。
+- Completion criteria: 4候補の容量・生成/検査時間・構造/描画検証結果、200 DPI再現性、原本/既存出力hash不変を記録。比較資料を目視確認する。
+- Validation: `inspect_file`、`validate(enhanced=True, detail=True)`、全ページ形状/文字/paths/画像配置一致、既存200 DPIとの画素一致、実験compile、関連suite、`git diff --check`。
+- Failure conditions: 検証不合格・上限超過を成功扱い、原本/既存出力変化、通常設定の無断変更。
+- Recovery: 比較用新規出力だけを残し、不合格は明示。原本/既存出力への書込みと自動採用はしない。
+
 ## 2026-09-08 追加実装: JPEG可逆比較と16 KiB採用下限
 
 利用者の追加実装計画を受領。CP-001〜008は履歴として保持する。今回開始時の作業ツリーはclean。
