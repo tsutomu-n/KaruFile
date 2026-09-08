@@ -10,6 +10,7 @@
 
 - 入力、出力、予定出力、状態DB、レポートの保存先を事前検査する。
 - `pdf-shrink`、`media-shrink-tool`、compact時の `video-shrink` の順にsubprocessで実行する。
+- `--pdf-preserve-pattern`・`--pdf-text-pattern`・`--pdf-text-scan-pattern`を同名のPDF個別オプション（pdf-除去）へ渡す。
 - `--pdf-photo-pattern`をPDF子CLIの`--photo-pattern`へ渡し、レポートのprofileを相対入力パスと照合する。
 - `--pdf-photo-dpi`（150〜300、既定200）をPDF子CLIへ委譲し、photo行の要求DPIを検証する。
 - `--pdf-preview`と反復`--pdf-preview-dpi`をPDF子CLIへ委譲し、独立manifestを照合する。
@@ -47,14 +48,13 @@ karufile.py
 ## 結果の照合
 
 - PDFレポートは、必須列、status、数値、行数、重複のない入力パス集合を検査する。
-  `profile`は必須で、各入力が写真選択パターンに一致すれば`photo`、それ以外はpresetの値に
-  一致する必要がある。photoの非可逆採用は64 KiBかつ5%以上、他は256 KiBかつ5%以上の削減を
-  実出力に照合する。一次候補の診断値は完成出力の集計に使用しない。
-  可逆採用は16 KiBかつ2%以上。全行の`lossless_jpeg_requested`が`true`/`false`で実行指定に
-  一致することを要求し、旧CSVの欠落、不正表記、不一致は拒否する。
-  `photo_dpi`列も必須で、photo行は要求DPIと同じ整数、それ以外は空欄でなければ拒否する。
+  `profile`は必須で、保護を最優先し、photo/text/text_scanの複数一致はpreflightで拒否する。
+  `requested_policy`・`classification`・`permission_basis`・`preservation_reason`・`processing_schema=5`も照合する。
+  保護出力はSHA-256一致必須。文章・表・文章スキャンは原本より小さい採用だけを許可し、
+  photoは非可逆64 KiBかつ5%以上、可逆16 KiBかつ2%以上を照合する。
+  全行の`lossless_jpeg_requested`は実行指定と一致し、photo行の`photo_dpi`は要求整数、他は空欄とする。
 - PDF比較manifestは通常`pdf-preview.json`、dry-run`pdf-preview.dry-run.json`を使う。
-  schema 1、requested/dry_run、photo_dpi/preview_dpis、入出力root、現在のphoto行集合と
+  schema 1、requested/dry_run、photo_dpi/preview_dpis、入出力root、現在の全PDF行集合と
   source/output SHA-256・PDF status、比較statusを照合する。normalのHTMLは`pdf-preview/<runid>/index.html`
   に限定し、保存先の安全性とSHA-256を確認する。古いmanifest、欠落、不整合は終了コード1。
   比較側ERRORだけで正常PDFの集計を破棄せず、完成PDF結果を保持したまま全体を失敗とする。
@@ -86,7 +86,7 @@ karufile.py
 `*`は`/`にも一致する。空、絶対パス、`..`を含むパターンは引数不正にする。複数指定はOR条件で、
 画像・動画のpresetを変えない。内容の自動分類やDPIによるOCR要否判定は行わない。
 
-写真用DPIの明示指定とpreviewには写真パターンを要求する。preview追加DPIにはpreviewを要求し、
+写真用DPIの明示指定には写真パターンを要求する。previewは全PDFを対象にし、追加DPI候補は保護されていないphotoだけに生成する。preview追加DPIにはpreviewを要求し、
 150〜300の整数を重複除去・降順に正規化し、5種類を超えた場合は引数不正にする。
 写真用DPIは通常処理hashへ含めるが、previewの有無と追加DPIは含めない。
 

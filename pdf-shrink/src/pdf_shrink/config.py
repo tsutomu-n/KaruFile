@@ -109,7 +109,7 @@ def photo_lossy_options(dpi: int = PHOTO_IMAGE_DPI_TARGET) -> LossyOptions:
     )
 
 
-def normalize_photo_patterns(values: Any) -> tuple[str, ...]:
+def normalize_photo_patterns(values: Any, *, option: str = "--photo-pattern") -> tuple[str, ...]:
     normalized: list[str] = []
     for raw in values:
         value = str(raw).replace("\\", "/")
@@ -119,10 +119,10 @@ def normalize_photo_patterns(values: Any) -> tuple[str, ...]:
             or PureWindowsPath(value).drive
             or ".." in value.split("/")
         ):
-            raise ValueError("--photo-pattern must be a nonempty relative glob without '..'")
+            raise ValueError(f"{option} must be a nonempty relative glob without '..'")
         value = "/".join(part for part in value.split("/") if part not in {"", "."})
         if not value:
-            raise ValueError("--photo-pattern must be a nonempty relative glob")
+            raise ValueError(f"{option} must be a nonempty relative glob")
         normalized.append(value.casefold())
     return tuple(sorted(set(normalized)))
 
@@ -177,7 +177,9 @@ class RunConfig:
     def __post_init__(self) -> None:
         object.__setattr__(self, "photo_patterns", normalize_photo_patterns(self.photo_patterns))
         for name in ("preserve_patterns", "text_patterns", "text_scan_patterns"):
-            object.__setattr__(self, name, normalize_photo_patterns(getattr(self, name)))
+            object.__setattr__(self, name, normalize_photo_patterns(
+                getattr(self, name), option="--" + name.replace("_", "-")[:-1],
+            ))
         validate_photo_dpi(self.photo_dpi)
         object.__setattr__(self, "preview_dpis", normalize_preview_dpis(self.preview_dpis))
         if not isinstance(self.preview, bool):
@@ -201,6 +203,9 @@ def default_config(
     output_dir: Path | str | None = None,
     preset: CompressionPreset | str = CompressionPreset.STANDARD,
     photo_patterns: tuple[str, ...] = (),
+    preserve_patterns: tuple[str, ...] = (),
+    text_patterns: tuple[str, ...] = (),
+    text_scan_patterns: tuple[str, ...] = (),
     photo_dpi: int = PHOTO_IMAGE_DPI_TARGET,
     preview: bool = False,
     preview_dpis: tuple[int, ...] = (),
@@ -218,6 +223,9 @@ def default_config(
         preset=selected_preset,
         lossy=lossy_options_for_preset(selected_preset),
         photo_patterns=photo_patterns,
+        preserve_patterns=preserve_patterns,
+        text_patterns=text_patterns,
+        text_scan_patterns=text_scan_patterns,
         photo_dpi=photo_dpi,
         preview=preview,
         preview_dpis=preview_dpis,

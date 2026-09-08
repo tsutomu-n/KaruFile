@@ -43,8 +43,10 @@ def generate(source: Path, target: Path, kind: str, cfg: RunConfig,
         with fitz.open(source) as doc:
             if kind.startswith("text_scan_jpeg_"):
                 quality = int(kind.rsplit("_", 1)[1])
-                minimums, reason = scan_images(doc)
+                minimums, reason = scan_images(doc, deadline=budget.deadline)
                 if reason:
+                    if reason == "scan_preflight_time_limit":
+                        raise CandidateRejected("text_document_time_limit")
                     raise RuntimeError(f"scan preflight changed: {reason}")
                 for xref, dpis in sorted(minimums.items()):
                     budget.check()

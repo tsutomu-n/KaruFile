@@ -161,6 +161,7 @@ def process_one_file(
     candidates: list[CandidateResult] = []
     recovery_needed = True
     decision = policy.Decision("unclassified", "")
+    processing_started = time.monotonic()
 
     def finish(
         status: ProcessStatus,
@@ -232,7 +233,8 @@ def process_one_file(
         if text_processing:
             import pymupdf as fitz
             with fitz.open(source.path) as doc:
-                inspection = InspectionResult(True, None, doc.page_count, 0.0, OptimizationMode.LOSSLESS)
+                inspection = InspectionResult(True, None, doc.page_count, 0.0,
+                                              OptimizationMode.LOSSLESS if cfg.safe else OptimizationMode.LOSSY)
         else:
             inspection = inspect_file(source.path, cfg.scan, safe=cfg.safe, lossy_options=cfg.lossy)
         discovery.assert_source_unchanged(source, cfg.input_dir)
@@ -288,7 +290,7 @@ def process_one_file(
             modes.extend([OptimizationMode.LOSSLESS] * 2)
             kinds.extend(["jpeg_lossless_baseline", "jpeg_lossless_progressive"])
         jpeg_deadline = None
-        text_budget = text_optimize.Budget(time.monotonic() + 300)
+        text_budget = text_optimize.Budget(processing_started + 300)
         for mode, jpeg_kind in zip(modes, kinds):
             descriptor, temp_name = tempfile.mkstemp(
                 prefix=f"{source.path.stem}_", suffix=".pdf", dir=temp_dir,
@@ -350,7 +352,7 @@ def process_one_file(
                 output_size=candidate_size,
                 saved_bytes=saved_bytes,
                 reason=(
-                    f"adopted_{candidate.kind}" if candidate.kind.startswith("jpeg_lossless_")
+                    f"adopted_{candidate.kind}" if text_processing or candidate.kind.startswith("jpeg_lossless_")
                     else "fallback_lossless" if chosen else str(status).lower()
                 ),
                 selected_mode=modes[chosen],

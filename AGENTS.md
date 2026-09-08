@@ -54,25 +54,38 @@ The root CLI's `standard` preset does not discover or copy videos. The standalon
 - Standard image recipe: long side `1280`, short side `960`, quality `72`; compact image recipe:
   long side `1024`, short side `768`, quality `60`. Both use JPEG `4:2:0`, white alpha,
   EXIF Orientation applied, no upscale or crop.
-- PDF placed images: standard/compact use a fixed `300` DPI candidate target from each placement transform axis,
-  never upscale, keep vector text, and retain the original when candidate validation rejects it.
-  Do not use JPEG xres/yres. 1-bit and soft-mask images are left unchanged.
-- PDF JPEG candidate quality is `92` for standard and `80` for compact. Compact also permits
-  same-dimension JPEG recompression; it does not lower the fixed DPI target.
+- PDF policy defaults to whole-document original protection for unpermitted images/drawings in both presets.
+  Automatically allow only confirmed text without images, paths or other paint; blank pages may coexist.
+  Root `--pdf-preserve-pattern`, `--pdf-text-pattern`, `--pdf-text-scan-pattern` use the photo glob rules;
+  standalone removes `pdf-`. Preserve overrides every permission; other overlapping permissions fail preflight.
+  Text patterns allow only text and horizontal/vertical strokes/rectangles. Scan patterns allow simple RGB/Gray
+  images; masks, complex Decode/colorspaces, inline or ambiguous placements protect the entire document.
+  Structure inspection failures are ERROR with recovery copying, never unsupported guesses.
+- Text candidates independently use qpdf, font subset/cleanup plus qpdf, grayscale plus cleanup/qpdf.
+  Scan candidates use 300 DPI gray JPEG quality 92/85/80 plus qpdf, and retain a qpdf-only candidate.
+  Preserve text/OCR and geometry; never rasterize text, add OCR, substitute fonts, scrub or upscale.
+  Shared images use minimum placement DPI per axis with ceil dimensions. Limits: 100 pages, 80 MP/image,
+  64 MiB compressed stream, 600 MP cumulative validation (both renders), 300 seconds cooperative candidate budget.
+  Preflight limit excess protects; runtime budget excess rejects the candidate.
+  Text validation checks text positions, paths/placements, links/bookmarks/metadata and exact 72/300 DPI
+  RGB or source-gray renders. Scan comparison keeps global 5% and local 20% thresholds.
+  Text recipes skip neither small PDFs nor small savings: adopt only strictly smaller validated candidates.
+  Ties prefer qpdf, color-preserving subset, gray; scan JPEG ties prefer higher quality. Gray is ADOPTED_LOSSY.
+  Safe disables grayscale and rejects scan/photo permissions. Preserve never generates any candidates.
 - Explicit photo selection uses root `--pdf-photo-pattern` / PDF `--photo-pattern`, repeatable input-relative
   globs. Match case-insensitively, normalize separators, allow `*` across directories, reject empty/absolute/`..`
   patterns, and reject photo selection with PDF `--safe`. Do not infer photo content or OCR need from DPI.
 - Selected PDFs use `photo` profile: only simple 8-bit DeviceRGB/DeviceGray DCT JPEGs, quality `80`, and
   root `--pdf-photo-dpi` / PDF `--photo-dpi` integer `150` to `300`, default `200`. Explicit DPI requires
-  photo patterns and does not change the standard/compact `300` DPI target.
+  photo patterns and does not change the text-scan `300` DPI target.
   Preserve non-JPEG, 1-bit, masks, complex color/Decode transforms, and ambiguous image-reference
   groups. Photo placement inspection failures are `ERROR`. Use the minimum placement
   DPI per shared-xref axis and ceil pixel dimensions; keep axes at or below the target DPI unchanged and do not
   recompress when neither dimension shrinks. Never upscale or rebuild PDF through HTML.
-- Optional root `--pdf-preview` / PDF `--preview` requires photo patterns and defaults OFF. The PDF processor
+- Optional root `--pdf-preview` / PDF `--preview` defaults OFF and covers all PDF results, including preservation reasons. The PDF processor
   creates static local HTML/JS and PNGs comparing originals with actual completed outputs at matched scale.
   Repeated `--pdf-preview-dpi` / `--preview-dpi` accepts 150 to 300, at most five distinct values, deduplicated
-  in descending order. Generate those comparison-only candidates independently from the original;
+  in descending order. Generate those comparison-only candidates only for unprotected photo PDFs, independently from the original;
   they never change normal candidate selection or successful processing state.
   Bundle copied original/output/candidate PDFs and images under `<output-parent>/pdf-preview/<runid>/`.
   Keep the entire run directory for portable viewing; no server or CDN is required.
@@ -81,12 +94,13 @@ The root CLI's `standard` preset does not discover or copy videos. The standalon
   remain separate ERRORs with exit 1, preserve completed PDF results, and continue independent files.
   Write `pdf-preview.json` or `pdf-preview.dry-run.json` in the output parent. Dry-run writes requests only,
   with no HTML, PNG, comparison PDF, or additional external-tool execution.
-- PDF processing schema is `4`; include `photo_dpi` in the processing hash and retain old DB rows through
+- PDF processing schema is `5`; record requested_policy, classification, permission_basis, preservation_reason; include `photo_dpi` in the processing hash and retain old DB rows through
   additive migration. CSV/DB `photo_dpi` is the requested integer for photo rows and empty/NULL otherwise;
   root rejects missing or mismatched values. Preview options are excluded from the processing hash.
 - Photo candidates add bounded 300 DPI changed-placement validation; this does not guarantee readability
-  or OCR accuracy. Photo lossy adoption requires `64 KiB` and `5%`; other lossy candidates require `256 KiB`
-  and `5%`, lossless candidates `16 KiB` and `2%`. The below-256-KiB PDF skip remains in every profile.
+  or OCR accuracy. Photo lossy adoption requires `64 KiB` and `5%`, photo lossless `16 KiB` and `2%`.
+  The below-256-KiB skip applies to photo, not text recipes. PRESERVED_ORIGINAL requires output/source SHA equality;
+  DRY_RUN_PRESERVED records protection without completed output. Hash every policy pattern and text recipe.
 - Optional root `--pdf-lossless-jpeg` / PDF `--lossless-jpeg` adds baseline/progressive JPEG candidates;
   default OFF, compatible with PDF `--safe`. Manually prepared jpegtran 3.2.0 only, explicit path then PATH;
   path alone does not enable it. No jpegtran download/install code. Dry-run never executes it.

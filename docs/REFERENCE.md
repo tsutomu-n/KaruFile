@@ -14,9 +14,12 @@
 --image-workers N        画像の並列処理数。既定値は4
 --video-workers N        動画の並列処理数。既定値は1
 --preset NAME            standardまたはcompact。既定値はstandard
+--pdf-preserve-pattern PATTERN 原本保護（反復可、最優先）
+--pdf-text-pattern PATTERN 文章・単純罫線表を許可（反復可）
+--pdf-text-scan-pattern PATTERN 文章スキャンを許可（反復可）
 --pdf-photo-pattern PATTERN  一致するPDFだけphoto profileを適用。反復可
 --pdf-photo-dpi DPI       photoの目標DPI。150〜300の整数、既定200。photo-pattern必須
---pdf-preview             写真PDFのローカル比較HTMLを作成。既定OFF、photo-pattern必須
+--pdf-preview             PDFのローカル比較HTMLを作成。既定OFF
 --pdf-preview-dpi DPI     比較専用DPI候補。150〜300、反復可、最大5種類。preview必須
 --pdf-lossless-jpeg       JPEG可逆候補を追加。既定OFF
 --pdf-jpegtran-path PATH  jpegtran 3.2.0を明示。パスだけでは有効化しない
@@ -227,45 +230,56 @@ PDF dry-runではqpdfを使用しません。
 
 ### 圧縮対象の判定
 
-次の300 DPIの処理値は、写真用パターンで選択していないstandard/compactの契約です。
-256 KiB未満と安全性による除外はphotoを含む全profileで共通です。
+standard/compactとも、図・写真・その他の画像を含む未許可PDFは一冊まるごと原本コピーします。
+可逆候補、JPEG可逆候補、比較用追加候補も生成しません。自動対象は、文字を確認でき、画像・
+描画パス・その他の非文字描画がないPDFだけです。空白ページの混在は許可します。
 
-- 256 KiB未満のPDFは圧縮せず、通常実行では原本をコピーします。
-- 暗号化、電子署名、フォーム、添付ファイル、修復済みPDFなどは圧縮しません。
-  添付ファイルまたは電子署名の有無を検査できない場合も、安全側で
-  `SKIPPED_COMPLEX` として原本を採用します。
-- ページ内で最大の画像配置がページ面積の80%以上、実効解像度が450 DPI超、
-  可視テキストが20文字以下のページをスキャンページと判定し、`scan_page_ratio` に記録します。
-  非可逆候補にするかの判定には使いません。
-- 実効解像度は、画像のpixel寸法と配置transformのX/Y基底長から軸別に求めます。
-  回転・skew・非等方配置と、同じ画像の複数配置を考慮します。
-- 可視文字数はtexttraceを優先し、非表示または透明なspanだけを除外します。
-  白色だけでは不可視扱いしません。
-- 配置サイズから見た画像実効DPIが300を超える画像がある場合、standardではその画像を
-  300 DPI・JPEG quality 92、compactでは300 DPI・quality 80へ縮小した候補を作ります。
-- compactは300DPI以下の既存JPEGも、pixel寸法を変えずquality 80で再圧縮候補にします。
-- compactの個別JPEG streamは、再圧縮後に5%以上小さくならなければ書き換えません。
-- 実効DPIはpixel寸法と配置transformから軸別に求めます。JPEGのxres/yresメタデータは
-  使いません。300 DPI未満の軸は拡大しません。
-- 拡大しません。1bit画像とsoft mask付き画像は縮小しません。ベクター文字は残します。
-- xrefを持たないinline画像がいずれかの軸で300 DPIを超える場合、非safe実行では
-  `SKIPPED_COMPLEX` として原本を採用します。safe実行のqpdf可逆候補は阻害しません。
-- 可視テキストが多くても、standardでは300DPI超、compactでは再圧縮可能な既存JPEGが
-  あれば非可逆候補を作ります。
-- standardで超過画像が無い場合はqpdfの可逆候補を作ります。
+| 指定 | 処理 |
+|---|---|
+| 無指定 | 文字だけを自動対象にし、その他は保護 |
+| `--pdf-preserve-pattern` | 必ず原本保護。すべての許可に優先 |
+| `--pdf-text-pattern` | 文章と水平・垂直の直線・枠線だけの罫線表を許可 |
+| `--pdf-text-scan-pattern` | 明示した文章だけのスキャンを許可 |
+| `--pdf-photo-pattern` | 既存の写真用150〜300 DPI候補を許可 |
 
-各軸300 DPIはstandard/compactで非可逆候補を作るときの固定目標です。非可逆候補を作る場合は、
-元PDFからqpdf可逆候補も作って比較します。最終的に可逆候補または原本を採用すると、
-入力由来の300 DPI超画像が残ることがあります。
+PDF個別CLIでは各オプションの`--pdf-`を外します。すべて反復可能な入力相対globで、
+大小文字を無視し、区切りを正規化、`*`はディレクトリ区切りにも一致します。空・絶対path・
+`..`は禁止です。保護されていないPDFが複数の処理許可に一致すると処理開始前にエラーになります。
+罫線表の意味や画像の内容を自動推測しません。曲線、塗り、斜線、特殊な描画は保護します。
+暗号化、署名、フォーム、添付、修復済みPDFなどの除外を維持し、検査失敗は`ERROR`として原本復旧します。
+
+文章・罫線表は原本から独立に、qpdf単独、フォントサブセット化・整理圧縮＋qpdf、
+グレー化＋同じ整理圧縮＋qpdfを作ります。PyMuPDF `recolor(components=1)`と
+`subset_fonts(fallback=False)`を使用し、文字の画像化・再配置・代替フォント・OCR・scrubは行いません。
+`--safe`はグレー化を無効にし、文章スキャン指定・写真指定・compactとの併用は引数エラーです。
+
+文章スキャンは単純な8-bit DeviceRGB/DeviceGray画像だけを対象に、300 DPI・グレーJPEG品質92/85/80を
+独立比較し、qpdf単独候補も残します。既存OCR文字層は保持し、新しいOCRはしません。
+配置transformから共有xrefの各軸の最小DPIを求め、300 DPI超の軸だけをceilで縮小します。
+低DPI軸は拡大せず、低DPI画像もグレーJPEG候補にはできます。マスク、特殊Decode/DecodeParms、
+複雑な色空間、inline画像、曖昧な画像参照・配置は文書全体を保護します。
+上限は100ページ、1画像80 MP、圧縮stream64 MiB、候補検証累積600 MP（比較双方を計上）、
+文書候補工程300秒の協調的予算です。事前超過は保護、実行中超過は候補棄却です。
+
+文章向けでは256 KiB未満の除外と最小削減量・率を外し、検証済みで原本より小さい最小候補だけを
+採用します。同サイズならqpdf、色を維持したsubset、グレーの順。scan JPEG同士は92、85、80の順です。
+グレー候補は`ADOPTED_LOSSY`であり可逆とは表示しません。増大・不合格の場合は原本を残します。
+qpdf検査、ページ形状・抽出文字・文字位置・罫線と画像の配置・リンク・しおり・metadataを照合します。
+文字候補は全ページ72/300 DPIでRGB完全一致、グレー文字候補は原本のグレー描画と完全一致が必要です。
+スキャンは原本のグレー描画に対し72 DPI全ページと300 DPI画像配置を比較し、全体差5%・
+最大32×32 pixel局所差20%を超える候補を棄却します。可読性やOCR精度の保証ではありません。
 
 ### 写真用profileの明示選択
 
-統合CLIの`--pdf-photo-pattern PATTERN`、PDF個別CLIの`--photo-pattern PATTERN`は反復指定でき、
+統合CLIの`--pdf-photo-pattern PATTERN`、PDF個別CLIの`--preserve-pattern PATTERN 原本保護（反復可、最優先）
+--text-pattern PATTERN 文章・単純罫線表を許可（反復可）
+--text-scan-pattern PATTERN 文章スキャンを許可（反復可）
+--photo-pattern PATTERN`は反復指定でき、
 1つ以上のパターンに一致するPDFにだけ`photo`を適用します。`preset`は`standard`または`compact`
 のままです。一致しないPDF、単独画像・動画のpresetは変わりません。
 
 統合CLIの`--pdf-photo-dpi DPI`、PDF個別CLIの`--photo-dpi DPI`は150〜300の整数で、既定200です。
-明示指定には写真パターンが必要です。写真用DPIを変えてもstandard/compactの固定300 DPIは変わりません。
+明示指定には写真パターンが必要です。写真用DPIを変えても文章スキャンの300 DPI目標は変わりません。
 
 - 入力フォルダーからの相対パスを対象とし、大文字小文字を区別しません。
 - `\`は`/`へ正規化し、重複する区切りと`.`を除きます。`*`は区切り`/`にも一致します。
@@ -314,7 +328,7 @@ libjpeg-turbo 3.2.0以外・未検出はPDF処理開始前にエラーにしま�
 パス指定だけでは有効化せず、dry-runでは探索・実行せず要求設定だけを記録します。
 PDF個別CLIの`--safe`と併用できます。既存preset/photoの非可逆候補は無効化しません。
 
-構造検査・256 KiB未満除外を通ったPDFへ、配置DPIと写真指定に関係なく追加します。
+保護判定を通ったphoto PDFへ追加します。保護対象や文章向け候補を迂回しません。
 初版の対象は単一DCTDecode・8-bit・直接指定のDeviceRGB/DeviceGray画像です。
 Mask/SMask、Decode/DecodeParms、ImageMask、複雑/間接ColorSpace、inline画像は変更しません。
 xrefごとに一度だけ処理し、画像辞書・配置を保持して圧縮streamだけを更新します。
@@ -332,8 +346,8 @@ xrefごとに一度だけ処理し、画像辞書・配置を保持して圧縮s
 
 | 候補 | 最小削減量 | 最小削減率 |
 |---|---:|---:|
-| 可逆 | 16 KiB | 2% |
-| 非可逆（standard/compact） | 256 KiB | 5% |
+| 文章・罫線表・文章スキャン | 原本より小さい | 下限なし |
+| 可逆（photo） | 16 KiB | 2% |
 | 非可逆（photo） | 64 KiB | 5% |
 
 最小削減量と最小削減率の両方を満たす必要があります。非可逆候補を作る場合は、元PDFから
@@ -354,7 +368,7 @@ JPEG progressive、非可逆の順です。候補の画質検査や非可逆の�
 
 出力先、presetで選ばれた画像処理値、写真選択パターン、`photo_dpi`とphoto recipe、tool versionは
 設定hashに含みます。standard/compact、写真選択、写真用DPIを切り替えると再処理します。
-現行版は`processing_schema=4`をhashに含み、以前のstateを一度再処理します。
+現行版は`processing_schema=5`をhashに含み、以前のstateを一度再処理します。
 採用下限、JPEG有効状態、固定レシピ・検証規則、jpegtranのversion・SHA-256もhashへ含めます。
 SQLiteは列の追加移行で旧行を保持します。無効時のjpegtranパスは処理結果へ影響しません。
 SQLiteは診断列を追加して移行し、既存行は削除しません。旧行の未記録候補サイズは`NULL`、
@@ -366,6 +380,8 @@ profileと理由は空文字、候補履歴は空配列として扱います。�
 
 | status | 意味 |
 |---|---|
+| `PRESERVED_ORIGINAL` | 保護方針により候補を生成せず原本コピー、SHA-256一致必須 |
+| `DRY_RUN_PRESERVED` | dry-runの保護判定、完成出力なし |
 | `ADOPTED_LOSSLESS` | 可逆圧縮候補を採用 |
 | `ADOPTED_LOSSY` | 非可逆圧縮候補を採用 |
 | `UNCHANGED` | 候補の画質・削減条件により原本を採用。理由は`decision_reason` |
@@ -380,7 +396,7 @@ profileと理由は空文字、候補履歴は空配列として扱います。�
 PDFレポートの列:
 
 ```text
-source_path,source_size,source_sha256,output_path,output_size,output_sha256,saved_bytes,saved_percent,preset,mode,status,page_count,scan_page_ratio,error_message,profile,decision_reason,candidate_size,candidate_saved_bytes,candidate_saved_percent,images_changed,candidate_details,lossless_jpeg_requested,photo_dpi
+source_path,source_size,source_sha256,output_path,output_size,output_sha256,saved_bytes,saved_percent,preset,mode,status,page_count,scan_page_ratio,error_message,profile,decision_reason,candidate_size,candidate_saved_bytes,candidate_saved_percent,images_changed,candidate_details,lossless_jpeg_requested,photo_dpi,requested_policy,classification,permission_basis,preservation_reason,processing_schema
 ```
 
 ### PDFレポートの診断列
@@ -405,6 +421,12 @@ JPEG可逆の採用statusは`ADOPTED_LOSSLESS`、採用理由は`adopted_jpeg_lo
 非可逆候補を試した場合はそれが一次候補です。後から可逆候補を採用しても、`candidate_*`は
 非可逆候補の記録のままです。完成出力の`output_size`・`saved_bytes`・`saved_percent`と混同しないで
 ください。`saved_percent`も0.05が5%です。dry-runでは候補サイズを計算しません。
+
+文章向けの一次候補はqpdf（`lossless`）です。追加kindは`text_subset`、`text_gray`、`text_scan_jpeg_92/85/80`。
+`requested_policy`は要求profile、`classification`はtext/text_table/text_scan/photo/protected/unclassified、
+`permission_basis`は自動文字判定または明示指定、`preservation_reason`は保護理由、`processing_schema`は5です。
+これらの列をDBへ追加移行し、保護規則・全指定パターン・文章レシピ・採用条件をhashへ含めます。
+統合CLIは列欠落・schema不一致・要求不一致・分類不整合を拒否し、保護出力SHA一致を必須にします。
 
 `candidate_details`の各要素は`kind`（非可逆は`standard`・`compact`・`photo`、可逆は`lossless`・`jpeg_lossless_baseline`・`jpeg_lossless_progressive`）、
 `size`（byte数または`null`）、
@@ -435,7 +457,7 @@ JPEG可逆の採用statusは`ADOPTED_LOSSLESS`、採用理由は`adopted_jpeg_lo
 
 ### 任意のPDF比較HTML
 
-統合CLIの`--pdf-preview`、PDF個別CLIの`--preview`は写真パターン必須で、既定OFFです。
+統合CLIの`--pdf-preview`、PDF個別CLIの`--preview`は既定OFFです。全PDFの原本・実際出力を比較し、保護理由も表示します。追加DPI候補は保護されていないphotoだけに生成します。
 PDF処理と状態・CSV保存の後に、現在選択したphoto行を対象として独立に比較資料を生成します。
 PDFの`ERROR`・`SKIPPED_*`は描画せず、比較側の`SKIPPED`と理由を記録します。
 対象なしも有効な結果です。
@@ -497,7 +519,7 @@ PDFの`ERROR`・`SKIPPED_*`は描画せず、比較側の`SKIPPED`と理由を�
 --preset NAME         standardまたはcompact。既定値standard
 --photo-pattern PATTERN  一致するPDFをphoto profileにする入力相対パターン。反復可
 --photo-dpi DPI        photoの目標DPI。150〜300の整数、既定200。photo-pattern必須
---preview              写真PDFのローカル比較HTMLを作成。既定OFF、photo-pattern必須
+--preview              PDFのローカル比較HTMLを作成。既定OFF
 --preview-dpi DPI      比較専用DPI候補。150〜300、反復可、最大5種類。preview必須
 -v, --verbose         詳細ログ
 ```

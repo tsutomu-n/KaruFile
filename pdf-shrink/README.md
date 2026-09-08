@@ -39,7 +39,7 @@ uv run --project pdf-shrink pdf-shrink run `
 | `--preset standard|compact` | 圧縮プリセット。既定値は `standard` |
 | `--photo-pattern PATTERN` | 一致するPDFだけphoto profileにする入力相対パターン。反復可 |
 | `--photo-dpi DPI` | photoの目標DPI。150〜300の整数、既定200。photo-pattern必須 |
-| `--preview` | 原本と実際の完成出力を比べるローカルHTMLを作成。既定OFF、photo-pattern必須 |
+| `--preview` | 原本と実際の完成出力を比べるローカルHTMLを作成。既定OFF |
 | `--preview-dpi DPI` | 比較専用DPI候補。150〜300、反復可、最大5種類。preview必須 |
 | `--dry-run` | 出力PDFを作らず、判定結果を記録 |
 | `--safe` | 非可逆処理を無効化し、可逆候補だけを作成 |
@@ -51,7 +51,7 @@ uv run --project pdf-shrink pdf-shrink run `
 | `-v`, `--verbose` | 詳細ログ |
 
 入力と出力に、同じフォルダーや互いに親子となるフォルダーは指定できません。
-`--safe`は`--preset compact`および`--photo-pattern`と同時指定できず、
+`--safe`は`--preset compact`、`--text-scan-pattern`および`--photo-pattern`と同時指定できず、
 終了コード `2` になります。
 
 写真PDFの閲覧用候補を明示的に選ぶ場合:
@@ -86,18 +86,18 @@ dry-runでも状態DBと `report.dry-run.csv` を更新する場合がありま�
 新しい内容を誤って処理済みと記録せず、次回に再処理します。ただし、処理中の入力自体は
 ロックしません。
 プリセットの画像処理値、写真選択パターン、`photo_dpi`とphoto recipeは再開判定用の設定ハッシュに
-含みます。現行版は`processing_schema=4`を含むため、以前のstateも一度再処理します。
+含みます。現行版は`processing_schema=5`を含むため、以前のstateも一度再処理します。
 状態DBは`photo_dpi`などの列追加で移行し、既存行は削除しません。
 `preview`・`preview_dpis`は通常処理のhashから除外し、比較資料だけの変更では正常PDFを再処理しません。
 
-## 任意の写真比較
+## 任意のPDF比較
 
 ```powershell
 uv run --project pdf-shrink pdf-shrink run --input "C:\作業\PDF" --output "C:\作業\比較\PDF_軽量化" --photo-pattern "*写真*.pdf" --photo-dpi 200 --preview --preview-dpi 180 --preview-dpi 150
 ```
 
 `--preview`は通常PDF処理後に、原本と実際の完成出力をローカルHTMLで比較できる資料を作ります。
-`--preview-dpi`は重複を除いて降順に揃えた最大5種類です。原本から独立に比較候補を作り、
+`--preview-dpi`は重複を除いて降順に揃えた最大5種類です。保護されていないphotoだけに原本から独立に比較候補を作り、
 通常の採用結果・成功state・CSV候補履歴へ影響させません。画質検証に合格した候補は容量が増大しても
 表示でき、画質棄却は`REJECTED`と理由だけを残します。通常PDFの`ERROR`・`SKIPPED_*`は描画しません。
 
@@ -111,79 +111,52 @@ uv run --project pdf-shrink pdf-shrink run --input "C:\作業\PDF" --output "C:\
 PDFが0件でも比較指定時は空report・状態領域・manifestを用意し、通常実行では対象なしHTMLを作ります。
 仕様の詳細は[PDF比較HTML](../docs/REFERENCE.md#任意のpdf比較html)を参照してください。
 
-## 圧縮対象の判定
+## 保護と文章向け候補
 
-- 256 KiB未満のPDFは圧縮せず、通常実行では原本をコピーします。
-- 暗号化、電子署名、フォーム、添付ファイル、修復済みPDFなどは圧縮しません。
-  添付ファイルまたは電子署名の有無を検査できない場合も、安全側で `SKIPPED_COMPLEX`
-  として原本を採用します。
-- ページ内で最大の画像配置がページ面積の80%以上、実効解像度が450 DPI超、
-  可視テキストが20文字以下のページをスキャンページと判定し、`scan_page_ratio` に記録します。
-  非可逆候補にするかの判定には使いません。
-- 実効解像度は、画像のpixel寸法と配置transformのX/Y基底長から軸別に求めます。
-  回転・skew・非等方配置と、同じ画像の複数配置を考慮します。
-- 可視文字数はtexttraceを優先し、非表示または透明なspanだけを除外します。
-  白色だけでは不可視扱いしません。
-- 写真用profileを適用しない場合、どちらのプリセットも縮小候補の固定目標は各軸300 DPIです。
-- `standard` は、配置サイズから見た画像実効DPIが300を超える画像を300 DPI、
-  JPEG quality 92へ縮小した非可逆候補を作ります。
-- `compact` は、300 DPI超の画像を300 DPI、JPEG quality 80へ縮小します。
-  300 DPI以下の既存DCTDecode JPEGも、pixel寸法を変えずquality 80の再圧縮候補にします。
-  ただし、個別画像streamが5%以上小さくならない場合はその画像を書き換えません。
-- 実効DPIはpixel寸法と配置transformから軸別に求めます。JPEGのxres/yresメタデータは
-  使いません。300 DPI未満の軸は拡大しません。
-- 拡大しません。1bit画像とsoft mask付き画像は縮小も再圧縮もしません。
-  ベクター文字は残します。
-- xrefを持たないinline画像はいずれかの軸が300 DPIを超える場合に安全に縮小できないため、
-  standard/compactの非safe実行では `SKIPPED_COMPLEX` として原本を採用します。
-  `--safe` の可逆処理は妨げません。photoではinline画像をそのまま残します。
-- 可視テキストが多くても、300DPI超の画像があれば非可逆候補を作ります。
-- `--safe` では可逆候補だけを作ります。qpdf単独に加え、明示時のみJPEG可逆候補も比較します。
+standard/compactとも、図・写真・その他の画像を含む未許可PDFは一冊まるごと原本コピーします。
+可逆候補、JPEG可逆候補、比較用追加候補も生成しません。自動対象は、文字を確認でき、画像・
+描画パス・その他の非文字描画がないPDFだけです。空白ページの混在は許可します。
 
-photoでは単純な8bit DeviceRGB/DeviceGrayのDCT JPEGだけを指定DPI・quality 80へ縮小します。
-`--photo-dpi`は150〜300の整数で既定200です。明示指定には`--photo-pattern`が必要です。
-非JPEG、1bit、Mask/SMask、Decode/DecodeParms、複雑な色空間、画像参照の同定が曖昧な群は
-書き換えません。photoで配置の検査処理が失敗した場合は`ERROR`にします。同じxrefの
-全配置から軸ごとの最小DPIを求め、目標DPI超の軸を`ceil(元pixel寸法 × 目標DPI / 最小DPI)`へ縮小し、
-目標DPI以下の軸は寸法を維持します。どちらも縮まなければ再圧縮せず、拡大もしません。
-ベクター文字・線を維持し、PDF→HTML→PDFによる再構成は行いません。
+| 指定 | 処理 |
+|---|---|
+| 無指定 | 文字だけを自動対象にし、その他は保護 |
+| `--preserve-pattern` | 必ず原本保護。すべての許可に優先 |
+| `--text-pattern` | 文章と水平・垂直の直線・枠線だけの罫線表を許可 |
+| `--text-scan-pattern` | 明示した文章だけのスキャンを許可 |
+| `--photo-pattern` | 既存の写真用150〜300 DPI候補を許可 |
 
-非可逆候補を作る場合は、元PDFから可逆候補も作って比較します。
-可逆候補または原本を採用した出力には、入力由来の高DPI画像が残ることがあります。
-300 DPIや写真用DPIは検証前候補の目標であり、画質gateを無効化する強制上限ではありません。
+PDF個別CLIでは各オプションの`--`を外します。すべて反復可能な入力相対globで、
+大小文字を無視し、区切りを正規化、`*`はディレクトリ区切りにも一致します。空・絶対path・
+`..`は禁止です。保護されていないPDFが複数の処理許可に一致すると処理開始前にエラーになります。
+罫線表の意味や画像の内容を自動推測しません。曲線、塗り、斜線、特殊な描画は保護します。
+暗号化、署名、フォーム、添付、修復済みPDFなどの除外を維持し、検査失敗は`ERROR`として原本復旧します。
 
-## 候補の検証と採用
+文章・罫線表は原本から独立に、qpdf単独、フォントサブセット化・整理圧縮＋qpdf、
+グレー化＋同じ整理圧縮＋qpdfを作ります。PyMuPDF `recolor(components=1)`と
+`subset_fonts(fallback=False)`を使用し、文字の画像化・再配置・代替フォント・OCR・scrubは行いません。
+`--safe`はグレー化を無効にし、文章スキャン指定・写真指定・compactとの併用は引数エラーです。
 
-候補は次の方法で検証します。
+文章スキャンは単純な8-bit DeviceRGB/DeviceGray画像だけを対象に、300 DPI・グレーJPEG品質92/85/80を
+独立比較し、qpdf単独候補も残します。既存OCR文字層は保持し、新しいOCRはしません。
+配置transformから共有xrefの各軸の最小DPIを求め、300 DPI超の軸だけをceilで縮小します。
+低DPI軸は拡大せず、低DPI画像もグレーJPEG候補にはできます。マスク、特殊Decode/DecodeParms、
+複雑な色空間、inline画像、曖昧な画像参照・配置は文書全体を保護します。
+上限は100ページ、1画像80 MP、圧縮stream64 MiB、候補検証累積600 MP（比較双方を計上）、
+文書候補工程300秒の協調的予算です。事前超過は保護、実行中超過は候補棄却です。
 
-- qpdfの構造検査
-- ページ数の一致
-- NFC正規化後の抽出テキストの一致
-- `standard`: 72 DPIグレースケール表示の平均絶対差が5%以下
-- `compact`: 72 DPI RGB表示のチャンネル平均絶対差が5%以下で、かつ最大32×32 pixelに
-  分けた局所タイルごとのチャンネル平均絶対差が20%以下
-- `photo`: compactと同じ72 DPI比較とページgeometry照合に加え、変更画像の各配置領域を
-  300 DPI RGBで比較。256×256 pixel単位の描画、最大32×32 pixel局所差20%以下、全体差5%以下
-- photoの細部検査は変更配置10,000箇所、累計80,000,000 pixel、120秒が上限。超過候補は不採用
+文章向けでは256 KiB未満の除外と最小削減量・率を外し、検証済みで原本より小さい最小候補だけを
+採用します。同サイズならqpdf、色を維持したsubset、グレーの順。scan JPEG同士は92、85、80の順です。
+グレー候補は`ADOPTED_LOSSY`であり可逆とは表示しません。増大・不合格の場合は原本を残します。
+qpdf検査、ページ形状・抽出文字・文字位置・罫線と画像の配置・リンク・しおり・metadataを照合します。
+文字候補は全ページ72/300 DPIでRGB完全一致、グレー文字候補は原本のグレー描画と完全一致が必要です。
+スキャンは原本のグレー描画に対し72 DPI全ページと300 DPI画像配置を比較し、全体差5%・
+最大32×32 pixel局所差20%を超える候補を棄却します。可読性やOCR精度の保証ではありません。
 
-採用条件:
-
-| 候補 | 最小削減量 | 最小削減率 |
-|---|---:|---:|
-| 可逆 | 16 KiB | 2% |
-| 非可逆（standard/compact） | 256 KiB | 5% |
-| 非可逆（photo） | 64 KiB | 5% |
-
-最小削減量と率の両方を満たす候補だけを採用します。非可逆候補を作る場合は元PDFから可逆候補も
-作り、検証と採用条件を満たす最小サイズを選びます。同サイズなら可逆候補を優先し、採用候補が
-なければ原本を出力へコピーします。ツール、構造検査、
-I/Oの失敗は回復コピーが成功しても`ERROR`です。出力は同じディレクトリの一時ファイルへ
-書いて検証してから `os.replace()` で公開します。シンボリックリンク、ジャンクション、ハードリンクによって
-入力または別の保存先へ書く可能性がある場合は拒否します。
+写真レシピ・候補検証・採用条件の正確な値は[技術リファレンス](../docs/REFERENCE.md#写真用profileの明示選択)を参照してください。
 
 ## レポートのstatus
 
-`--lossless-jpeg`は原本からbaseline/progressiveの可逆候補を追加し、既存の非可逆候補を無効化しません。
+`--lossless-jpeg`は保護されていないphoto PDFの原本からbaseline/progressiveの可逆候補を追加し、既存の非可逆候補を無効化しません。
 手動準備したlibjpeg-turbo 3.2.0のjpegtranだけを使用し、明示パス→PATHで解決します。
 未検出/版不一致は処理開始前エラー。dry-runでは外部toolを実行しません。
 単純な8-bit DeviceRGB/DeviceGray DCT画像のstreamだけを変更し、辞書・原寸画素・DQTと
@@ -194,6 +167,8 @@ I/Oの失敗は回復コピーが成功しても`ERROR`です。出力は同じ�
 
 | status | 意味 |
 |---|---|
+| `PRESERVED_ORIGINAL` | 候補を生成せず原本保護、出力SHA一致 |
+| `DRY_RUN_PRESERVED` | 保護予定、完成出力なし |
 | `ADOPTED_LOSSLESS` | 可逆圧縮候補を採用 |
 | `ADOPTED_LOSSY` | 非可逆圧縮候補を採用 |
 | `UNCHANGED` | 候補の画質・削減条件により原本を採用。理由は`decision_reason` |
@@ -211,13 +186,13 @@ I/Oの失敗は回復コピーが成功しても`ERROR`です。出力は同じ�
 レポート列:
 
 ```text
-source_path,source_size,source_sha256,output_path,output_size,output_sha256,saved_bytes,saved_percent,preset,mode,status,page_count,scan_page_ratio,error_message,profile,decision_reason,candidate_size,candidate_saved_bytes,candidate_saved_percent,images_changed,candidate_details,lossless_jpeg_requested,photo_dpi
+source_path,source_size,source_sha256,output_path,output_size,output_sha256,saved_bytes,saved_percent,preset,mode,status,page_count,scan_page_ratio,error_message,profile,decision_reason,candidate_size,candidate_saved_bytes,candidate_saved_percent,images_changed,candidate_details,lossless_jpeg_requested,photo_dpi,requested_policy,classification,permission_basis,preservation_reason,processing_schema
 ```
 
-`profile`はファイルに適用した`standard`・`compact`・`photo`です。`preset`は起動時の値を維持します。
+`profile`はファイルに適用した`standard`・`compact`・`photo`・`text`・`text_scan`・`preserve`です。`preset`は起動時の値を維持します。
 `photo_dpi`はphoto行の要求目標DPIで、それ以外はCSVで空欄、DBで`NULL`です。原本・可逆候補を
 採用しても要求値を維持します。統合CLIは旧CSVでの列欠落、不正値、指定不一致を拒否します。
-`candidate_*`と`images_changed`は一次候補の診断値です。非可逆候補を試した場合はそれを一次とし、
+`candidate_*`と`images_changed`は一次候補の診断値です。photoでは非可逆候補を試した場合はそれを一次とし、文章向けはqpdfを一次とします。
 可逆候補を後から採用しても記録を置き換えません。`candidate_saved_percent`と`saved_percent`は
 0.05が5%の割合です。候補未生成のサイズは空欄であり、0 byteとは異なります。
 

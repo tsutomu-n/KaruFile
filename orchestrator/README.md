@@ -24,6 +24,10 @@ uv run --script karufile.py `
 | `--image-workers` | 画像の並列数。既定値は4、最小値は1 |
 | `--video-workers` | 動画の並列数。既定値は1、最小値は1 |
 | `--preset` | `standard` または `compact`。既定値は `standard` |
+| `--pdf-preserve-pattern PATTERN` | 最優先の原本保護。反復可 |
+| `--pdf-text-pattern PATTERN` | 文章と単純罫線表の処理許可。反復可 |
+| `--pdf-text-scan-pattern PATTERN` | 文章スキャンの300 DPIグレーJPEG候補を許可。反復可 |
+| `--pdf-preview` | 全PDFの原本と実際出力・保護理由の比較HTML。既定OFF |
 | `--pdf-photo-pattern PATTERN` | 一致するPDFだけphoto profileにする入力相対パターン。反復可 |
 | `--pdf-lossless-jpeg` | JPEG可逆候補を追加。既定OFF |
 | `--pdf-jpegtran-path PATH` | 手動準備したjpegtran 3.2.0を明示。パスだけでは有効化しない |
@@ -34,7 +38,8 @@ uv run --script karufile.py `
 
 `--pdf-photo-pattern`は大文字小文字を区別せず、`/`と`\`を正規化します。`*`は区切りにも
 一致します。空、絶対パス、`..`を含むパターンは拒否します。一致するPDFだけに約200 DPIの
-写真用候補を許可し、他のPDFと画像・動画は`--preset`に従います。写真の自動分類は行いません。
+写真用候補を許可します。未許可の図・画像PDFは原本保護し、文字だけを自動対象にします。
+保護指定を最優先し、残る複数許可の一致は処理前エラーです。単独画像・動画の設定は変えません。
 
 ## 実行契約
 
@@ -78,13 +83,13 @@ dry-runは完成したPDF・画像・動画を作りません。PDF状態と各r
 video dry-runはstate workspace・空DBを初期化する場合がありますが、通常実行の成功recordを
 読み書きしません。
 
-PDFレポートの`profile`は必須で、各相対入力パスに対しパターンとpresetから期待する
-`standard`・`compact`・`photo`へ一致することを検証します。`ADOPTED_LOSSY`の削減量は
-photoで64 KiB以上、他は256 KiB以上、削減率はどちらも5%以上です。集計には実出力のサイズを
-使い、棄却された候補の診断サイズは使いません。
-`ADOPTED_LOSSLESS`は16 KiB以上かつ2%以上を実出力へ照合します。
-`lossless_jpeg_requested`は全行必須の`true`/`false`で、実行指定と不一致・欠落のCSVは拒否します。
-JPEG指定はPDF子CLIへだけ委譲し、既存presetの非可逆候補も残します。準備手順はマニュアルを参照してください。
+PDFレポートはschema 5と要求policy・分類・許可根拠・保護理由を必須とし、各入力相対パスへの
+指定内容を照合します。profileはstandard/compact/photo/text/text_scan/preserveです。
+保護statusは`PRESERVED_ORIGINAL`（dry-runは`DRY_RUN_PRESERVED`）で、通常出力のSHA一致を必須にします。
+文章・表・文章スキャンの採用は原本より小さい場合だけです。photoは可逆16 KiBかつ2%以上、
+非可逆64 KiBかつ5%以上を照合します。一次候補の診断sizeを完成出力の集計には使用しません。
+全行の`lossless_jpeg_requested`とphoto行の`photo_dpi`も要求と照合し、欠落・不一致を拒否します。
+JPEG可逆は保護を迂回しません。比較manifestは全PDFの集合と原本・実出力のSHA、statusを照合します。
 
 画像の統合集計は子プロセスのstdoutではなく、現在実行で原子的に更新された画像manifestを
 使います。入力・予定出力path、preset/recipe、size/SHA-256、action、寸法上限、画像エラーCSV

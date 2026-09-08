@@ -7,7 +7,7 @@
     "quality_profile": "showcase",
     "repository": {
       "url": "https://github.com/tsutomu-n/KaruFile",
-      "revision": "4e5f135360c179aa08d15bf2b9a5831475f901f4"
+      "revision": "9469ce72d0679880c60f8d5b106e49eca64789de"
     },
     "legend": {
       "mode": "auto",
@@ -89,7 +89,7 @@
       "id": "pdf",
       "type": "backend",
       "label": "pdf-shrink",
-      "sublabel": "通常300 DPI・写真150〜300 DPI",
+      "sublabel": "原本保護・文章／写真の候補比較",
       "pos": [
         650,
         215
@@ -261,7 +261,7 @@
         245,
         82
       ],
-      "sublabel": "pdf-preview/<runid>/index.html",
+      "sublabel": "原本・採用結果・保護理由",
       "id": "pdf_preview",
       "type": "database",
       "tag": "原本・完成出力・追加DPI"
@@ -538,10 +538,10 @@
     },
     {
       "dot": "amber",
-      "title": "写真比較",
+      "title": "PDFの保護と比較",
       "items": [
-        "写真は既定200 DPI・quality 80、150〜300 DPIを選択",
-        "原本・完成出力・追加DPIをローカルHTMLで比較",
+        "未許可の図・画像PDFは候補を作らず原本保護",
+        "文章は最小の検証済み候補、写真DPIは150〜300",
         "未commit変更を含む。ソースリンクは基準commit"
       ]
     }

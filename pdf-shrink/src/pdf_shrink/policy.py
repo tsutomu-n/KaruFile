@@ -3,11 +3,12 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import math
+import time
 from pathlib import Path
 
 import pymupdf as fitz
 
-from .inspect_pdf import _photo_xref_min_effective_dpis
+from .inspect_pdf import _effective_image_dpis
 
 MAX_PAGES = 100
 MAX_IMAGE_PIXELS = 80_000_000
@@ -42,10 +43,12 @@ def _simple_rules(page: fitz.Page) -> bool:
     return True
 
 
-def scan_images(doc: fitz.Document) -> tuple[dict[int, tuple[float, float]], str]:
+def scan_images(doc: fitz.Document, *, deadline: float = float("inf")) -> tuple[dict[int, tuple[float, float]], str]:
     """Preflight dictionaries/limits before decoding; reject the entire document."""
     xrefs = set()
     for page in doc:
+        if time.monotonic() > deadline:
+            return {}, "scan_preflight_time_limit"
         for image in page.get_images(full=True):
             xref = image[0]
             if xref <= 0:
@@ -64,15 +67,34 @@ def scan_images(doc: fitz.Document) -> tuple[dict[int, tuple[float, float]], str
                 return {}, "image_pixel_limit"
             if int(get("Length")[1]) > MAX_STREAM_BYTES:
                 return {}, "image_stream_limit"
-    minimums = _photo_xref_min_effective_dpis(doc)
+    # Digest matching is ambiguous when two resource xrefs decode identically.
+    # Bound dictionaries first and check time between individual decodes.
+    digests = set()
+    for xref in sorted(xrefs):
+        if time.monotonic() > deadline:
+            return {}, "scan_preflight_time_limit"
+        pix = fitz.Pixmap(doc, xref)
+        digest = pix.digest
+        del pix
+        if digest in digests:
+            return {}, "ambiguous_image_reference"
+        digests.add(digest)
+    minimums = {}
     placed = set()
     for page in doc:
+        if time.monotonic() > deadline:
+            return {}, "scan_preflight_time_limit"
+        if not page.get_images(full=True) and any(k == "fill-image" for k, _ in page.get_bboxlog()):
+            return {}, "inline_image"
         for info in page.get_image_info(xrefs=True):
             xref = info.get("xref", 0)
             if xref <= 0:
                 return {}, "inline_image"
-            if xref not in minimums or xref not in xrefs:
+            if xref not in xrefs:
                 return {}, "ambiguous_image_placement"
+            dpis = _effective_image_dpis(info)
+            previous = minimums.get(xref, dpis)
+            minimums[xref] = tuple(min(a, b) for a, b in zip(previous, dpis))
             matrix = info.get("transform", ())
             if len(matrix) != 6 or not all(math.isfinite(v) for v in matrix):
                 return {}, "ambiguous_image_placement"
@@ -87,6 +109,7 @@ def scan_images(doc: fitz.Document) -> tuple[dict[int, tuple[float, float]], str
 
 
 def classify(path: Path, requested: str) -> Decision:
+    deadline = time.monotonic() + 300
     basis = "automatic_text_only" if requested in {"standard", "compact"} else f"explicit_{requested}"
     def preserve(reason: str) -> Decision:
         return Decision("protected", basis, reason)
@@ -111,9 +134,15 @@ def classify(path: Path, requested: str) -> Decision:
         # semantics than the first text/scan recipe supports.
         if doc.get_ocgs():
             return preserve("optional_content")
+        if requested == "text_scan":
+            _, reason = scan_images(doc, deadline=deadline)
+            if reason:
+                return preserve(reason)
         has_text = False
         has_images = False
         for page in doc:
+            if time.monotonic() > deadline:
+                return preserve("preflight_time_limit")
             if list(page.annots() or ()) or page.first_widget:
                 return preserve("annotations")
             kinds = {entry[0] for entry in page.get_bboxlog()}
@@ -135,9 +164,6 @@ def classify(path: Path, requested: str) -> Decision:
             if kinds - allowed:
                 return preserve("non_text_paint")
         if requested == "text_scan":
-            _, reason = scan_images(doc)
-            if reason:
-                return preserve(reason)
             if not has_images:
                 return preserve("no_scan_image")
             return Decision("text_scan", basis)
