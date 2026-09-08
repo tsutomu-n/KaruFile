@@ -3,13 +3,13 @@
 この文書は、KaruFileを初めて使う人のための正本です。上から順に進めると、準備、
 dry-run、本実行、結果確認まで完了できます。
 
-KaruFileは、フォルダー内のPDFと対応形式の画像を再帰的に探し、別のフォルダーへ軽量化する
-Windows向けCLIです。CLIは、PowerShellへコマンドを入力して使う形式です。
-入力したPDFと画像は変更・削除しません。
+KaruFileは、フォルダー内のPDFと対応形式の画像、compact presetでは対応動画も再帰的に探し、
+別のフォルダーへ軽量化するWindows向けCLIです。CLIは、PowerShellへコマンドを入力して使う
+形式です。入力原本は変更・削除しません。
 
 基本操作は「実行前に確認すること」から「終了コードとエラー確認」までを順に読んでください。
 数値、status、再利用条件、個別CLIは [技術リファレンス](docs/REFERENCE.md)、処理全体の関係は
-[実行時アーキテクチャ](docs/architecture/karufile-runtime.html)から確認できます。
+[実行時アーキテクチャ](docs/architecture/karufile-runtime.compact.html)から確認できます。
 
 ## 実行前に確認すること
 
@@ -17,13 +17,28 @@ Windows向けCLIです。CLIは、PowerShellへコマンドを入力して使う
 
 1. 入力とは別の出力フォルダーを使います。入力と出力に、同じフォルダーや互いに
    親子となるフォルダーは指定できません。
-2. `--dry-run`でも、PDFの再開判定に使う状態DBと判定レポート、画像エラーCSVは
+2. `--dry-run`でも、PDF状態DB、判定レポート、画像エラーCSV、画像dry-run manifestは
    更新される場合があります。
-   完成したPDFと画像は作りません。
+   compact動画はdry-runレポートを更新し、空の状態領域を初期作成する場合がありますが、
+   通常実行の成功記録は読み書きしません。
+   完成したPDF・画像・動画は作りません。
 3. 画像のメタデータを削除する機能ではありません。GPSを含む情報が出力に残る場合があります。
 4. 処理中の入力ファイルはロックしません。別の処理から同時に入力を更新しないでください。
 
-PDFと対応形式の画像以外のファイルは、出力フォルダーへコピーしません。
+PDF、対応形式の画像、compactで探索する対応動画以外のファイルは、出力フォルダーへ
+コピーしません。standardでは動画を探索・コピーせず、従来のPDF・画像動作を維持します。
+
+### プリセットを選ぶ
+
+| 項目 | `standard`（既定値） | `compact` |
+|---|---|---|
+| 画像 | 長辺1280px・短辺960px以内、quality 72 | 長辺1024px・短辺768px以内、quality 60 |
+| PDF配置画像 | 300 DPI目標、JPEG候補quality 92 | 同じ300 DPI目標、quality 80。既存JPEGの同寸法再圧縮も候補化 |
+| 動画 | 探索・コピーしない | 対応する構成だけAV1へ変換し、複雑・未対応の構成は原本コピー |
+
+まず使うプリセットを選び、同じプリセットでdry-runと本実行を行ってください。
+compactの方が必ず小さくなるとは限りません。PDFと動画は候補の検証・削減条件により
+原本を採用することがあります。両プリセットの結果を比較するときは別の出力先を使います。
 
 ## 必要なもの
 
@@ -35,6 +50,14 @@ PDFを含む通常実行ではqpdfを使用します。KaruFileは `PATH` とロ
 qpdfを探し、見つからない場合はqpdf 12.3.2のWindows向け配布ZIPをGitHub Releasesから
 取得します。初回実行時に取得が必要になる場合があります。PDFを含まない実行と
 `--dry-run` ではqpdfを使用しません。
+
+compactで動画を処理する場合は、`ffmpeg` と `ffprobe` が `PATH` に必要です。KaruFileは
+これらを自動取得・同梱しません。別の実行ファイルを使う場合は `--ffmpeg-path` と
+`--ffprobe-path` で指定できます。利用するFFmpeg buildにはSVT-AV1、AAC、Opus、libvmaf、
+scale/fps filter、MP4/Matroska/WebM muxerが必要です。不足は処理開始時にエラーとして検出します。
+
+動画の`--dry-run`ではffprobeだけを使い、FFmpegのencoder/filterや実際の圧縮品質は検証しません。
+compactでも対象動画がなければFFmpeg/ffprobeは使いません。
 
 ## 基本手順
 
@@ -48,6 +71,14 @@ qpdfを探し、見つからない場合はqpdf 12.3.2のWindows向け配布ZIP�
 uv sync --project pdf-shrink --dev
 uv sync --project media-shrink-tool
 ```
+
+compactで動画も処理する場合は、追加で動画コンポーネントを準備します。
+
+```powershell
+uv sync --project video-shrink
+```
+
+これらは各コンポーネントのPython環境を準備するコマンドです。FFmpeg/ffprobeは含まれません。
 
 ### 3. 入力と出力を決める
 
@@ -67,7 +98,14 @@ uv run --script karufile.py -i "D:\作業\資料" -o "D:\作業\資料_軽量化
 ```
 
 `--dry-run`の短縮形は `-n` です。dry-runでは、対象の検査と処理方法の判定を行います。
-完成したPDFと画像は作りませんが、状態DBとレポートは更新される場合があります。
+完成したPDF・画像・動画は作りませんが、状態DBとレポートは更新される場合があります。
+圧縮後のサイズや品質、通常実行の成功を保証する検査ではありません。
+
+compactのPDF・画像・動画候補を確認する場合:
+
+```powershell
+uv run --script karufile.py --preset compact -i "D:\作業\資料" -o "D:\作業\資料_軽量化" --dry-run
+```
 
 ### 5. 本実行する
 
@@ -81,26 +119,37 @@ uv run --script karufile.py -i "D:\作業\資料" -o "D:\作業\資料_軽量化
 uv run --script karufile.py -i "D:\作業\資料"
 ```
 
-通常実行では確認入力を求めません。PDFを先に処理し、その後に画像を処理します。
-片方で失敗しても、可能な範囲でもう片方を処理します。
+compactを選んだ場合は、上のstandard実行に代えて次を実行します:
+
+```powershell
+uv run --script karufile.py --preset compact -i "D:\作業\資料" -o "D:\作業\資料_軽量化"
+```
+
+通常実行では確認入力を求めません。PDF、画像、compactの場合は動画の順に処理します。
+1つが失敗しても、可能な範囲で他のprocessorを処理します。
 
 ### 6. 結果を確認する
 
 終了時の統合サマリーを確認します。
 
+PowerShellでは、実行コマンドの直後に`$LASTEXITCODE`を入力すると終了コードを確認できます。
+
 | 表示 | 意味 |
 |---|---|
 | `PDF errors` | PDFの失敗件数 |
 | `Image errors` | 画像の失敗件数 |
+| `Video errors` | compact動画の失敗件数 |
 | `Original size` | 処理結果から集計した入力サイズ |
 | `Output size` | 処理結果から集計した出力サイズ |
 | `Saved` | 削減できたサイズ |
 | `Reduction` | 削減率 |
-| `Source files changed: NO` | 入力を変更していないこと |
+| `Source files changed: NO` | 起動前と終了時のidentity・SHA-256検査で入力変更を検出しなかったこと |
 | `Files deleted: 0` | 入力を削除していないこと |
 
 正確な値を取得できなかった項目は `unknown` と表示します。dry-runでは完成出力を
 作らないため、出力サイズ、削減量、削減率を計算しません。
+`Source files changed: YES OR COULD NOT VERIFY` の場合は入力の変更または検証不能を表し、
+他の集計値も `unknown`、終了コードは `1` になります。
 
 ## 出力とレポートの場所
 
@@ -108,28 +157,50 @@ uv run --script karufile.py -i "D:\作業\資料"
 
 | 内容 | 保存先 |
 |---|---|
-| 軽量化したPDFと画像 | `D:\作業\資料_軽量化\` |
+| 軽量化したPDF・画像・動画 | `D:\作業\資料_軽量化\` |
 | 通常実行のPDFレポート | `D:\作業\report.csv` |
 | dry-runのPDFレポート | `D:\作業\report.dry-run.csv` |
 | PDFの再開状態 | `D:\作業\.pdf-shrink\state.sqlite3` |
 | 画像エラーCSV | `D:\作業\資料_軽量化.image-errors.csv` |
+| 通常実行の画像manifest | `D:\作業\資料_軽量化.image-manifest.csv` |
+| dry-runの画像manifest | `D:\作業\資料_軽量化.image-manifest.dry-run.csv` |
+| 通常実行の動画レポート | `D:\作業\資料_軽量化.video-report.csv` |
+| dry-runの動画レポート | `D:\作業\資料_軽量化.video-report.dry-run.csv` |
+| 動画の再開状態・一時領域 | `D:\作業\資料_軽量化.video-state\` |
 
 PDFレポートと状態DBは、入力ではなく出力フォルダーの親へ保存します。PDFがない実行では、
 PDFレポートと状態DBを作成・更新しません。以前の実行で同じ場所にあるファイルは削除しません。
 
 複数の出力フォルダーが同じ親フォルダーにある場合、PDFレポートと状態DBは同じ保存先を
 使います。PDFレポートは、現在の実行で選ばれた入力を対象に更新します。
+実行を並行させる場合は、出力先だけでなくPDFの状態・レポートを置く親フォルダーも分けてください。
 
-画像処理が起動し、CSVの更新に成功した場合、画像エラーが0件でも、現在の実行結果を示す
-ヘッダーだけのCSVへ更新します。安全性検査、画像処理の起動、またはCSVの更新に失敗した場合は
-終了コード `1` となり、以前のCSVが残ることがあります。
+画像処理が起動し、CSVの更新に成功した場合、画像エラーが0件でもエラーCSVをヘッダーだけへ
+更新します。全画像のpath、size、SHA-256、action、preset、recipe、処理前後の寸法は、通常実行と
+dry-runを分けた画像manifestへ記録します。統合CLIはこのmanifestを現在の入力・出力と照合して
+集計します。安全性検査、画像処理の起動、またはレポート更新に失敗した場合は終了コード `1` と
+なり、以前のレポートが残ることがあります。
+
+動画レポートと状態領域は、統合CLIでcompactを選び、対象動画がある場合だけ使用します。
+standardの実行で過去の動画出力やレポートを削除することはありません。
+
+### 再実行と結果の比較
+
+再実行では、各処理の再利用条件を満たす完成済み出力を再利用し、それ以外は再評価します。
+同じ出力先でプリセットを変えると、既存出力が新しい結果へ置き換わる場合があります。
+以前の結果を残す場合は別の出力先を指定してください。PDFレポートも別々に残す場合は、
+出力先の親フォルダーも分けます。
+
+画像の非JPEG入力は、元のファイル名全体へ`.jpg`を追加します（例: `photo.png` → `photo.png.jpg`）。
+JPEG入力は`.jpg`または`.jpeg`を維持します。出力名が衝突する場合は名前を調整するため、
+最終的な出力先は画像manifestの`output_path`で確認してください。
 
 ## 終了コードとエラー確認
 
 | コード | 意味 |
 |---:|---|
-| `0` | PDFと画像のエラーが0件 |
-| `1` | 1件以上の処理失敗、レポート更新失敗、または入出力の安全性検査失敗 |
+| `0` | 対象となったPDF・画像・動画のエラーが0件 |
+| `1` | 1件以上の処理失敗、レポート更新失敗、結果不整合、または入出力の安全性検査失敗 |
 | `2` | コマンド引数が不正 |
 
 終了コードが `1` の場合は、次を確認します。
@@ -137,8 +208,10 @@ PDFレポートと状態DBを作成・更新しません。以前の実行で同
 1. ターミナルのエラー表示
 2. PDFレポートの `status` と `error_message`
 3. 画像エラーCSVの `error`
+4. 画像manifestの `action` と `error`
+5. 動画レポートの `status`、`reason`、`error_message`
 
-集計に必要なレポートまたはサマリーが現在の入力と一致しない場合、KaruFileは過去の出力から
+集計に必要なレポートが現在の入力と一致しない場合、KaruFileは過去の出力から
 推測せず、該当値を `unknown` として終了コード `1` を返します。
 
 ## 処理される内容
@@ -147,7 +220,8 @@ PDFレポートと状態DBを作成・更新しません。以前の実行で同
 
 JPEG、PNG、TIFF、BMP、GIF、WebP、HEIC、HEIFをJPEGとして出力します。
 
-- 長辺1280px、短辺960px以内
+- standardは長辺1280px・短辺960px以内、quality 72
+- compactは長辺1024px・短辺768px以内、quality 60
 - 縦横比を維持し、拡大・切り抜きなし
 - EXIF Orientationを画素へ適用
 - 透過部分を白背景へ合成
@@ -162,41 +236,79 @@ JPEG、PNG、TIFF、BMP、GIF、WebP、HEIC、HEIFをJPEGとして出力しま�
 PDFの特性に応じてPyMuPDFまたはqpdfで候補を作り、検証と削減条件を満たした候補だけを
 採用します。候補を採用しない場合や、安全上圧縮しない場合は原本を出力へコピーします。
 
-ページ上の配置サイズから見た画像実効解像度が300DPIを超える場合、その画像を300DPIへ
-縮小します。JPEGに埋め込まれた解像度メタデータは使いません。拡大はしません。
+ページ上の配置transformから軸別に見た画像実効解像度が300DPIを超える場合、その軸を
+300DPI目標へ縮小します。この固定目標はstandardとcompactで共通です。compactではJPEG qualityを80とし、
+300DPI以下の既存JPEGも寸法を下げず再圧縮候補にします。JPEGに埋め込まれた解像度
+メタデータは使いません。拡大はしません。
 ベクター文字はラスター化しません。1bit画像とsoft mask付き画像は縮小しません。
+xrefを持たないinline画像がいずれかの軸で300 DPIを超えるPDFは、安全に画像を書き換えられない
+ため、通常の統合CLIでは圧縮せず原本を採用します。PDF個別CLIの`--safe`による可逆処理は
+継続できます。`--safe`は`karufile.py`のオプションではありません。
 
 暗号化、電子署名、フォーム、添付ファイル、修復済みPDFなどは圧縮しません。通常実行では
 原本を出力へコピーします。
+添付ファイルまたは電子署名の有無を検査できないPDFも、安全側で
+`SKIPPED_COMPLEX` として原本を採用します。
+
+PDF候補が表示検証または削減条件を満たさない場合も原本を採用します。そのため、300 DPIは
+検証前候補の固定目標であり、最終出力へ強制するために画質検証を迂回する値ではありません。
 
 変換条件、採用基準、再利用条件、PDF status、全オプションは
 [KaruFile技術リファレンス](docs/REFERENCE.md)を参照してください。
 
+### 動画
+
+動画は `--preset compact` のときだけ処理します。MP4、M4V、MKV、WebMのうち、単一映像、
+8-bit SDR、progressive、固定frame rate、音声なしまたはmono/stereo 1本など、安全に扱える
+構成だけを変換します。
+
+- 1280×720以内、30fps以内。小さい動画は拡大しません
+- 映像はSVT-AV1
+- MP4/M4Vの音声はAAC、MKV/WebMの音声はOpus
+- 全decode、duration・stream構成、VMAF、削減量を検証した候補だけ採用
+- HDR、VFR、interlace、字幕、複数映像・音声、chapter等は変換せず原本を出力へコピー
+
+FFmpegまたは候補検証が失敗した場合は他ファイルを継続しますが、該当行を `ERROR` として
+終了コード `1` を返します。
+出力が未作成なら原本の回復コピーを試みる場合がありますが、コピーが成功しても`ERROR`のままです。
+ファイルが出力先にあることだけで成功と判断せず、終了コードと動画レポートを確認してください。
+
 ## 図で全体を確認する
 
-[KaruFile実行時アーキテクチャ](docs/architecture/karufile-runtime.html)は、利用者から
-`karufile.py`、PDF・画像処理、出力、状態・レポートまでの関係を示す対話型HTMLです。
+[KaruFile実行時アーキテクチャ](docs/architecture/karufile-runtime.compact.html)は、利用者から
+`karufile.py`、PDF・画像・動画処理、出力、状態・レポートまでの関係を示す対話型HTMLです。
 
 PowerShellからローカルのブラウザで開く場合:
 
 ```powershell
-Start-Process .\docs\architecture\karufile-runtime.html
+Start-Process .\docs\architecture\karufile-runtime.compact.html
 ```
 
-静止画は [light](docs/architecture/karufile-runtime.visual-check.1440x900.light.png) と
-[dark](docs/architecture/karufile-runtime.visual-check.1440x900.dark.png) を用意しています。
+静止画は [light](docs/architecture/karufile-runtime.compact.visual-check.1440x900.light.png) と
+[dark](docs/architecture/karufile-runtime.compact.visual-check.1440x900.dark.png) を用意しています。
 
 ## 対象外と確認済みの制約
 
-KaruFile v1は、動画圧縮、重複削除、知覚ハッシュ、元ファイル削除、GUIを提供しません。
+KaruFileは、HDR/VFR/interlace/字幕/複数stream等を保持した動画変換、重複削除、
+知覚ハッシュ、元ファイル削除、GUIを提供しません。
 PDF処理は `pdf-shrink` だけが担当します。
 
 現在確認できている未解決事項:
 
 - 自動取得するqpdf配布ZIPのSHA-256または署名は検証していません。
-- PDF表示検証はページ全体の平均差を使うため、小さな領域だけの欠落が平均で薄まる可能性があります。
-- 入力PDFを処理中に別プロセスが変更することは防止していません。
+- PDF表示検証は72 DPIです。compactではRGB全体差に加えて最大32×32 pixelの局所差も
+  検査しますが、それより細かい劣化を見逃す可能性があります。
+- 処理中の入力はロックしません。KaruFileは起動前と全processor終了後に全対象のidentityと
+  SHA-256を照合して変更を失敗として検出しますが、別プロセスによる変更そのものは防止しません。
 - 自動テストは小さな合成データが中心で、今回の実装では実データPilotを実施していません。
+- 動画のCFR判定はffprobeのrate比較による入口判定です。既知のHDR metadataは拒否しますが、
+  metadataが欠けた動画のSDR性までは証明しません。VMAFは映像だけを評価し、30fps化の
+  滑らかさと音声品質は測定しません。
+- 動画のVMAF JSONは生成後に64 MiB上限を検査するため、異常なlibvmaf実行中の一時領域消費を
+  事前停止できません。
+- 完了済み動画の再利用時は、保存したsource/config/tool versionと出力hashを照合しますが、
+  full decodeとVMAFを再実行しません。動画stateを手動編集した疑いがある場合は
+  `<output>.video-state` を別名へ退避してから再実行してください。
 
 代表的な実データでのPilotを行わずに、スキャン判定、削減率、表示差分の既定値が実際の
 文書群に適するとは確認できません。

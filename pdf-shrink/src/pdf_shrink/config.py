@@ -4,8 +4,17 @@ from __future__ import annotations
 import hashlib
 import json
 from dataclasses import asdict, dataclass, replace
+from enum import StrEnum
 from pathlib import Path
 from typing import Any
+
+
+PDF_IMAGE_DPI_TARGET = 300
+
+
+class CompressionPreset(StrEnum):
+    STANDARD = "standard"
+    COMPACT = "compact"
 
 
 @dataclass(frozen=True)
@@ -18,7 +27,7 @@ class ScanOptions:
 @dataclass(frozen=True)
 class LossyOptions:
     dpi_threshold: int = 450
-    dpi_target: int = 300
+    dpi_target: int = PDF_IMAGE_DPI_TARGET
     quality: int = 92
     lossy: bool = True
     lossless: bool = True
@@ -26,9 +35,31 @@ class LossyOptions:
     color: bool = True
     gray: bool = True
     set_to_gray: bool = False
+    recompress_existing_jpeg: bool = False
+    jpeg_recompress_min_percent: float = 0.05
     # rewrite_images ではなく配置実効DPIで差し替える実装の識別子。
     # 値を変えると再開用 config_hash が変わり、旧UNCHANGED結果を再処理する。
-    algorithm: str = "placed-effective-dpi-v2"
+    algorithm: str = "placed-effective-dpi-v4-axis-safe-decode-fixed"
+
+    def __post_init__(self) -> None:
+        if self.dpi_target != PDF_IMAGE_DPI_TARGET:
+            raise ValueError(
+                f"PDF image DPI target is fixed at {PDF_IMAGE_DPI_TARGET}"
+            )
+        if not 0 <= self.jpeg_recompress_min_percent < 1:
+            raise ValueError("JPEG recompression minimum must be between 0 and 1")
+
+
+def lossy_options_for_preset(
+    preset: CompressionPreset | str,
+) -> LossyOptions:
+    if CompressionPreset(preset) is CompressionPreset.COMPACT:
+        return LossyOptions(
+            quality=80,
+            recompress_existing_jpeg=True,
+            algorithm="placed-effective-dpi-v5-axis-safe-compact-jpeg",
+        )
+    return LossyOptions()
 
 
 @dataclass(frozen=True)
@@ -54,6 +85,7 @@ class RunConfig:
     input_dir: Path
     output_dir: Path
     workers: int = 2
+    preset: CompressionPreset = CompressionPreset.STANDARD
     safe: bool = False
     dry_run: bool = False
     limit: int | None = None
@@ -74,14 +106,21 @@ def default_config(
     *,
     input_dir: Path | str = ".",
     output_dir: Path | str | None = None,
+    preset: CompressionPreset | str = CompressionPreset.STANDARD,
 ) -> RunConfig:
+    selected_preset = CompressionPreset(preset)
     input_path = Path(input_dir).resolve()
     output_path = (
         Path(output_dir).resolve()
         if output_dir is not None
         else (input_path.parent / f"{input_path.name}_軽量化").resolve()
     )
-    return RunConfig(input_dir=input_path, output_dir=output_path)
+    return RunConfig(
+        input_dir=input_path,
+        output_dir=output_path,
+        preset=selected_preset,
+        lossy=lossy_options_for_preset(selected_preset),
+    )
 
 
 def build_config(args: Any) -> RunConfig:
@@ -101,27 +140,44 @@ def build_config(args: Any) -> RunConfig:
         raise ValueError("--limit must be at least 1")
 
     qpdf_arg = getattr(args, "qpdf_path", None)
+    try:
+        preset = CompressionPreset(
+            getattr(args, "preset", CompressionPreset.STANDARD.value)
+        )
+    except ValueError as exc:
+        raise ValueError("--preset must be standard or compact") from exc
+    safe = bool(getattr(args, "safe", False))
+    if safe and preset is CompressionPreset.COMPACT:
+        raise ValueError("--safe cannot be combined with --preset compact")
+
     return RunConfig(
         input_dir=input_dir,
         output_dir=output_dir,
         workers=workers,
-        safe=bool(getattr(args, "safe", False)),
+        preset=preset,
+        safe=safe,
         dry_run=bool(getattr(args, "dry_run", False)),
         limit=limit,
         retry_errors=bool(getattr(args, "retry_errors", False)),
         qpdf_path=Path(qpdf_arg).expanduser().resolve() if qpdf_arg else None,
+        lossy=lossy_options_for_preset(preset),
     )
 
 
 def config_hash(cfg: RunConfig) -> str:
     """処理結果または記録される判定結果に影響する条件をハッシュ化する。"""
+    lossy = asdict(cfg.lossy)
+    if not cfg.lossy.recompress_existing_jpeg:
+        # standardで無効な追加項目は、既存stateとのhash互換性を保つ。
+        lossy.pop("recompress_existing_jpeg")
+        lossy.pop("jpeg_recompress_min_percent")
     relevant = {
         # DBの主キーは入力パスだけなので、出力先も再開条件へ含める。
         "output_dir": str(cfg.output_dir),
         "safe": cfg.safe,
         "dry_run": cfg.dry_run,
         "scan": asdict(cfg.scan),
-        "lossy": asdict(cfg.lossy),
+        "lossy": lossy,
         "reduction": asdict(cfg.reduction),
         "qpdf": asdict(cfg.qpdf),
         "pymupdf_version": cfg.pymupdf_version,

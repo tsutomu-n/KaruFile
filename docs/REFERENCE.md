@@ -12,6 +12,10 @@
 -o, --output PATH        出力フォルダー。省略時は <input>_軽量化
 --pdf-workers N          PDFの並列処理数。既定値は2
 --image-workers N        画像の並列処理数。既定値は4
+--video-workers N        動画の並列処理数。既定値は1
+--preset NAME            standardまたはcompact。既定値はstandard
+--ffmpeg-path PATH       compact動画用ffmpeg。省略時はPATH
+--ffprobe-path PATH      compact動画用ffprobe。省略時はPATH
 -n, --dry-run            完成出力を作らず判定を確認
 -v, --verbose            詳細ログを表示
 ```
@@ -24,10 +28,11 @@
 1. 入出力、予定出力、状態DB、レポートの保存先を検査
 2. PDFを処理
 3. 画像を処理
-4. 現在実行のレポートと画像サマリーを入力集合へ照合
-5. 統合サマリーと終了コードを出力
+4. compactの場合、対応動画を処理
+5. 現在実行のPDF・画像・動画レポートを入力集合と実ファイルへ照合
+6. 統合サマリーと終了コードを出力
 
-PDFと画像の片方が失敗しても、可能な範囲でもう片方を実行します。正確な集計値を取得できない
+1つのprocessorが失敗しても、可能な範囲で他を実行します。正確な集計値を取得できない
 場合は、過去の出力から推測せず `unknown` と表示します。
 
 ## 統合CLIの保存先
@@ -36,12 +41,18 @@ PDFと画像の片方が失敗しても、可能な範囲でもう片方を実�
 
 | 内容 | 保存先 |
 |---|---|
-| PDFと画像 | `D:\作業\資料_軽量化\` |
+| PDF、画像、compact動画 | `D:\作業\資料_軽量化\` |
 | 通常実行のPDFレポート | `D:\作業\report.csv` |
 | dry-runのPDFレポート | `D:\作業\report.dry-run.csv` |
 | PDF状態DB | `D:\作業\.pdf-shrink\state.sqlite3` |
 | PDF一時ファイル | `D:\作業\.pdf-shrink\temp\` |
 | 画像エラーCSV | `D:\作業\資料_軽量化.image-errors.csv` |
+| 通常実行の画像manifest | `D:\作業\資料_軽量化.image-manifest.csv` |
+| dry-runの画像manifest | `D:\作業\資料_軽量化.image-manifest.dry-run.csv` |
+| 通常実行の動画レポート | `D:\作業\資料_軽量化.video-report.csv` |
+| dry-runの動画レポート | `D:\作業\資料_軽量化.video-report.dry-run.csv` |
+| 動画状態DB | `D:\作業\資料_軽量化.video-state\state.sqlite3` |
+| 動画一時ファイル | `D:\作業\資料_軽量化.video-state\temp\` |
 
 PDFレポート、状態DB、一時ファイルはPDFがある場合だけ使用します。PDFがない実行では
 作成・更新せず、以前の実行で同じ場所にあるファイルも削除しません。PDFレポートと状態DBは、
@@ -59,23 +70,45 @@ source,planned_output,error
 終了コード `1` となり、以前のCSVが残ることがあります。画像warningはターミナルへ表示し、
 画像エラーCSVには保存しません。
 
+画像manifestは現在入力を重複なく1行ずつ記録します。列:
+
+```text
+source_path,source_size,source_sha256,output_path,output_size,output_sha256,
+action,error,preset,recipe_hash,orig_width,orig_height,new_width,new_height
+```
+
+通常実行とdry-runは別ファイルです。統合CLIは更新の有無、入力との1:1対応、予定出力、presetと
+recipe hash、source/outputの安定したsize・SHA-256、action別の空欄、処理後寸法上限、エラーCSV
+との対応を検査し、manifestの整数値から集計します。子CLIの丸め済みstdoutサマリーは集計に
+使用しません。既存の正式出力または画像レポートがread-onlyならchmodせず終了コード `1` で
+fail-closedにします。
+
+動画レポートとstateはcompactで動画がある場合だけ使います。reportは現在入力を重複なく1行ずつ
+記録し、orchestratorは更新、入力・予定出力path、preset、実ファイルのsize/SHA-256、削減値の
+整合を照合します。
+
 ## 終了コード
 
 | コード | 意味 |
 |---:|---|
-| `0` | PDFと画像のエラーが0件 |
+| `0` | 対象となったPDF・画像・動画のエラーが0件 |
 | `1` | 処理失敗、レポート更新失敗、結果不整合、または安全性検査失敗 |
 | `2` | 引数不正 |
 
-子処理の終了コードが `0` でも、現在入力とレポート・サマリーが一致しない場合や、報告された
+子処理の終了コードが `0` でも、現在入力とレポートが一致しない場合や、報告された
 エラーが1件以上ある場合は、統合CLIも `1` を返します。
+統合CLIはprocessor起動前に全対象のidentityとSHA-256を記録し、全processor終了後に再照合します。
+入力変更または検証不能を検出した場合は集計値を `unknown` とし、終了コード `1` を返します。
+各processorには24時間の固定実行期限があり、超過時は子process treeを停止して失敗とします。
 
 ## dry-run
 
-- 完成したPDFと画像を作りません。
+- 完成したPDF・画像・動画を作りません。
 - PDF処理用の一時PDFを作りません。
 - qpdfを探索、実行、自動取得しません。
-- PDF状態DBと `report.dry-run.csv`、画像エラーCSVは更新される場合があります。
+- PDF状態DBと `report.dry-run.csv`、画像エラーCSV、画像dry-run manifestは更新される場合があります。
+- compact動画ではffprobeで構成を確認し、dry-run reportを更新します。空の動画state領域を
+  初期作成する場合がありますが、通常実行の成功recordは読み書きしません。
 - 統合サマリーの出力サイズ、削減量、削減率は計算しません。
 - 圧縮対象PDFの処理方法は `DRY_RUN_LOSSLESS` または `DRY_RUN_LOSSY` として記録します。
 
@@ -98,13 +131,19 @@ Windowsで大文字小文字を無視すると出力名が衝突する場合、�
 SHA-256先頭8文字を付けます。ファイルとディレクトリのprefixが衝突する場合も、ファイル側の
 出力名へハッシュを付けて解消します。
 
-### 固定変換条件
+### 変換プリセット
+
+| 項目 | `standard` | `compact` |
+|---|---:|---:|
+| 最大寸法 | 長辺1280px・短辺960px | 長辺1024px・短辺768px |
+| JPEG quality | 72 | 60 |
+
+両presetで共通:
 
 | 項目 | 値 |
 |---|---|
-| 最大寸法 | 長辺1280px、短辺960px |
 | リサイズ | 縦横比維持、拡大・切り抜きなし |
-| JPEG | quality 72、4:2:0、optimize、progressive |
+| JPEG | 4:2:0、optimize、progressive |
 | Orientation | EXIF Orientationを画素へ適用 |
 | 透過 | 白背景へ合成 |
 | animation・複数ページ | 先頭フレームだけを使用し、ターミナルへ警告を表示 |
@@ -117,13 +156,18 @@ SHA-256先頭8文字を付けます。ファイルとディレクトリのprefix
 非JPEG、上限を超えるJPEG、Orientationの画素適用が必要なJPEGは変換対象です。非JPEGでは
 出力が入力より大きい場合があり、`OUTPUT_LARGER_THAN_SOURCE` を表示します。
 
-KaruFileが生成したJPEGには、小文字の識別情報 `karufile:image-v1` と入力スナップショットを
+KaruFileが生成したJPEGには、小文字の識別情報 `karufile:image-v2` と入力スナップショットを
 保存します。
 
-- この識別情報を持つ入力は、旧変換条件で生成された場合も再エンコードしません。
-- 同じ入力ファイルサイズ・更新時刻と現在の変換条件に一致し、寸法が現在の上限内にある
-  完成済み出力は再利用します。
-- コピー済みJPEGを再利用する場合は、ファイルサイズ・更新時刻に加えてbyte列の一致も確認します。
+- SHA-256を含む完全な現行markerかつ既知recipeで、Orientation適用が不要、現在presetの
+  寸法上限内にある生成物だけを短絡できます。同じpresetの生成物と、compact生成物を
+  standardで処理する場合が該当します。
+- standard生成物をcompactで処理する場合と、未知・破損・旧v1 markerは通常のJPEG候補
+  判定へ戻し、markerだけを理由に圧縮を省略しません。
+- 同じ入力SHA-256・ファイルサイズ・更新時刻と現在の変換条件に一致し、寸法が現在の上限内に
+  ある完成済み出力は再利用します。SHA-256を持たない旧v1 markerは一度再生成します。
+- standardでコピー済みJPEGを再利用する場合は、ファイルサイズ・更新時刻に加えてbyte列の
+  一致も確認します。compactではpreset不明のコピーを再評価します。
 
 ### メタデータ
 
@@ -172,25 +216,39 @@ PDF dry-runではqpdfを使用しません。
 
 - 256 KiB未満のPDFは圧縮せず、通常実行では原本をコピーします。
 - 暗号化、電子署名、フォーム、添付ファイル、修復済みPDFなどは圧縮しません。
+  添付ファイルまたは電子署名の有無を検査できない場合も、安全側で
+  `SKIPPED_COMPLEX` として原本を採用します。
 - ページ内で最大の画像配置がページ面積の80%以上、実効解像度が450 DPI超、
   可視テキストが20文字以下のページをスキャンページと判定し、`scan_page_ratio` に記録します。
   非可逆候補にするかの判定には使いません。
-- 実効解像度は、画像のpixel寸法と表示bboxから90度回転も考慮して求めます。
+- 実効解像度は、画像のpixel寸法と配置transformのX/Y基底長から軸別に求めます。
+  回転・skew・非等方配置と、同じ画像の複数配置を考慮します。
 - 可視文字数はtexttraceを優先し、非表示または透明なspanだけを除外します。
   白色だけでは不可視扱いしません。
-- 配置サイズから見た画像実効DPIが300を超える画像がある場合、その画像を300 DPI、
-  JPEG quality 92へ縮小した非可逆候補を作ります。
-- 実効DPIはpixel寸法と表示bboxから求めます。JPEGのxres/yresメタデータは使いません。
+- 配置サイズから見た画像実効DPIが300を超える画像がある場合、standardではその画像を
+  300 DPI・JPEG quality 92、compactでは300 DPI・quality 80へ縮小した候補を作ります。
+- compactは300DPI以下の既存JPEGも、pixel寸法を変えずquality 80で再圧縮候補にします。
+- compactの個別JPEG streamは、再圧縮後に5%以上小さくならなければ書き換えません。
+- 実効DPIはpixel寸法と配置transformから軸別に求めます。JPEGのxres/yresメタデータは
+  使いません。300 DPI未満の軸は拡大しません。
 - 拡大しません。1bit画像とsoft mask付き画像は縮小しません。ベクター文字は残します。
-- 可視テキストが多くても、300DPI超の画像があれば非可逆候補を作ります。
-- 超過画像が無い場合はqpdfの可逆候補を作ります。
+- xrefを持たないinline画像がいずれかの軸で300 DPIを超える場合、非safe実行では
+  `SKIPPED_COMPLEX` として原本を採用します。safe実行のqpdf可逆候補は阻害しません。
+- 可視テキストが多くても、standardでは300DPI超、compactでは再圧縮可能な既存JPEGが
+  あれば非可逆候補を作ります。
+- standardで超過画像が無い場合はqpdfの可逆候補を作ります。
+
+各軸300 DPIは非可逆候補を作るときの固定目標です。候補が表示検証または削減条件を満たさない
+場合は原本を採用するため、最終出力に入力由来の300 DPI超画像が残ることがあります。
 
 ### 候補の検証
 
 - qpdfの構造検査
 - ページ数の一致
 - NFC正規化後の抽出テキストの一致
-- 72 DPIグレースケール表示の平均絶対差が5%以下
+- standardは72 DPIグレースケール表示の平均絶対差が5%以下
+- compactは72 DPI RGB表示のチャンネル平均絶対差が5%以下、かつ最大32×32 pixelの
+  局所タイルごとのチャンネル平均絶対差が20%以下
 
 ### 採用条件
 
@@ -204,9 +262,13 @@ PDF dry-runではqpdfを使用しません。
 
 ### 状態DBと再処理
 
-状態DBには、対象を決めた時点の入力SHA-256を保存します。処理中に入力が変わった場合は、
+状態DBには入力と完成出力のSHA-256を保存します。処理中に入力または出力が変わった場合は、
 新しい内容を誤って処理済みと記録せず、次回に再処理します。ただし、処理中の入力自体は
-ロックしません。
+ロックしません。出力SHA-256を持たない旧recordは一度再処理します。
+
+出力先、presetで選ばれた画像処理値、tool versionは設定hashに含みます。standardとcompactを
+切り替えた入力は再処理します。JPEG `/Decode` の色変換と非等方配置の軸別DPI判定を修正した
+versionではalgorithm識別子を変更したため、旧stateにあるPDFも初回に再処理します。
 
 ### PDFレポートのstatus
 
@@ -226,7 +288,7 @@ PDF dry-runではqpdfを使用しません。
 PDFレポートの列:
 
 ```text
-source_path,source_size,output_size,saved_bytes,saved_percent,mode,status,page_count,scan_page_ratio,error_message
+source_path,source_size,source_sha256,output_path,output_size,output_sha256,saved_bytes,saved_percent,preset,mode,status,page_count,scan_page_ratio,error_message
 ```
 
 ### PDF個別CLI
@@ -240,6 +302,7 @@ source_path,source_size,output_size,saved_bytes,saved_percent,mode,status,page_c
 --limit N             サイズ上位floor(N/2)件と、残りから固定seedでN-floor(N/2)件を選択
 --retry-errors        前回ERRORを再処理
 --qpdf-path PATH      qpdf.exeを明示
+--preset NAME         standardまたはcompact。既定値standard
 -v, --verbose         詳細ログ
 ```
 
@@ -253,8 +316,76 @@ Nが奇数の場合、`--limit` は固定seedのランダム側を1件多く選�
 ```text
 -i, --input PATH      入力フォルダー。必須
 -o, --output PATH     省略時は <input>_resized
--n, --dry-run         画像出力を作らず、画像エラーCSVを更新
+-n, --dry-run         画像出力を作らず、画像エラーCSVとdry-run manifestを更新
 -j, --workers N       既定値4、最小値1
+--preset NAME         standardまたはcompact。既定値standard
+-v, --verbose         詳細ログ
+```
+
+## 動画処理
+
+統合CLIではcompactのときだけ `.mp4`、`.m4v`、`.mkv`、`.webm` を探索します。
+入力拡張子とcontainer familyを維持し、対応可能な構成だけを変換します。
+
+### 対応する変換条件
+
+- attached pictureではない映像1本
+- 8-bit SDR、progressive、固定frame rate、sample aspect ratio 1:1
+- 音声なし、またはmono/stereo 1本
+- 字幕、data、attachment、chapterなし
+- 1280×720以内、30fps以内、拡大なし
+- 映像は `libsvtav1`
+- MP4/M4VはAAC、MKV/WebMはOpus
+
+初期recipeの固定値:
+
+- CRFは38、35、32の順で候補化し、SVT-AV1 `preset=8`、`tune=0`
+- 音声bitrateはmono 64 kbps、stereo 96 kbps。AACは入力以下かつ最大48 kHz、
+  Opusは48 kHzへする
+- VMAF `vmaf_v0.6.1`を5 frameごとに評価し、mean 85以上かつ5 percentile 70以上
+- 入力より1 MiB以上かつ10%以上小さい候補だけを採用
+- container durationと、両方で取得できた映像・音声stream durationの許容差は0.25秒
+
+HDR、VFR、interlace、複数stream等は `SKIPPED_COMPLEX` または
+`SKIPPED_UNSUPPORTED` として原本を同じ相対pathへコピーします。
+
+### 動画候補の検証と採用
+
+候補はffprobe構造検査、全stream decode、duration・stream・寸法・fps、rotation 0、
+明示progressive/SAR 1:1、予定した音声sample rate、VMAF mean/p5、削減量をすべて満たした
+場合だけ `os.replace()` で公開します。品質不合格または削減不足は `UNCHANGED` として原本を
+コピーします。処理中に入力snapshotが変わった候補は公開しません。
+
+動画reportの主なstatus:
+
+| status | 意味 |
+|---|---|
+| `ADOPTED` | 検証済みAV1候補を採用 |
+| `UNCHANGED` | 品質または削減条件により原本を採用 |
+| `SKIPPED_STANDARD` | 動画個別CLIのstandardで原本を採用 |
+| `SKIPPED_COMPLEX` | 複雑なstream構成のため原本を採用 |
+| `SKIPPED_UNSUPPORTED` | 未対応container/codec条件のため原本を採用 |
+| `SKIPPED_COMPLETE` | source/config/output検証済みの既存結果を再利用 |
+| `DRY_RUN` | dry-runで予定だけを記録 |
+| `ERROR` | tool、probe、encode、validation、公開に失敗 |
+
+保存先は `<output>.video-state/` と `<output>.video-report.csv`、dry-runは
+`<output>.video-report.dry-run.csv` です。FFmpeg/ffprobeは自動取得せず、PATHまたはCLIで
+指定します。
+`SKIPPED_COMPLETE` の再利用時はstateに保存したsource/config/tool versionと出力hashを照合し、
+full decodeとVMAFは再実行しません。state/reportは利用者のローカル管理下にある信頼済みcacheと
+みなします。手動編集が疑われる場合は `<output>.video-state` を別名へ退避して再実行してください。
+
+動画個別CLI:
+
+```text
+--input PATH          入力フォルダー。必須
+--output PATH         出力フォルダー。必須
+--workers N           既定値1、最小値1
+--preset NAME         standardまたはcompact。既定値standard
+--dry-run             動画出力を作らず予定を記録
+--ffmpeg-path PATH    ffmpegを明示
+--ffprobe-path PATH   ffprobeを明示
 -v, --verbose         詳細ログ
 ```
 
@@ -262,13 +393,14 @@ Nが奇数の場合、`--limit` は固定seedのランダム側を1件多く選�
 
 - [pdf-shrink](../pdf-shrink/README.md)
 - [media-shrink-tool](../media-shrink-tool/README.md)
+- [video-shrink](../video-shrink/README.md)
 - [orchestrator](../orchestrator/README.md)
 
 ## 対象外と確認済みの制約
 
-KaruFile v1の対象外:
+KaruFileの対象外:
 
-- 動画圧縮
+- HDR、VFR、interlace、字幕、複数映像・音声等を保持した動画変換
 - 重複削除
 - 知覚ハッシュ
 - 元ファイル削除
@@ -279,8 +411,20 @@ KaruFile v1の対象外:
 1. qpdf配布ZIPの真正性
    - バージョンと展開先は固定・検査しますが、SHA-256または署名は検証しません。
 2. PDF表示検証の局所差分
-   - 72 DPIのページ全体平均差を使うため、小さな領域だけの欠落を見逃す可能性があります。
+   - standardは72 DPIグレースケールのページ全体平均差を使います。compactは72 DPI RGBの
+     全体差と最大32×32 pixelの局所差を検査しますが、それより細かい劣化を見逃す可能性があります。
 3. 入力ファイルの同時更新
-   - 処理前スナップショットにより次回実行で変更を検出できますが、処理中の入力をロックしません。
+   - 起動前と終了時に全対象のidentity・SHA-256を照合して変更を失敗として検出しますが、
+     処理中の入力をロックせず、別プロセスによる変更そのものは防止しません。
 4. 実データでの判定閾値
    - テストは合成データが中心です。今回の実装では実データPilotを実施していません。
+5. 動画の自動判定と知覚品質
+   - CFRはffprobeの `r_frame_rate == avg_frame_rate` を使う入口判定で、全timestampの均一性を
+     証明しません。既知のHDR/Dolby Vision metadataは拒否しますが、metadata欠落時のSDR性までは
+     証明しません。VMAFは映像だけを評価し、30fps化の滑らかさと音声品質は測定しません。
+6. 動画VMAFの一時ファイル上限
+   - VMAF JSONは生成完了後に64 MiB上限を検査するため、異常なlibvmaf実行中はvalidation timeoutまで
+     一時領域を消費する余地があります。
+7. 完了済み動画の再検証
+   - state再利用時は出力hashを照合しますが、full decodeとVMAFを再実行しません。ローカルstateを
+     信頼境界に含めることで、再実行を高速化しています。

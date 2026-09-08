@@ -1,16 +1,50 @@
 # Python-generated files
 __pycache__/
 .pytest_cache/
+.ruff_cache/
 *.py[oc]
 build/
 dist/
 wheels/
 *.egg-info
 .coverage
+.coverage.*
 htmlcov/
 
 # Virtual environments
 .venv/
+
+# KaruFile default output directories (root/PDF CLI and standalone image CLI)
+*_軽量化/
+*_resized/
+# Custom --output directories should be added to .git/info/exclude locally.
+
+# PDF runtime state, reports, and interrupted report publication
+.pdf-shrink/
+report.csv
+report.dry-run.csv
+.report.csv.*.tmp
+.report.csv.*.backup
+.report.dry-run.csv.*.tmp
+.report.dry-run.csv.*.backup
+
+# Standalone image reports, including dry-run manifests
+*.image-errors.csv
+*.image-manifest.csv
+*.image-manifest.dry-run.csv
+.*.image-errors.csv.*.tmp
+.*.image-manifest.csv.*.tmp
+.*.image-manifest.dry-run.csv.*.tmp
+
+# Standalone video state and reports, including dry-run reports
+*.video-state/
+*.video-report.csv
+*.video-report.dry-run.csv
+.*.video-report.csv.*.tmp
+.*.video-report.dry-run.csv.*.tmp
+
+# Keep uv.lock, .python-version, ExecPlans, and architecture/visual-check artifacts.
+# Do not ignore media extensions: source fixtures may be versioned.
 
 # Local Devin CLI overrides
 .devin/config.local.json

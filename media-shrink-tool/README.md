@@ -15,6 +15,7 @@ uv sync --project media-shrink-tool
 uv run --project media-shrink-tool python -m media_shrink resize `
   -i "D:\作業\資料" `
   -o "D:\作業\資料_resized" `
+  --preset standard `
   -j 4
 ```
 
@@ -26,26 +27,29 @@ uv run --project media-shrink-tool python -m media_shrink resize `
 | `-o`, `--output` | 別の出力フォルダー。省略時は `<input>_resized` |
 | `-n`, `--dry-run` | 画像をデコードして予定を確認 |
 | `-j`, `--workers` | 並列処理数。既定値は4、最小値は1 |
+| `--preset` | `standard`または`compact`。既定値は`standard` |
 | `-v`, `--verbose` | 詳細ログ |
 
 統合CLIとPDF個別CLIの既定出力は `<input>_軽量化` ですが、この個別CLIは
 `<input>_resized` です。入力と出力が同一、または互いに親子となる指定は処理前に拒否します。
 
-`--dry-run` は画像出力を書きませんが、現在の検査結果を残すためエラーCSVの更新を試みます。
+`--dry-run` は画像出力を書きませんが、現在の検査結果を残すためエラーCSVとdry-run
+manifestの更新を試みます。
 通常実行では確認入力を求めません。
 
-## 固定変換契約
+## 変換プリセット
 
-| 項目 | 値 |
-|---|---|
-| 入力候補 | JPEG、PNG、TIFF、BMP、GIF、WebP、HEIC、HEIF |
-| 出力 | JPEG |
-| 最大寸法 | 長辺1280px、短辺960px |
-| リサイズ | 縦横比維持、拡大・切り抜きなし |
-| JPEG | quality 72、4:2:0、optimize、progressive |
-| Orientation | EXIF Orientationを画素へ適用 |
-| 透過 | 白背景へ合成 |
-| animation・複数ページ | 先頭フレームだけを使用し、ターミナルへ警告を表示 |
+| 項目 | `standard` | `compact` |
+|---|---:|---:|
+| 最大寸法 | 長辺1280px・短辺960px | 長辺1024px・短辺768px |
+| JPEG quality | 72 | 60 |
+
+どちらもJPEG 4:2:0、optimize、progressiveを使います。縦横比を維持し、
+拡大や切り抜きは行いません。EXIF Orientationは画素へ適用し、透過部分は
+白背景へ合成します。animation・複数ページは先頭フレームだけを使用し、
+ターミナルへ警告を表示します。
+
+入力候補はJPEG、PNG、TIFF、BMP、GIF、WebP、HEIC、HEIF、出力はJPEGです。
 
 ## 出力名と衝突
 
@@ -67,13 +71,20 @@ SHA-256先頭8文字を付けます。ファイルとディレクトリのprefix
 上限内のJPEGは、候補が32 KiB以上かつ10%以上小さくなる場合だけ再エンコード結果を
 採用します。それ以外は入力JPEGを出力へコピーします。
 
-KaruFileが生成したJPEGには、小文字の識別情報 `karufile:image-v1` と入力スナップショットを
+KaruFileが生成したJPEGには、小文字の識別情報 `karufile:image-v2` と入力スナップショットを
 保存します。
 
-- この識別情報を持つ入力は、旧変換条件で生成された場合も再エンコードしません。
-- 同じ入力ファイルサイズ・更新時刻と現在の変換条件に一致し、寸法が現在の上限内にある
-  完成済み出力は再利用します。
-- コピー済みJPEGを再利用する場合は、ファイルサイズ・更新時刻に加えてbyte列の一致も確認します。
+- 同じプリセットの生成物は再エンコードしません。
+- `compact`生成物を`standard`で処理しても、拡大・再エンコードしません。
+- `standard`生成物を`compact`で処理する場合だけ再処理し、寸法上限または品質を下げます。
+  同寸法の候補は実ファイルが小さくなる場合だけ採用します。
+- 生成済み短絡は、SHA-256を含む完全な現行markerかつ既知recipeで、Orientation適用が不要、
+  現在presetの寸法上限内の場合だけ許可します。未知・破損・旧v1 markerは通常のJPEG候補
+  判定へ戻し、markerだけを理由に圧縮を省略しません。
+- 同じ入力SHA-256・ファイルサイズ・更新時刻と現在の変換条件に一致し、寸法が現在の上限内に
+  ある完成済み出力は再利用します。旧v1 markerはSHA-256を持たないため一度再生成します。
+- `standard`でコピー済みJPEGを再利用する場合は、ファイルサイズ・更新時刻に
+  加えてbyte列の一致も確認します。`compact`では既存コピーを再評価します。
 
 ## メタデータと警告
 
@@ -105,6 +116,19 @@ Orientation適用後は古いOrientation値を残しません。CMYKなどから
 列は `source,planned_output,error` です。入力・出力の検査を通過してレポート公開に成功した
 場合は、現在実行の結果で置き換え、エラー0件でもヘッダーだけへ更新します。検査または公開に
 失敗した場合は終了コード `1` となり、以前のCSVが残ることがあります。
+
+全画像の現在実行結果は、通常実行とdry-runを分けた次の原子的manifestへ記録します。
+
+```text
+<output>.image-manifest.csv
+<output>.image-manifest.dry-run.csv
+```
+
+列は `source_path,source_size,source_sha256,output_path,output_size,output_sha256,action,error,`
+`preset,recipe_hash,orig_width,orig_height,new_width,new_height` です。公開直前に全入力と、通常実行で
+生成・再利用した出力のpath、size、SHA-256、寸法を再検証します。manifestを更新できない場合も
+終了コードは `1` です。既存の正式出力またはレポートがread-onlyの場合、入力側のmodeを変えない
+ため自動でchmodせず、以前の内容を残してfail-closedにします。
 
 | コード | 意味 |
 |---:|---|

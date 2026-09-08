@@ -7,7 +7,9 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable
 
+from . import discovery
 from .models import ProcessResult, ProcessStatus, SourceSnapshot
+from .utils import sha256_file
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS files (
@@ -19,6 +21,7 @@ CREATE TABLE IF NOT EXISTS files (
     mode              TEXT,
     status            TEXT NOT NULL,
     output_size       INTEGER,
+    output_sha256     TEXT,
     saved_bytes       INTEGER,
     saved_percent     REAL,
     page_count        INTEGER,
@@ -46,6 +49,7 @@ class Record:
     mode: str | None
     status: str
     output_size: int | None
+    output_sha256: str | None
     saved_bytes: int | None
     saved_percent: float | None
     page_count: int | None
@@ -59,6 +63,15 @@ class Record:
 def init_db(db_path: Path) -> sqlite3.Connection:
     conn = sqlite3.connect(str(db_path), timeout=30.0)
     conn.executescript(SCHEMA)
+    columns = {
+        str(row[1])
+        for row in conn.execute("PRAGMA table_info(files)").fetchall()
+    }
+    if "output_sha256" not in columns:
+        # Existing databases predate output-content verification.  NULL makes
+        # every legacy terminal row run once, after which save_result stores a
+        # digest that can be checked on subsequent runs.
+        conn.execute("ALTER TABLE files ADD COLUMN output_sha256 TEXT")
     conn.commit()
     return conn
 
@@ -73,6 +86,7 @@ def _record_from_row(row: sqlite3.Row) -> Record:
         mode=row["mode"],
         status=row["status"],
         output_size=row["output_size"],
+        output_sha256=row["output_sha256"],
         saved_bytes=row["saved_bytes"],
         saved_percent=row["saved_percent"],
         page_count=row["page_count"],
@@ -126,6 +140,8 @@ def should_process(
         return True
     if record.config_hash != config_hash:
         return True
+    if output_required and is_terminal(record.status) and not record.output_sha256:
+        return True
     if record.status == ProcessStatus.ERROR:
         # 復旧コピーにも失敗したERRORは、出力を回復するため自動再試行する。
         if record.output_size is None or (output_required and not output_matches_record):
@@ -142,17 +158,28 @@ def save_result(
     result: ProcessResult,
     config_hash: str,
     *,
+    input_dir: Path,
     pymupdf_version: str,
     qpdf_version: str,
+    commit: bool = True,
 ) -> None:
     processed_at = datetime.datetime.now(datetime.timezone.utc).isoformat()
+    output_sha256 = _stable_output_sha256(result)
+    if result.output_size is not None and output_sha256 is None:
+        raise OSError(
+            f"Could not capture a stable PDF output digest: {result.output_path}"
+        )
+    # Hashing a large output creates another race window.  Reconfirm the input
+    # after that work and immediately before writing the completion record.
+    discovery.assert_source_unchanged(source, input_dir)
     conn.execute(
         """
         INSERT INTO files (
             source_path, source_sha256, source_size, source_mtime_ns, config_hash,
-            mode, status, output_size, saved_bytes, saved_percent, error_message,
+            mode, status, output_size, output_sha256, saved_bytes, saved_percent,
+            error_message,
             pymupdf_version, qpdf_version, page_count, scan_page_ratio, processed_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(source_path) DO UPDATE SET
             source_sha256 = excluded.source_sha256,
             source_size = excluded.source_size,
@@ -161,6 +188,7 @@ def save_result(
             mode = excluded.mode,
             status = excluded.status,
             output_size = excluded.output_size,
+            output_sha256 = excluded.output_sha256,
             saved_bytes = excluded.saved_bytes,
             saved_percent = excluded.saved_percent,
             error_message = excluded.error_message,
@@ -179,6 +207,7 @@ def save_result(
             str(result.mode) if result.mode else None,
             str(result.status),
             result.output_size,
+            output_sha256,
             result.saved_bytes,
             result.saved_percent,
             result.error_message,
@@ -189,7 +218,37 @@ def save_result(
             processed_at,
         ),
     )
-    conn.commit()
+    if commit:
+        conn.commit()
+
+
+def _stable_output_sha256(result: ProcessResult) -> str | None:
+    """Hash a published output only when it still matches the result snapshot."""
+    if result.output_size is None:
+        return None
+    try:
+        before = result.output_path.stat()
+        if not result.output_path.is_file() or before.st_size != result.output_size:
+            return None
+        digest = sha256_file(result.output_path)
+        after = result.output_path.stat()
+    except OSError:
+        return None
+    before_signature = (
+        before.st_dev,
+        before.st_ino,
+        before.st_size,
+        before.st_mtime_ns,
+        before.st_ctime_ns,
+    )
+    after_signature = (
+        after.st_dev,
+        after.st_ino,
+        after.st_size,
+        after.st_mtime_ns,
+        after.st_ctime_ns,
+    )
+    return digest if before_signature == after_signature else None
 
 
 def list_records(conn: sqlite3.Connection) -> list[Record]:

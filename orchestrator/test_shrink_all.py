@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import csv
+import hashlib
 import os
 import subprocess
 import sys
@@ -13,10 +15,154 @@ from shrink_all import (
     build_parser,
     collect_files,
     human_size,
+    image_errors_match_manifest,
+    image_manifest_matches_inputs,
+    parse_image_manifest,
     parse_image_summary,
     parse_pdf_report,
     validate_directories,
 )
+
+
+IMAGE_MANIFEST_FIELDS = (
+    "source_path",
+    "source_size",
+    "source_sha256",
+    "output_path",
+    "output_size",
+    "output_sha256",
+    "action",
+    "error",
+    "preset",
+    "recipe_hash",
+    "orig_width",
+    "orig_height",
+    "new_width",
+    "new_height",
+)
+
+
+def _write_image_manifest(path: Path, rows: list[dict[str, object]] | None = None) -> None:
+    with path.open("w", encoding="utf-8", newline="") as stream:
+        writer = csv.DictWriter(stream, fieldnames=IMAGE_MANIFEST_FIELDS)
+        writer.writeheader()
+        writer.writerows(rows or [])
+
+
+def _image_manifest_row(
+    source: Path,
+    output: Path,
+    *,
+    preset: str = "standard",
+    action: str = "COPIED_ORIGINAL",
+    error: str = "",
+    dry_run: bool = False,
+) -> dict[str, object]:
+    source_bytes = source.read_bytes()
+    output_bytes = output.read_bytes() if output.is_file() and not dry_run else None
+    has_dimensions = action != "ERROR"
+    return {
+        "source_path": str(source.resolve()),
+        "source_size": len(source_bytes),
+        "source_sha256": hashlib.sha256(source_bytes).hexdigest(),
+        "output_path": str(output.resolve()),
+        "output_size": len(output_bytes) if output_bytes is not None else "",
+        "output_sha256": hashlib.sha256(output_bytes).hexdigest() if output_bytes is not None else "",
+        "action": action,
+        "error": error,
+        "preset": preset,
+        "recipe_hash": shrink_all.IMAGE_RECIPE_HASHES[preset],
+        "orig_width": 1 if has_dimensions else "",
+        "orig_height": 1 if has_dimensions else "",
+        "new_width": 1 if has_dimensions else "",
+        "new_height": 1 if has_dimensions else "",
+    }
+
+
+PDF_REPORT_FIELDS = (
+    "source_path",
+    "source_size",
+    "source_sha256",
+    "output_path",
+    "output_size",
+    "output_sha256",
+    "saved_bytes",
+    "saved_percent",
+    "status",
+    "preset",
+)
+
+
+def _write_pdf_report(path: Path, rows: list[dict[str, object]]) -> None:
+    with path.open("w", newline="", encoding="utf-8") as stream:
+        writer = csv.DictWriter(stream, fieldnames=PDF_REPORT_FIELDS)
+        writer.writeheader()
+        writer.writerows(rows)
+
+
+VIDEO_REPORT_FIELDNAMES = (
+    "source_path",
+    "source_size",
+    "output_path",
+    "output_size",
+    "saved_bytes",
+    "saved_percent",
+    "status",
+    "error_message",
+    "preset",
+    "source_sha256",
+    "output_sha256",
+    "reason",
+    "video_codec",
+    "audio_codec",
+    "width",
+    "height",
+    "fps",
+    "duration",
+    "vmaf_mean",
+    "vmaf_p5",
+    "ffmpeg_version",
+)
+
+
+def _video_metadata(*, adopted: bool = False, audio_codec: str = "aac") -> dict[str, object]:
+    if adopted:
+        return {
+            "reason": "adopted test candidate",
+            "video_codec": "av1",
+            "audio_codec": audio_codec,
+            "width": 1280,
+            "height": 720,
+            "fps": 30.0,
+            "duration": 10.0,
+            "vmaf_mean": 85.0,
+            "vmaf_p5": 70.0,
+            "ffmpeg_version": "ffmpeg test",
+        }
+    return {
+        "reason": "copied original",
+        "video_codec": "",
+        "audio_codec": "",
+        "width": None,
+        "height": None,
+        "fps": None,
+        "duration": None,
+        "vmaf_mean": None,
+        "vmaf_p5": None,
+        "ffmpeg_version": "",
+    }
+
+
+def _write_video_report(
+    path: Path,
+    row: dict[str, object],
+    *,
+    fieldnames: tuple[str, ...] = VIDEO_REPORT_FIELDNAMES,
+) -> None:
+    with path.open("w", encoding="utf-8", newline="") as stream:
+        writer = csv.DictWriter(stream, fieldnames=fieldnames, extrasaction="ignore")
+        writer.writeheader()
+        writer.writerow(row)
 
 
 def _make_directory_link(link: Path, target: Path) -> None:
@@ -38,6 +184,75 @@ def test_human_size_formats_units():
     assert human_size(1536) == "1.50 KB"
 
 
+def test_source_baseline_detects_replacement_after_earlier_hash(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    source = tmp_path / "source.pdf"
+    later_source = tmp_path / "later.pdf"
+    source.write_bytes(b"first")
+    later_source.write_bytes(b"later")
+    baseline = shrink_all._capture_source_baseline([source, later_source])
+    previous = source.stat()
+    replacement = tmp_path / "replacement.pdf"
+    replacement.write_bytes(b"other")
+    os.utime(replacement, ns=(previous.st_atime_ns, previous.st_mtime_ns))
+
+    original_hash = shrink_all._stable_file_size_and_sha256
+
+    def replace_earlier_source_after_later_hash(path: Path) -> tuple[int, str]:
+        result = original_hash(path)
+        if path == later_source.resolve():
+            os.replace(replacement, source)
+        return result
+
+    monkeypatch.setattr(
+        shrink_all,
+        "_stable_file_size_and_sha256",
+        replace_earlier_source_after_later_hash,
+    )
+
+    assert not shrink_all._source_baseline_matches(baseline)
+
+
+def test_run_command_streams_but_returns_only_bounded_tail(capsys) -> None:
+    code = (
+        "import sys; "
+        "sys.stdout.write('x' * (3 * 1024 * 1024)); "
+        "sys.stdout.write('\\nResized 0 images (0 errors)\\n'); "
+        "sys.stdout.flush()"
+    )
+
+    exit_code, lines, _elapsed = shrink_all.run_command(
+        "bounded-output",
+        shrink_all.PDF_SHRINK_DIR,
+        ["python", "-c", code],
+    )
+
+    assert exit_code == 0
+    assert len(lines) <= shrink_all.PROCESSOR_OUTPUT_TAIL_LINES
+    assert all(
+        len(line) <= shrink_all.PROCESSOR_MAX_RETURNED_LINE_CHARS for line in lines
+    )
+    assert lines[-1] == "Resized 0 images (0 errors)"
+    assert len(capsys.readouterr().out) > 3 * 1024 * 1024
+
+
+def test_run_command_times_out_and_terminates_child_tree(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(shrink_all, "PROCESSOR_TIMEOUT_SECONDS", 0.2)
+    monkeypatch.setattr(shrink_all, "PROCESSOR_TERMINATE_GRACE_SECONDS", 1.0)
+
+    exit_code, _lines, elapsed = shrink_all.run_command(
+        "timeout",
+        shrink_all.PDF_SHRINK_DIR,
+        ["python", "-c", "import time; time.sleep(60)"],
+    )
+
+    assert exit_code != 0
+    assert elapsed < 5.0
+
+
 def test_parse_image_summary_extracts_count_and_sizes():
     lines = [
         "some log line",
@@ -57,15 +272,109 @@ def test_parse_image_summary_returns_none_without_summary_line():
     assert parse_image_summary(["no summary here"]) is None
 
 
+def test_image_manifest_validates_exact_files_totals_and_error_mapping(tmp_path: Path):
+    input_dir = tmp_path / "input"
+    output_dir = tmp_path / "output"
+    input_dir.mkdir()
+    output_dir.mkdir()
+    source = input_dir / "photo.jpg"
+    output = output_dir / "photo.jpg"
+    source.write_bytes(b"image-bytes")
+    output.write_bytes(source.read_bytes())
+    manifest_path = Path(f"{output_dir}.image-manifest.csv")
+    error_report = Path(f"{output_dir}.image-errors.csv")
+    _write_image_manifest(manifest_path, [_image_manifest_row(source, output)])
+    error_report.write_text("source,planned_output,error\n", encoding="utf-8")
+
+    result = parse_image_manifest(manifest_path)
+
+    assert result["count"] == 1
+    assert result["errors"] == 0
+    assert result["orig_size"] == result["new_size"] == len(source.read_bytes())
+    assert image_manifest_matches_inputs(
+        result,
+        [source],
+        input_dir=input_dir,
+        output_dir=output_dir,
+        preset="standard",
+        dry_run=False,
+    )
+    assert image_errors_match_manifest(error_report, result)
+    error_report.write_text(
+        "source,planned_output,error\nforged,forged,forged\n",
+        encoding="utf-8",
+    )
+    assert not image_errors_match_manifest(error_report, result)
+
+
+def test_image_manifest_rejects_malformed_and_raced_output(tmp_path: Path, monkeypatch):
+    malformed = tmp_path / "malformed.csv"
+    malformed.write_text("source_path,action\na,CONVERTED\n", encoding="utf-8")
+    assert parse_image_manifest(malformed) == {}
+
+    zero_source = tmp_path / "zero-source.jpg"
+    zero_output = tmp_path / "zero-output.jpg"
+    zero_source.write_bytes(b"source")
+    zero_output.write_bytes(b"")
+    zero_manifest = tmp_path / "zero-output.csv"
+    _write_image_manifest(
+        zero_manifest,
+        [_image_manifest_row(zero_source, zero_output, action="CONVERTED")],
+    )
+    assert parse_image_manifest(zero_manifest) == {}
+
+    input_dir = tmp_path / "input"
+    output_dir = tmp_path / "output"
+    input_dir.mkdir()
+    output_dir.mkdir()
+    source = input_dir / "photo.jpg"
+    output = output_dir / "photo.jpg"
+    source.write_bytes(b"source")
+    output.write_bytes(source.read_bytes())
+    report = tmp_path / "manifest.csv"
+    _write_image_manifest(report, [_image_manifest_row(source, output)])
+    parsed = parse_image_manifest(report)
+    original_fingerprint = shrink_all._stable_file_size_and_sha256
+    raced = False
+
+    def fingerprint_then_replace(path: Path) -> tuple[int, str]:
+        nonlocal raced
+        fingerprint = original_fingerprint(path)
+        if not raced and Path(path) == output:
+            raced = True
+            before = output.stat()
+            replacement = output.with_name("replacement.jpg")
+            replacement.write_bytes(b"forged")
+            os.utime(replacement, ns=(before.st_atime_ns, before.st_mtime_ns))
+            os.replace(replacement, output)
+        return fingerprint
+
+    monkeypatch.setattr(
+        shrink_all,
+        "_stable_file_size_and_sha256",
+        fingerprint_then_replace,
+    )
+    assert not image_manifest_matches_inputs(
+        parsed,
+        [source],
+        input_dir=input_dir,
+        output_dir=output_dir,
+        preset="standard",
+        dry_run=False,
+    )
+
+
 def test_build_parser_requires_input():
     parser = build_parser()
     args = parser.parse_args(["-i", "C:\\some\\path"])
     assert args.input == "C:\\some\\path"
     assert args.pdf_workers == 2
     assert args.image_workers == 4
+    assert args.video_workers == 1
+    assert args.preset == "standard"
 
 
-@pytest.mark.parametrize("option", ["--pdf-workers", "--image-workers"])
+@pytest.mark.parametrize("option", ["--pdf-workers", "--image-workers", "--video-workers"])
 def test_build_parser_rejects_non_positive_workers(option: str):
     parser = build_parser()
 
@@ -73,6 +382,541 @@ def test_build_parser_rejects_non_positive_workers(option: str):
         parser.parse_args(["-i", "C:\\some\\path", option, "0"])
 
     assert exc_info.value.code == 2
+
+
+def test_build_parser_accepts_compact_and_rejects_unknown_preset():
+    parser = build_parser()
+
+    assert parser.parse_args(["-i", "input", "--preset", "compact"]).preset == "compact"
+    with pytest.raises(SystemExit) as exc_info:
+        parser.parse_args(["-i", "input", "--preset", "tiny"])
+    assert exc_info.value.code == 2
+
+
+def test_parse_video_report_requires_known_status_and_preset(tmp_path: Path):
+    report = tmp_path / "video.csv"
+    output_dir = tmp_path / "output"
+    output_dir.mkdir()
+    source = tmp_path / "clip.mp4"
+    source_bytes = b"v" * (shrink_all.VIDEO_MIN_SAVED_BYTES + 100)
+    source.write_bytes(source_bytes)
+    output = output_dir / "clip.mp4"
+    output.write_bytes(b"tiny")
+    saved = len(source_bytes) - 4
+    saved_percent = saved / len(source_bytes) * 100
+    source_hash = hashlib.sha256(source.read_bytes()).hexdigest()
+    output_hash = hashlib.sha256(output.read_bytes()).hexdigest()
+    row = {
+        "source_path": str(source),
+        "source_size": len(source_bytes),
+        "output_path": str(output),
+        "output_size": 4,
+        "saved_bytes": saved,
+        "saved_percent": saved_percent,
+        "status": "ADOPTED",
+        "error_message": "",
+        "preset": "compact",
+        "source_sha256": source_hash,
+        "output_sha256": output_hash,
+        **_video_metadata(adopted=True),
+    }
+    _write_video_report(
+        report,
+        row,
+    )
+
+    result = shrink_all.parse_video_report(report)
+
+    assert result["count"] == 1
+    assert result["errors"] == 0
+    assert result["orig_size"] == len(source_bytes)
+    assert result["new_size"] == 4
+    assert shrink_all.video_report_matches_inputs(
+        result,
+        [source],
+        input_dir=tmp_path,
+        output_dir=output_dir,
+        preset="compact",
+        dry_run=False,
+    )
+    assert not shrink_all.video_report_matches_inputs(
+        result,
+        [source],
+        input_dir=tmp_path,
+        output_dir=output_dir,
+        preset="standard",
+        dry_run=False,
+    )
+
+    _write_video_report(report, {**row, "status": "UNKNOWN"})
+    assert shrink_all.parse_video_report(report) == {}
+
+
+@pytest.mark.parametrize(
+    "missing",
+    [
+        "reason",
+        "video_codec",
+        "audio_codec",
+        "width",
+        "height",
+        "fps",
+        "duration",
+        "vmaf_mean",
+        "vmaf_p5",
+        "ffmpeg_version",
+    ],
+)
+def test_parse_video_report_requires_all_metadata_columns(
+    tmp_path: Path,
+    missing: str,
+) -> None:
+    report = tmp_path / "video.csv"
+    fieldnames = tuple(field for field in VIDEO_REPORT_FIELDNAMES if field != missing)
+    report.write_text(",".join(fieldnames) + "\n", encoding="utf-8")
+
+    assert shrink_all.parse_video_report(report) == {}
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("reason", " "),
+        ("width", "0"),
+        ("height", "-1"),
+        ("fps", "nan"),
+        ("duration", "inf"),
+        ("vmaf_mean", "-0.1"),
+        ("vmaf_p5", "100.1"),
+    ],
+)
+def test_parse_video_report_rejects_invalid_metadata_values(
+    tmp_path: Path,
+    field: str,
+    value: str,
+) -> None:
+    report = tmp_path / "video.csv"
+    row = {
+        "source_path": str(tmp_path / "clip.mp4"),
+        "source_size": 5,
+        "output_path": str(tmp_path / "output" / "clip.mp4"),
+        "output_size": "",
+        "saved_bytes": 0,
+        "saved_percent": 0.0,
+        "status": "DRY_RUN",
+        "error_message": "",
+        "preset": "compact",
+        "source_sha256": "a" * 64,
+        "output_sha256": "",
+        **_video_metadata(),
+    }
+    row[field] = value
+    _write_video_report(report, row)
+
+    assert shrink_all.parse_video_report(report) == {}
+
+
+@pytest.mark.parametrize(
+    ("field", "replacement"),
+    [
+        ("source_size", 999),
+        ("saved_bytes", 0),
+        ("saved_percent", 0.0),
+        ("output_path", "outside.mp4"),
+        ("source_sha256", "0" * 64),
+        ("output_sha256", "f" * 64),
+        ("reason", ""),
+        ("video_codec", "h264"),
+        ("audio_codec", "opus"),
+        ("width", 1282),
+        ("width", 1279),
+        ("height", 722),
+        ("height", 719),
+        ("fps", 30.1),
+        ("fps", float("nan")),
+        ("duration", 0.0),
+        ("vmaf_mean", 84.9),
+        ("vmaf_p5", 69.9),
+        ("ffmpeg_version", ""),
+    ],
+)
+def test_video_report_match_rejects_forged_row(
+    tmp_path: Path,
+    field: str,
+    replacement: object,
+) -> None:
+    input_dir = tmp_path / "input"
+    output_dir = tmp_path / "output"
+    input_dir.mkdir()
+    output_dir.mkdir()
+    source = input_dir / "clip.mp4"
+    output = output_dir / "clip.mp4"
+    source_bytes = b"v" * (shrink_all.VIDEO_MIN_SAVED_BYTES + 100)
+    source.write_bytes(source_bytes)
+    output.write_bytes(b"tiny")
+    saved = len(source_bytes) - 4
+    row = {
+        "source_path": str(source),
+        "source_size": len(source_bytes),
+        "output_path": str(output),
+        "output_size": 4,
+        "saved_bytes": saved,
+        "saved_percent": saved / len(source_bytes) * 100,
+        "status": "ADOPTED",
+        "error_message": "",
+        "preset": "compact",
+        "source_sha256": hashlib.sha256(source.read_bytes()).hexdigest(),
+        "output_sha256": hashlib.sha256(output.read_bytes()).hexdigest(),
+        **_video_metadata(adopted=True),
+    }
+    row[field] = replacement
+    result = {
+        "count": 1,
+        "source_paths": [str(source)],
+        "presets": ["compact"],
+        "rows": [row],
+    }
+
+    assert not shrink_all.video_report_matches_inputs(
+        result,
+        [source],
+        input_dir=input_dir,
+        output_dir=output_dir,
+        preset="compact",
+        dry_run=False,
+    )
+
+
+@pytest.mark.parametrize(
+    ("suffix", "audio_codec", "status", "expected"),
+    [
+        (".mp4", "aac", "ADOPTED", True),
+        (".m4v", "", "ADOPTED", True),
+        (".mkv", "opus", "ADOPTED", True),
+        (".webm", "", "ADOPTED", True),
+        (".mp4", "opus", "ADOPTED", False),
+        (".mkv", "aac", "ADOPTED", False),
+        (".mp4", "aac", "SKIPPED_COMPLETE", True),
+        (".mp4", "opus", "SKIPPED_COMPLETE", False),
+    ],
+)
+def test_video_report_match_validates_adopted_metadata_and_container_audio(
+    tmp_path: Path,
+    suffix: str,
+    audio_codec: str,
+    status: str,
+    expected: bool,
+) -> None:
+    input_dir = tmp_path / "input"
+    output_dir = tmp_path / "output"
+    input_dir.mkdir()
+    output_dir.mkdir()
+    source = input_dir / f"clip{suffix}"
+    output = output_dir / f"clip{suffix}"
+    source_bytes = b"v" * (shrink_all.VIDEO_MIN_SAVED_BYTES + 100)
+    source.write_bytes(source_bytes)
+    output.write_bytes(b"tiny")
+    saved = len(source_bytes) - output.stat().st_size
+    row = {
+        "source_path": str(source),
+        "source_size": len(source_bytes),
+        "output_path": str(output),
+        "output_size": output.stat().st_size,
+        "saved_bytes": saved,
+        "saved_percent": saved / len(source_bytes) * 100,
+        "status": status,
+        "error_message": "",
+        "preset": "compact",
+        "source_sha256": hashlib.sha256(source.read_bytes()).hexdigest(),
+        "output_sha256": hashlib.sha256(output.read_bytes()).hexdigest(),
+        **_video_metadata(adopted=True, audio_codec=audio_codec),
+    }
+    result = {
+        "count": 1,
+        "source_paths": [str(source)],
+        "presets": ["compact"],
+        "rows": [row],
+    }
+
+    assert shrink_all.video_report_matches_inputs(
+        result,
+        [source],
+        input_dir=input_dir,
+        output_dir=output_dir,
+        preset="compact",
+        dry_run=False,
+    ) is expected
+
+
+def test_video_report_match_accepts_only_dry_run_shape_for_dry_run(tmp_path: Path) -> None:
+    input_dir = tmp_path / "input"
+    output_dir = tmp_path / "output"
+    input_dir.mkdir()
+    source = input_dir / "clip.mp4"
+    source.write_bytes(b"video")
+    row = {
+        "source_path": str(source),
+        "source_size": 5,
+        "output_path": str(output_dir / "clip.mp4"),
+        "output_size": None,
+        "saved_bytes": 0,
+        "saved_percent": 0.0,
+        "status": "DRY_RUN",
+        "error_message": "",
+        "preset": "compact",
+        "source_sha256": hashlib.sha256(source.read_bytes()).hexdigest(),
+        "output_sha256": "",
+        **_video_metadata(),
+    }
+    result = {
+        "count": 1,
+        "source_paths": [str(source)],
+        "presets": ["compact"],
+        "rows": [row],
+    }
+
+    assert shrink_all.video_report_matches_inputs(
+        result,
+        [source],
+        input_dir=input_dir,
+        output_dir=output_dir,
+        preset="compact",
+        dry_run=True,
+    )
+    assert not shrink_all.video_report_matches_inputs(
+        result,
+        [source],
+        input_dir=input_dir,
+        output_dir=output_dir,
+        preset="compact",
+        dry_run=False,
+    )
+
+
+@pytest.mark.parametrize(
+    ("status", "output_bytes", "error_message", "expected"),
+    [
+        ("SKIPPED_STANDARD", b"video", "", False),
+        ("SKIPPED_COMPLEX", b"tiny", "", False),
+        ("SKIPPED_UNSUPPORTED", b"video", "", True),
+        ("UNCHANGED", b"video", "", True),
+        ("SKIPPED_COMPLETE", b"video", "", True),
+        ("ADOPTED", b"tiny", "", False),
+        ("ERROR", b"video", "processing failed", True),
+        ("ERROR", b"video", "", False),
+    ],
+)
+def test_video_report_match_enforces_status_semantics(
+    tmp_path: Path,
+    status: str,
+    output_bytes: bytes,
+    error_message: str,
+    expected: bool,
+) -> None:
+    input_dir = tmp_path / "input"
+    output_dir = tmp_path / "output"
+    input_dir.mkdir()
+    output_dir.mkdir()
+    source = input_dir / "clip.mp4"
+    source.write_bytes(b"video")
+    output = output_dir / "clip.mp4"
+    output.write_bytes(output_bytes)
+    source_size = source.stat().st_size
+    output_size = output.stat().st_size
+    saved = source_size - output_size
+    row = {
+        "source_path": str(source),
+        "source_size": source_size,
+        "output_path": str(output),
+        "output_size": output_size,
+        "saved_bytes": saved,
+        "saved_percent": saved / source_size * 100,
+        "status": status,
+        "error_message": error_message,
+        "preset": "compact",
+        "source_sha256": hashlib.sha256(source.read_bytes()).hexdigest(),
+        "output_sha256": hashlib.sha256(output.read_bytes()).hexdigest(),
+        **_video_metadata(adopted=status == "ADOPTED"),
+    }
+    result = {
+        "count": 1,
+        "source_paths": [str(source)],
+        "presets": ["compact"],
+        "rows": [row],
+    }
+
+    assert shrink_all.video_report_matches_inputs(
+        result,
+        [source],
+        input_dir=input_dir,
+        output_dir=output_dir,
+        preset="compact",
+        dry_run=False,
+    ) is expected
+
+
+@pytest.mark.parametrize("race_target", ["source", "output"])
+def test_video_report_match_rejects_atomic_replace_during_hash(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    race_target: str,
+) -> None:
+    input_dir = tmp_path / "input"
+    output_dir = tmp_path / "output"
+    input_dir.mkdir()
+    output_dir.mkdir()
+    source = input_dir / "clip.mp4"
+    output = output_dir / "clip.mp4"
+    source.write_bytes(b"video")
+    output.write_bytes(b"video")
+    source_hash = hashlib.sha256(source.read_bytes()).hexdigest()
+    output_hash = hashlib.sha256(output.read_bytes()).hexdigest()
+    row = {
+        "source_path": str(source),
+        "source_size": 5,
+        "output_path": str(output),
+        "output_size": 5,
+        "saved_bytes": 0,
+        "saved_percent": 0.0,
+        "status": "UNCHANGED",
+        "error_message": "",
+        "preset": "compact",
+        "source_sha256": source_hash,
+        "output_sha256": output_hash,
+        **_video_metadata(),
+    }
+    result = {
+        "count": 1,
+        "source_paths": [str(source)],
+        "presets": ["compact"],
+        "rows": [row],
+    }
+    target = source if race_target == "source" else output
+    original_hash = shrink_all._sha256_file
+    raced = False
+
+    def hash_then_replace(path: Path) -> str:
+        nonlocal raced
+        digest = original_hash(path)
+        if not raced and Path(path) == target:
+            raced = True
+            before = target.stat()
+            replacement = target.with_name(f"{target.name}.replacement")
+            replacement.write_bytes(b"other")
+            os.utime(replacement, ns=(before.st_atime_ns, before.st_mtime_ns))
+            os.replace(replacement, target)
+            os.utime(target, ns=(before.st_atime_ns, before.st_mtime_ns))
+        return digest
+
+    monkeypatch.setattr(shrink_all, "_sha256_file", hash_then_replace)
+    assert not shrink_all.video_report_matches_inputs(
+        result,
+        [source],
+        input_dir=input_dir,
+        output_dir=output_dir,
+        preset="compact",
+        dry_run=False,
+    )
+
+
+def test_standard_keeps_v1_behavior_and_does_not_start_video(tmp_path: Path, monkeypatch):
+    input_dir = tmp_path / "input"
+    output_dir = tmp_path / "output"
+    input_dir.mkdir()
+    (input_dir / "clip.mp4").write_bytes(b"video")
+    image_report = Path(f"{output_dir}.image-errors.csv")
+    calls: list[str] = []
+
+    def fake_run(name, _project_dir, args):
+        calls.append(name)
+        assert name == "media-shrink"
+        assert args[args.index("--preset") + 1] == "standard"
+        image_report.write_text("source,planned_output,error\n", encoding="utf-8")
+        _write_image_manifest(Path(f"{output_dir}.image-manifest.csv"))
+        return 0, ["Resized 0 images (0 errors)", "0.00 B -> 0.00 B"], 0.01
+
+    monkeypatch.setattr(shrink_all, "run_command", fake_run)
+
+    assert shrink_all.main(["-i", str(input_dir), "-o", str(output_dir)]) == 0
+    assert calls == ["media-shrink"]
+
+
+def test_compact_runs_video_and_validates_atomic_report(tmp_path: Path, monkeypatch):
+    input_dir = tmp_path / "input"
+    output_dir = tmp_path / "output"
+    input_dir.mkdir()
+    source = input_dir / "clip.mp4"
+    source_bytes = b"v" * (shrink_all.VIDEO_MIN_SAVED_BYTES + 100)
+    source.write_bytes(source_bytes)
+    image_report = Path(f"{output_dir}.image-errors.csv")
+    video_report = Path(f"{output_dir}.video-report.csv")
+    calls: list[str] = []
+
+    def fake_run(name, _project_dir, args):
+        calls.append(name)
+        assert args[args.index("--preset") + 1] == "compact"
+        if name == "media-shrink":
+            image_report.write_text("source,planned_output,error\n", encoding="utf-8")
+            _write_image_manifest(Path(f"{output_dir}.image-manifest.csv"))
+            return 0, ["Resized 0 images (0 errors)", "0.00 B -> 0.00 B"], 0.01
+        assert name == "video-shrink"
+        output = output_dir / "clip.mp4"
+        output.write_bytes(b"tiny")
+        saved = len(source_bytes) - 4
+        saved_percent = saved / len(source_bytes) * 100
+        source_hash = hashlib.sha256(source.read_bytes()).hexdigest()
+        output_hash = hashlib.sha256(output.read_bytes()).hexdigest()
+        _write_video_report(
+            video_report,
+            {
+                "source_path": str(source.resolve()),
+                "source_size": len(source_bytes),
+                "output_path": str(output.resolve()),
+                "output_size": 4,
+                "saved_bytes": saved,
+                "saved_percent": saved_percent,
+                "status": "ADOPTED",
+                "error_message": "",
+                "preset": "compact",
+                "source_sha256": source_hash,
+                "output_sha256": output_hash,
+                **_video_metadata(adopted=True),
+            },
+        )
+        return 0, [], 0.01
+
+    monkeypatch.setattr(shrink_all, "run_command", fake_run)
+
+    assert shrink_all.main(
+        ["-i", str(input_dir), "-o", str(output_dir), "--preset", "compact"]
+    ) == 0
+    assert calls == ["media-shrink", "video-shrink"]
+
+
+def test_compact_rejects_video_state_hardlink_before_processors(
+    tmp_path: Path,
+    monkeypatch,
+):
+    input_dir = tmp_path / "input"
+    output_dir = tmp_path / "output"
+    state_dir = Path(f"{output_dir}.video-state")
+    input_dir.mkdir()
+    state_dir.mkdir()
+    source = input_dir / "clip.mp4"
+    source.write_bytes(b"video")
+    os.link(source, state_dir / "state.sqlite3")
+    monkeypatch.setattr(
+        shrink_all,
+        "run_command",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(
+            AssertionError("processor must not be started")
+        ),
+    )
+
+    assert shrink_all.main(
+        ["-i", str(input_dir), "-o", str(output_dir), "--preset", "compact"]
+    ) == 1
+    assert source.read_bytes() == b"video"
 
 
 @pytest.mark.parametrize("relationship", ["same", "output_below_input", "input_below_output"])
@@ -138,6 +982,7 @@ def test_main_does_not_report_stale_results_after_start_failure(
         "source,planned_output,error\n",
         encoding="utf-8",
     )
+    _write_image_manifest(Path(f"{output_dir}.image-manifest.csv"))
 
     monkeypatch.setattr(
         shrink_all,
@@ -155,10 +1000,22 @@ def test_main_does_not_report_stale_results_after_start_failure(
 
 def test_parse_pdf_report_keeps_missing_output_size_unknown(tmp_path: Path):
     report = tmp_path / "report.csv"
-    report.write_text(
-        "source_path,source_size,output_size,saved_bytes,status\n"
-        "C:/source.pdf,100,,,ERROR\n",
-        encoding="utf-8",
+    _write_pdf_report(
+        report,
+        [
+            {
+                "source_path": "C:/source.pdf",
+                "source_size": 100,
+                "source_sha256": "a" * 64,
+                "output_path": "C:/output/source.pdf",
+                "output_size": "",
+                "output_sha256": "",
+                "saved_bytes": 0,
+                "saved_percent": 0,
+                "status": "ERROR",
+                "preset": "standard",
+            }
+        ],
     )
 
     result = parse_pdf_report(report)
@@ -176,6 +1033,157 @@ def test_parse_pdf_report_rejects_missing_required_columns(tmp_path: Path):
     assert parse_pdf_report(report) == {}
 
 
+@pytest.mark.parametrize(
+    ("field", "replacement"),
+    [
+        ("source_size", 31),
+        ("source_sha256", "f" * 64),
+        ("output_path", "unexpected.pdf"),
+        ("output_size", 31),
+        ("output_sha256", "e" * 64),
+        ("saved_bytes", 1),
+        ("saved_percent", 0.1),
+        ("status", "ADOPTED_LOSSLESS"),
+        ("preset", "compact"),
+    ],
+)
+def test_pdf_report_matcher_rejects_forged_row(
+    tmp_path: Path,
+    field: str,
+    replacement: object,
+) -> None:
+    input_dir = tmp_path / "input"
+    output_dir = tmp_path / "output"
+    input_dir.mkdir()
+    output_dir.mkdir()
+    source = input_dir / "document.pdf"
+    destination = output_dir / "document.pdf"
+    source.write_bytes(b"%PDF-1.7\n" + b"A" * 23)
+    destination.write_bytes(source.read_bytes())
+    row: dict[str, object] = {
+        "source_path": str(source.resolve()),
+        "source_size": 32,
+        "source_sha256": hashlib.sha256(source.read_bytes()).hexdigest(),
+        "output_path": str(destination.resolve()),
+        "output_size": 32,
+        "output_sha256": hashlib.sha256(destination.read_bytes()).hexdigest(),
+        "saved_bytes": 0,
+        "saved_percent": 0,
+        "status": "UNCHANGED",
+        "preset": "standard",
+    }
+    report = tmp_path / "report.csv"
+    _write_pdf_report(report, [row])
+    parsed = parse_pdf_report(report)
+    assert shrink_all.pdf_report_matches_inputs(
+        parsed,
+        [source],
+        input_dir=input_dir,
+        output_dir=output_dir,
+        preset="standard",
+        dry_run=False,
+    )
+
+    row[field] = replacement
+    _write_pdf_report(report, [row])
+
+    assert not shrink_all.pdf_report_matches_inputs(
+        parse_pdf_report(report),
+        [source],
+        input_dir=input_dir,
+        output_dir=output_dir,
+        preset="standard",
+        dry_run=False,
+    )
+
+
+def test_pdf_report_matcher_accepts_only_empty_dry_run_output(
+    tmp_path: Path,
+) -> None:
+    input_dir = tmp_path / "input"
+    output_dir = tmp_path / "output"
+    input_dir.mkdir()
+    source = input_dir / "document.pdf"
+    source.write_bytes(b"source")
+    report = tmp_path / "report.csv"
+    row: dict[str, object] = {
+        "source_path": str(source.resolve()),
+        "source_size": source.stat().st_size,
+        "source_sha256": hashlib.sha256(source.read_bytes()).hexdigest(),
+        "output_path": str((output_dir / source.name).resolve()),
+        "output_size": "",
+        "output_sha256": "",
+        "saved_bytes": 0,
+        "saved_percent": 0,
+        "status": "DRY_RUN_LOSSLESS",
+        "preset": "standard",
+    }
+    _write_pdf_report(report, [row])
+
+    assert shrink_all.pdf_report_matches_inputs(
+        parse_pdf_report(report),
+        [source],
+        input_dir=input_dir,
+        output_dir=output_dir,
+        preset="standard",
+        dry_run=True,
+    )
+
+    row["output_sha256"] = "f" * 64
+    _write_pdf_report(report, [row])
+    assert not shrink_all.pdf_report_matches_inputs(
+        parse_pdf_report(report),
+        [source],
+        input_dir=input_dir,
+        output_dir=output_dir,
+        preset="standard",
+        dry_run=True,
+    )
+
+
+def test_pdf_report_matcher_rejects_identical_hardlinked_output(
+    tmp_path: Path,
+) -> None:
+    input_dir = tmp_path / "input"
+    output_dir = tmp_path / "output"
+    input_dir.mkdir()
+    output_dir.mkdir()
+    source = input_dir / "document.pdf"
+    external = tmp_path / "external.pdf"
+    destination = output_dir / source.name
+    source.write_bytes(b"source")
+    external.write_bytes(b"source")
+    os.link(external, destination)
+    digest = hashlib.sha256(source.read_bytes()).hexdigest()
+    report = tmp_path / "report.csv"
+    _write_pdf_report(
+        report,
+        [
+            {
+                "source_path": str(source.resolve()),
+                "source_size": source.stat().st_size,
+                "source_sha256": digest,
+                "output_path": str(destination.resolve()),
+                "output_size": destination.stat().st_size,
+                "output_sha256": digest,
+                "saved_bytes": 0,
+                "saved_percent": 0,
+                "status": "UNCHANGED",
+                "preset": "standard",
+            }
+        ],
+    )
+
+    assert not shrink_all.pdf_report_matches_inputs(
+        parse_pdf_report(report),
+        [source],
+        input_dir=input_dir,
+        output_dir=output_dir,
+        preset="standard",
+        dry_run=False,
+    )
+
+
 @pytest.mark.parametrize("report_kind", ["header_only", "garbage", "count_mismatch"])
 def test_main_rejects_updated_pdf_report_that_does_not_match_current_inputs(
     tmp_path: Path,
@@ -190,20 +1198,31 @@ def test_main_rejects_updated_pdf_report_that_does_not_match_current_inputs(
     source.write_bytes(b"pdf")
     report_path = tmp_path / "report.csv"
     image_report = Path(f"{output_dir}.image-errors.csv")
-    header = "source_path,source_size,output_size,saved_bytes,status\n"
 
     def fake_run(name, _project_dir, _args):
         if name == "pdf-shrink":
             if report_kind == "header_only":
-                contents = header
+                _write_pdf_report(report_path, [])
             elif report_kind == "garbage":
-                contents = "garbage,columns\n1,2\n"
+                report_path.write_text("garbage,columns\n1,2\n", encoding="utf-8")
             else:
-                row = f"{source.resolve()},3,3,0,UNCHANGED\n"
-                contents = header + row + row
-            report_path.write_text(contents, encoding="utf-8")
+                digest = hashlib.sha256(source.read_bytes()).hexdigest()
+                row = {
+                    "source_path": str(source.resolve()),
+                    "source_size": 3,
+                    "source_sha256": digest,
+                    "output_path": str((output_dir / source.name).resolve()),
+                    "output_size": 3,
+                    "output_sha256": digest,
+                    "saved_bytes": 0,
+                    "saved_percent": 0,
+                    "status": "UNCHANGED",
+                    "preset": "standard",
+                }
+                _write_pdf_report(report_path, [row, row])
             return 0, [], 0.01
         image_report.write_text("source,planned_output,error\n", encoding="utf-8")
+        _write_image_manifest(Path(f"{output_dir}.image-manifest.csv"))
         return 0, ["Resized 0 images (0 errors)", "0.00 B -> 0.00 B"], 0.01
 
     monkeypatch.setattr(shrink_all, "run_command", fake_run)
@@ -228,13 +1247,26 @@ def test_main_treats_pdf_report_error_as_failure_even_if_child_exits_zero(
 
     def fake_run(name, _project_dir, _args):
         if name == "pdf-shrink":
-            report_path.write_text(
-                "source_path,source_size,output_size,saved_bytes,status\n"
-                f"{source.resolve()},3,,,ERROR\n",
-                encoding="utf-8",
+            _write_pdf_report(
+                report_path,
+                [
+                    {
+                        "source_path": str(source.resolve()),
+                        "source_size": 3,
+                        "source_sha256": hashlib.sha256(source.read_bytes()).hexdigest(),
+                        "output_path": str((output_dir / source.name).resolve()),
+                        "output_size": "",
+                        "output_sha256": "",
+                        "saved_bytes": 0,
+                        "saved_percent": 0,
+                        "status": "ERROR",
+                        "preset": "standard",
+                    }
+                ],
             )
             return 0, [], 0.01
         image_report.write_text("source,planned_output,error\n", encoding="utf-8")
+        _write_image_manifest(Path(f"{output_dir}.image-manifest.csv"))
         return 0, ["Resized 0 images (0 errors)", "0.00 B -> 0.00 B"], 0.01
 
     monkeypatch.setattr(shrink_all, "run_command", fake_run)
@@ -394,12 +1426,17 @@ def test_main_rejects_pdf_workspace_collision_before_processors(
     assert shrink_all.main(["-i", str(input_dir), "-o", str(output_dir)]) == 1
 
 
-def test_main_rejects_image_error_report_collision_before_processors(
+@pytest.mark.parametrize(
+    "suffix",
+    [".image-errors.csv", ".image-manifest.csv", ".image-manifest.dry-run.csv"],
+)
+def test_main_rejects_image_report_collision_before_processors(
     tmp_path: Path,
     monkeypatch,
+    suffix: str,
 ):
     output_dir = tmp_path / "output"
-    input_dir = tmp_path / "output.image-errors.csv"
+    input_dir = tmp_path / f"output{suffix}"
     input_dir.mkdir()
     (input_dir / "image.jpg").write_bytes(b"image")
     monkeypatch.setattr(
@@ -520,50 +1557,109 @@ def test_main_rechecks_destinations_after_output_directory_creation(
     assert source.read_bytes() == b"image"
 
 
-@pytest.mark.parametrize(
-    ("summary_lines", "expected_images"),
-    [
-        ([], 1),
-        (["Resized 0 images (0 errors)", "0.00 B -> 0.00 B"], 1),
-    ],
-)
-def test_main_rejects_missing_or_mismatched_image_summary_without_stale_fallback(
+def test_main_uses_image_manifest_totals_and_ignores_stdout_summary(
     tmp_path: Path,
     monkeypatch,
     capsys,
-    summary_lines: list[str],
-    expected_images: int,
 ):
     input_dir = tmp_path / "input"
     output_dir = tmp_path / "output"
     input_dir.mkdir()
     output_dir.mkdir()
-    (input_dir / "image.jpg").write_bytes(b"image")
-    (output_dir / "stale.jpg").write_bytes(b"stale")
+    source = input_dir / "image.jpg"
+    output = output_dir / "image.jpg"
+    source.write_bytes(b"image")
+    output.write_bytes(source.read_bytes())
     image_report = Path(f"{output_dir}.image-errors.csv")
+    image_manifest = Path(f"{output_dir}.image-manifest.csv")
 
     def fake_run(name, _project_dir, _args):
         assert name == "media-shrink"
         image_report.write_text("source,planned_output,error\n", encoding="utf-8")
-        return 0, summary_lines, 0.01
+        _write_image_manifest(image_manifest, [_image_manifest_row(source, output)])
+        return 0, ["Resized 999 images (999 errors)", "9.00 TB -> 8.00 TB"], 0.01
 
     monkeypatch.setattr(shrink_all, "run_command", fake_run)
 
-    assert expected_images == 1
-    assert shrink_all.main(["-i", str(input_dir), "-o", str(output_dir)]) == 1
-    assert "Image errors : unknown" in capsys.readouterr().out
+    assert shrink_all.main(["-i", str(input_dir), "-o", str(output_dir)]) == 0
+    stdout = capsys.readouterr().out
+    assert "Image errors : 0" in stdout
+    assert "Original size : 5.00 B" in stdout
+
+
+def test_main_uses_separate_dry_run_image_manifest(tmp_path: Path, monkeypatch):
+    input_dir = tmp_path / "input"
+    output_dir = tmp_path / "output"
+    input_dir.mkdir()
+    source = input_dir / "image.jpg"
+    planned_output = output_dir / "image.jpg"
+    source.write_bytes(b"image")
+    error_report = Path(f"{output_dir}.image-errors.csv")
+    dry_manifest = Path(f"{output_dir}.image-manifest.dry-run.csv")
+
+    def fake_run(name, _project_dir, args):
+        assert name == "media-shrink"
+        assert "-n" in args
+        error_report.write_text("source,planned_output,error\n", encoding="utf-8")
+        _write_image_manifest(
+            dry_manifest,
+            [
+                _image_manifest_row(
+                    source,
+                    planned_output,
+                    action="DRY_RUN",
+                    dry_run=True,
+                )
+            ],
+        )
+        return 0, [], 0.01
+
+    monkeypatch.setattr(shrink_all, "run_command", fake_run)
+
+    assert shrink_all.main(
+        ["-i", str(input_dir), "-o", str(output_dir), "-n"]
+    ) == 0
+    assert dry_manifest.is_file()
+    assert not Path(f"{output_dir}.image-manifest.csv").exists()
+    assert not output_dir.exists()
 
 
 def test_main_treats_reported_processor_errors_as_failure(tmp_path: Path, monkeypatch):
     input_dir = tmp_path / "input"
     output_dir = tmp_path / "output"
     input_dir.mkdir()
-    (input_dir / "image.jpg").write_bytes(b"image")
+    source = input_dir / "image.jpg"
+    source.write_bytes(b"image")
+    planned_output = output_dir / "image.jpg"
     image_report = Path(f"{output_dir}.image-errors.csv")
+    image_manifest = Path(f"{output_dir}.image-manifest.csv")
+    error = "ValueError: invalid image"
 
     def fake_run(_name, _project_dir, _args):
-        image_report.write_text("source,planned_output,error\n", encoding="utf-8")
-        return 0, ["Resized 0 images (1 errors)", "0.00 B -> 0.00 B"], 0.01
+        with image_report.open("w", encoding="utf-8", newline="") as stream:
+            writer = csv.DictWriter(
+                stream, fieldnames=("source", "planned_output", "error")
+            )
+            writer.writeheader()
+            writer.writerow(
+                {
+                    "source": str(source.resolve()),
+                    "planned_output": str(planned_output.resolve()),
+                    "error": error,
+                }
+            )
+        _write_image_manifest(
+            image_manifest,
+            [
+                _image_manifest_row(
+                    source,
+                    planned_output,
+                    action="ERROR",
+                    error=error,
+                )
+            ],
+        )
+        return 0, ["Resized 999 images (0 errors)"], 0.01
 
     monkeypatch.setattr(shrink_all, "run_command", fake_run)
 

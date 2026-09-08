@@ -6,7 +6,7 @@ import tempfile
 import traceback
 from pathlib import Path
 
-from . import output, transform, validate
+from . import discovery, output, transform, validate
 from .config import ReductionOptions, RunConfig
 from .inspect_pdf import inspect_file
 from .models import (
@@ -16,7 +16,7 @@ from .models import (
     ProcessStatus,
     SourceSnapshot,
 )
-from .utils import ensure_dir, logger
+from .utils import ensure_dir, logger, sha256_file
 
 SKIP_REASON_TO_STATUS = {
     "encrypted": ProcessStatus.SKIPPED_ENCRYPTED,
@@ -91,15 +91,18 @@ def process_one_file(
     recovery_needed = True
 
     try:
+        discovery.assert_source_unchanged(source, cfg.input_dir)
         if source.size < cfg.reduction.skip_below_bytes:
             if not cfg.dry_run:
                 recovery_needed = False
                 output.copy_original(
-                    source.path,
+                    source,
                     output_path,
                     input_root=cfg.input_dir,
                     output_root=cfg.output_dir,
                 )
+            else:
+                discovery.assert_source_unchanged(source, cfg.input_dir)
             return _result(
                 output_path,
                 ProcessStatus.SKIPPED_SMALL,
@@ -110,14 +113,15 @@ def process_one_file(
             source.path,
             cfg.scan,
             safe=cfg.safe,
-            dpi_target=cfg.lossy.dpi_target,
+            lossy_options=cfg.lossy,
         )
+        discovery.assert_source_unchanged(source, cfg.input_dir)
         if not inspection.ok:
             reason = inspection.skip_reason or "unknown"
             if not cfg.dry_run:
                 recovery_needed = False
                 output.copy_original(
-                    source.path,
+                    source,
                     output_path,
                     input_root=cfg.input_dir,
                     output_root=cfg.output_dir,
@@ -162,16 +166,23 @@ def process_one_file(
 
         if qpdf_exe is None:
             raise RuntimeError("qpdf is required for candidate validation")
-        valid, reason = validate.validate(source.path, temp_path, qpdf_exe)
+        valid, reason = validate.validate(
+            source.path,
+            temp_path,
+            qpdf_exe,
+            enhanced=cfg.lossy.recompress_existing_jpeg,
+        )
         if not valid:
             raise RuntimeError(f"validation_failed: {reason}")
 
         candidate_size = temp_path.stat().st_size
+        candidate_sha256 = sha256_file(temp_path)
         if _meets_reduction(source.size, candidate_size, inspection.mode, cfg.reduction):
             output.adopt_candidate(
-                source.path,
+                source,
                 temp_path,
                 output_path,
+                candidate_sha256,
                 input_root=cfg.input_dir,
                 output_root=cfg.output_dir,
             )
@@ -192,7 +203,7 @@ def process_one_file(
 
         recovery_needed = False
         output.copy_original(
-            source.path,
+            source,
             output_path,
             input_root=cfg.input_dir,
             output_root=cfg.output_dir,
@@ -208,10 +219,14 @@ def process_one_file(
         error_message = f"{exc}\n{traceback.format_exc()}"
         logger.error("Failed to process %s: %s", source.path, exc)
         recovered_size: int | None = None
-        if recovery_needed:
+        if (
+            recovery_needed
+            and not cfg.dry_run
+            and discovery.source_is_unchanged(source, cfg.input_dir)
+        ):
             try:
                 output.copy_original(
-                    source.path,
+                    source,
                     output_path,
                     input_root=cfg.input_dir,
                     output_root=cfg.output_dir,

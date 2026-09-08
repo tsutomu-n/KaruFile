@@ -9,6 +9,8 @@
 | [2026-08-15-karufile-v1.md](2026-08-15-karufile-v1.md) | 完了・履歴 | KaruFile v1の実装と安全性検証 |
 | [2026-08-16-karufile-user-manual.md](2026-08-16-karufile-user-manual.md) | 完了・履歴 | 正本マニュアル、図解、文書監査 |
 | [2026-08-20-pdf-300dpi-placed-images.md](2026-08-20-pdf-300dpi-placed-images.md) | 完了・履歴 | PDF配置画像を300DPIへ縮小 |
+| [2026-09-04-compact-preset.md](2026-09-04-compact-preset.md) | 中断・再開待ち | compact presetと安全な動画処理 |
+| [2026-09-04-compact-preset-handoff.md](2026-09-04-compact-preset-handoff.md) | 再開用 | 中断時点、残るP2、検証証拠、再開手順 |
 
 PDF責務分離の完了記録は
 [pdf-shrink側のExecPlan](../../pdf-shrink/.agent/execplans/2026-08-13-refactor-responsibilities.md)にあります。

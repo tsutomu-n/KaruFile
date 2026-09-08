@@ -15,7 +15,7 @@ import pymupdf as fitz
 from . import discovery, output, qpdf, report, state, worker
 from .config import RunConfig, config_hash
 from .models import ProcessResult, ProcessStatus, SourceSnapshot
-from .utils import ensure_dir, human_size, logger
+from .utils import ensure_dir, human_size, logger, sha256_file
 
 
 @dataclass(frozen=True)
@@ -52,6 +52,86 @@ def _prepare_tools(cfg: RunConfig) -> tuple[RunConfig, Path | None]:
     executable = qpdf.ensure_qpdf(cfg.qpdf_path)
     version = qpdf.qpdf_version(executable)
     return cfg.with_tool_versions(pymupdf=_pymupdf_version(), qpdf=version), executable
+
+
+def _output_matches_record(record: state.Record | None, destination: Path) -> bool:
+    """Verify a completed output by identity, size, and content digest."""
+    if (
+        record is None
+        or record.output_size is None
+        or not record.output_sha256
+    ):
+        return False
+    try:
+        before = destination.stat()
+        if not destination.is_file() or before.st_size != record.output_size:
+            return False
+        digest = sha256_file(destination)
+        after = destination.stat()
+    except OSError:
+        return False
+    before_signature = (
+        before.st_dev,
+        before.st_ino,
+        before.st_size,
+        before.st_mtime_ns,
+        before.st_ctime_ns,
+    )
+    after_signature = (
+        after.st_dev,
+        after.st_ino,
+        after.st_size,
+        after.st_mtime_ns,
+        after.st_ctime_ns,
+    )
+    return before_signature == after_signature and digest == record.output_sha256
+
+
+def _validate_report_snapshot(
+    sources: list[SourceSnapshot],
+    records: list[state.Record],
+    cfg: RunConfig,
+    processing_hash: str,
+    protected_sources: tuple[Path, ...],
+) -> None:
+    """Revalidate every input and completed output at report publication."""
+    records_by_source = {record.source_path: record for record in records}
+    for source in sources:
+        discovery.assert_source_unchanged(source, cfg.input_dir)
+        record = records_by_source.get(str(source.path))
+        if (
+            record is None
+            or record.source_sha256 != source.sha256
+            or record.config_hash != processing_hash
+        ):
+            raise RuntimeError(f"PDF state is incomplete for report: {source.path}")
+        if not cfg.dry_run and record.output_size is not None:
+            destination = source.output_path(cfg.output_dir)
+            output.validate_destination(
+                destination,
+                input_root=cfg.input_dir,
+                output_root=cfg.output_dir,
+                protected_sources=protected_sources,
+            )
+            if not _output_matches_record(
+                record,
+                destination,
+            ):
+                raise RuntimeError(
+                    f"PDF output changed before report publication: {source.path}"
+                )
+            # The digest may take long enough for a link to be injected after
+            # the first topology check.  Make topology the final output check.
+            output.validate_destination(
+                destination,
+                input_root=cfg.input_dir,
+                output_root=cfg.output_dir,
+                protected_sources=protected_sources,
+            )
+        elif not cfg.dry_run and record.status != ProcessStatus.ERROR:
+            raise RuntimeError(f"PDF output is missing before report: {source.path}")
+        # Output hashing above can itself be long-running.
+        discovery.assert_source_unchanged(source, cfg.input_dir)
 
 
 def _is_within(path: Path, parent: Path) -> bool:
@@ -170,10 +250,13 @@ def _worker_crash_result(
     destination = source.output_path(cfg.output_dir)
     error_message = f"{exc}\n{traceback.format_exc()}"
     recovered_size: int | None = None
-    if not cfg.dry_run:
+    if (
+        not cfg.dry_run
+        and discovery.source_is_unchanged(source, cfg.input_dir)
+    ):
         try:
             output.copy_original(
-                source.path,
+                source,
                 destination,
                 input_root=cfg.input_dir,
                 output_root=cfg.output_dir,
@@ -308,14 +391,19 @@ def run(cfg: RunConfig) -> int:
     try:
         to_process: list[SourceSnapshot] = []
         for source in sources:
+            try:
+                discovery.assert_source_unchanged(source, cfg.input_dir)
+            except discovery.SourceChangedError as exc:
+                logger.error("PDF input changed before reuse decision: %s", exc)
+                return 1
             destination = source.output_path(cfg.output_dir)
             record = state.get_record(conn, str(source.path))
-            output_matches_record = (
-                record is not None
-                and record.output_size is not None
-                and destination.is_file()
-                and destination.stat().st_size == record.output_size
-            )
+            output_matches_record = _output_matches_record(record, destination)
+            try:
+                discovery.assert_source_unchanged(source, cfg.input_dir)
+            except discovery.SourceChangedError as exc:
+                logger.error("PDF input changed during reuse decision: %s", exc)
+                return 1
             if state.should_process(
                 record,
                 source.sha256,
@@ -336,34 +424,50 @@ def run(cfg: RunConfig) -> int:
 
         process_start = time.perf_counter()
         for source, result in _execute(to_process, cfg, paths, qpdf_exe):
-            state.save_result(
-                conn,
-                source,
-                result,
-                processing_hash,
-                pymupdf_version=cfg.pymupdf_version,
-                qpdf_version=cfg.qpdf_version,
-            )
+            try:
+                state.save_result(
+                    conn,
+                    source,
+                    result,
+                    processing_hash,
+                    input_dir=cfg.input_dir,
+                    pymupdf_version=cfg.pymupdf_version,
+                    qpdf_version=cfg.qpdf_version,
+                    commit=False,
+                )
+            except discovery.SourceChangedError as exc:
+                logger.error("PDF input changed before state publication: %s", exc)
+                conn.rollback()
+                return 1
         elapsed = time.perf_counter() - process_start
 
         records = state.list_records_for_paths(
             conn,
             (str(source.path) for source in sources),
         )
-    finally:
-        conn.close()
-
-    try:
         report.write_csv(
             records,
             paths.report,
             input_root=cfg.input_dir,
             work_root=cfg.output_dir.parent,
             protected_sources=files,
+            output_root=cfg.output_dir,
+            preset=str(cfg.preset),
+            before_publish=lambda: _validate_report_snapshot(
+                sources,
+                records,
+                cfg,
+                processing_hash,
+                protected_sources,
+            ),
+            after_publish=conn.commit,
         )
     except Exception as exc:
+        conn.rollback()
         logger.error("Failed to write PDF report: %s", exc)
         return 1
+    finally:
+        conn.close()
     report.print_summary(records, elapsed_seconds=elapsed)
     logger.info("Report saved to %s", paths.report)
     return 1 if any(record.status == ProcessStatus.ERROR for record in records) else 0

@@ -9,17 +9,19 @@ import os
 from pathlib import Path
 import re
 import shutil
-from typing import Any, Mapping
+import stat
+from typing import Any, Mapping, cast
 
 from PIL import Image, ImageOps
 
-from .config import ImageConfig
+from .config import ImageConfig, ImagePreset, image_preset_for_recipe_hash
 from .utils import (
     PathValidationError,
     is_link_like,
     logger,
     make_writable,
     staged_path,
+    validate_auxiliary_output,
     validate_output_destination,
     validate_source_path,
 )
@@ -36,12 +38,41 @@ IMAGE_EXTENSIONS = frozenset(
     {".jpg", ".jpeg", ".png", ".tif", ".tiff", ".bmp", ".gif", ".webp", ".heic", ".heif"}
 )
 JPEG_EXTENSIONS = frozenset({".jpg", ".jpeg"})
-MARKER_ID = "karufile:image-v1"
+MARKER_VERSION = 2
+MARKER_ID = f"karufile:image-v{MARKER_VERSION}"
 MARKER_PREFIX = b"karufile:image-"
 JPEG_MIN_SAVINGS = 32 * 1024
 JPEG_MIN_REDUCTION = 0.10
+MANIFEST_COLUMNS = (
+    "source_path",
+    "source_size",
+    "source_sha256",
+    "output_path",
+    "output_size",
+    "output_sha256",
+    "action",
+    "error",
+    "preset",
+    "recipe_hash",
+    "orig_width",
+    "orig_height",
+    "new_width",
+    "new_height",
+)
+NORMAL_IMAGE_ACTIONS = frozenset(
+    {
+        "CONVERTED",
+        "SKIPPED_GENERATED",
+        "SKIPPED_COMPLETE",
+        "SKIPPED_COPY",
+        "COPIED_ORIGINAL",
+        "COPIED_ENCODE_FAILED",
+    }
+)
+DRY_RUN_IMAGE_ACTIONS = frozenset({"DRY_RUN", "DRY_RUN_SKIPPED_GENERATED"})
 _MARKER_RE = re.compile(
-    rb"karufile:image-v1;recipe=([0-9a-f]+);src_size=([0-9]+);src_mtime_ns=(-?[0-9]+)",
+    rb"karufile:image-v([12]);recipe=([0-9a-f]+);src_size=([0-9]+);"
+    rb"src_mtime_ns=(-?[0-9]+)(?:;src_sha256=([0-9a-f]{64}))?",
     re.IGNORECASE,
 )
 
@@ -50,11 +81,41 @@ class OutputCollisionError(RuntimeError):
     """固定8桁hashでも出力を一意にできない場合のエラー。"""
 
 
+class SourceChangedError(OSError):
+    """処理中に入力画像の内容またはファイル同一性が変化した。"""
+
+
 @dataclass(frozen=True, slots=True)
 class ImagePlan:
     source: Path
     relative_source: Path
     output: Path
+
+
+@dataclass(frozen=True, slots=True)
+class SourceFingerprint:
+    """入力画像の1時点における安定したstatと内容SHA-256。"""
+
+    stat: os.stat_result
+    sha256: str
+
+    @property
+    def stat_signature(self) -> tuple[int, int, int, int, int]:
+        return _stat_signature(self.stat)
+
+
+@dataclass(frozen=True, slots=True)
+class OutputFingerprint:
+    """再利用候補JPEGの安定した内容・metadata snapshot。"""
+
+    stat: os.stat_result
+    sha256: str
+    dimensions: tuple[int, int]
+    comment: bytes
+
+    @property
+    def stat_signature(self) -> tuple[int, int, int, int, int]:
+        return _stat_signature(self.stat)
 
 
 def _file_identity(path: Path) -> tuple[int, int] | None:
@@ -82,17 +143,33 @@ def _validate_existing_output_identity(
         raise PathValidationError(f"Existing output is the same file as an input source: {output}")
 
 
+def _validate_replaceable_file(path: Path, *, label: str) -> None:
+    """正式ファイルをchmodせず、安全に置換可能な既存fileだけを許可する。"""
+
+    if is_link_like(path):
+        raise PathValidationError(f"Linked {label} is not allowed: {path}")
+    try:
+        file_stat = path.stat()
+    except FileNotFoundError:
+        return
+    if not path.is_file() or file_stat.st_nlink > 1:
+        raise PathValidationError(f"Unsafe {label} cannot be replaced: {path}")
+    if not file_stat.st_mode & stat.S_IWRITE:
+        raise PathValidationError(f"Read-only {label} cannot be replaced: {path}")
+
+
 def _coerce_config(config: ImageConfig | Mapping[str, Any]) -> ImageConfig:
     if isinstance(config, ImageConfig):
         return config
     return ImageConfig(
         workers=int(config.get("workers", 4)),
         dry_run=bool(config.get("dry_run", False)),
+        preset=cast(ImagePreset, str(config.get("preset", "standard"))),
     )
 
 
 def calculate_output_size(size: tuple[int, int], config: ImageConfig | None = None) -> tuple[int, int]:
-    """Orientation 適用後の寸法を長辺1280・短辺960の枠へ収める。"""
+    """Orientation適用後の寸法を選択レシピの枠へ拡大せず収める。"""
 
     width, height = size
     if width <= 0 or height <= 0:
@@ -242,18 +319,113 @@ def _has_karufile_marker(comment: bytes) -> bool:
     return MARKER_PREFIX in comment.lower()
 
 
-def _parse_current_marker(comment: bytes) -> tuple[str, int, int] | None:
+def _parse_current_marker(comment: bytes) -> tuple[int, str, int, int, str | None] | None:
     matches = list(_MARKER_RE.finditer(comment))
     if not matches:
         return None
-    recipe, size, mtime = matches[-1].groups()
-    return recipe.decode("ascii").lower(), int(size), int(mtime)
+    version, recipe, size, mtime, source_sha256 = matches[-1].groups()
+    return (
+        int(version),
+        recipe.decode("ascii").lower(),
+        int(size),
+        int(mtime),
+        source_sha256.decode("ascii").lower() if source_sha256 else None,
+    )
 
 
-def _marker_for(source_stat: os.stat_result, config: ImageConfig) -> bytes:
+def _known_generated_preset(comment: bytes) -> ImagePreset | None:
+    """完全な現行markerと既知recipeだけを生成済み入力として信頼する。"""
+
+    marker = _parse_current_marker(comment)
+    if marker is None:
+        return None
+    version, recipe_hash, _source_size, _source_mtime_ns, source_sha256 = marker
+    if version != MARKER_VERSION or source_sha256 is None:
+        return None
+    return image_preset_for_recipe_hash(recipe_hash)
+
+
+def _generated_jpeg_requires_reprocessing(comment: bytes, config: ImageConfig) -> bool:
+    """未知・破損markerとstandard→compactは生成済み短絡を許可しない。"""
+
+    if not _has_karufile_marker(comment):
+        return False
+    source_preset = _known_generated_preset(comment)
+    if source_preset is None:
+        return True
+    return source_preset == "standard" and config.preset == "compact"
+
+
+def _without_karufile_marker_lines(comment: bytes) -> bytes:
+    """再エンコード時に旧内部markerだけを除き、利用者commentは残す。"""
+
+    return b"\n".join(
+        line for line in comment.splitlines() if MARKER_PREFIX not in line.lower()
+    )
+
+
+def _sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as stream:
+        while chunk := stream.read(1024 * 1024):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _stat_signature(file_stat: os.stat_result) -> tuple[int, int, int, int, int]:
+    """置換と同一サイズ・mtime偽装も検知できるsource identity。"""
+
+    return (
+        file_stat.st_dev,
+        file_stat.st_ino,
+        file_stat.st_size,
+        file_stat.st_mtime_ns,
+        file_stat.st_ctime_ns,
+    )
+
+
+def _capture_source_fingerprint(source: Path) -> SourceFingerprint:
+    """hash中にstatが変わらなかった入力のfingerprintだけを返す。"""
+
+    before = source.stat()
+    source_sha256 = _sha256_file(source)
+    after = source.stat()
+    if _stat_signature(before) != _stat_signature(after):
+        raise SourceChangedError(f"Source changed while hashing: {source}")
+    return SourceFingerprint(stat=after, sha256=source_sha256)
+
+
+def _assert_source_unchanged(
+    source: Path,
+    expected: SourceFingerprint,
+    input_root: Path,
+) -> None:
+    """公開または再利用確定の直前に入力の同一性と内容を再検証する。"""
+
+    try:
+        validate_source_path(input_root, source)
+        observed = _capture_source_fingerprint(source)
+        validate_source_path(input_root, source)
+    except SourceChangedError:
+        raise
+    except (OSError, RuntimeError, ValueError, PathValidationError) as exc:
+        raise SourceChangedError(f"Source changed during processing: {source}") from exc
+
+    if (
+        observed.sha256 != expected.sha256
+        or observed.stat_signature != expected.stat_signature
+    ):
+        raise SourceChangedError(f"Source changed during processing: {source}")
+
+
+def _marker_for(
+    source_stat: os.stat_result,
+    source_sha256: str,
+    config: ImageConfig,
+) -> bytes:
     return (
         f"{MARKER_ID};recipe={config.recipe_hash};src_size={source_stat.st_size};"
-        f"src_mtime_ns={source_stat.st_mtime_ns}"
+        f"src_mtime_ns={source_stat.st_mtime_ns};src_sha256={source_sha256}"
     ).encode("ascii")
 
 
@@ -269,49 +441,94 @@ def _inspect_jpeg(path: Path) -> tuple[tuple[int, int], bytes]:
     return size, comment
 
 
+def _capture_output_fingerprint(output: Path) -> OutputFingerprint:
+    """linkでなく、読取り中も同一だったJPEG出力だけをsnapshot化する。"""
+
+    if is_link_like(output):
+        raise PathValidationError(f"Linked output file is not allowed: {output}")
+    before = output.stat()
+    if not output.is_file() or before.st_nlink > 1:
+        raise PathValidationError(f"Unsafe image output cannot be reused: {output}")
+    dimensions, comment = _inspect_jpeg(output)
+    digest = _sha256_file(output)
+    after = output.stat()
+    if _stat_signature(before) != _stat_signature(after):
+        raise OutputCollisionError(f"Image output changed while validating reuse: {output}")
+    return OutputFingerprint(after, digest, dimensions, comment)
+
+
+def _assert_reusable_output_unchanged(
+    output: Path,
+    expected: OutputFingerprint,
+    *,
+    input_root: Path,
+    output_root: Path,
+    source_identity: tuple[int, int],
+) -> OutputFingerprint:
+    """source検査で生じた窓の後にreuse対象とdestinationを再確認する。"""
+
+    validate_output_destination(input_root, output_root, output)
+    _validate_existing_output_identity(output, {source_identity})
+    observed = _capture_output_fingerprint(output)
+    if (
+        observed.stat_signature != expected.stat_signature
+        or observed.sha256 != expected.sha256
+        or observed.dimensions != expected.dimensions
+        or observed.comment != expected.comment
+    ):
+        raise OutputCollisionError(f"Image output changed before reuse: {output}")
+    validate_output_destination(input_root, output_root, output)
+    _validate_existing_output_identity(output, {source_identity})
+    return observed
+
+
 def _completed_output_matches(
     output: Path,
     source_stat: os.stat_result,
+    source_sha256: str,
     config: ImageConfig,
-) -> tuple[int, tuple[int, int]] | None:
+) -> OutputFingerprint | None:
     if not output.is_file():
         return None
     try:
-        dimensions, comment = _inspect_jpeg(output)
+        fingerprint = _capture_output_fingerprint(output)
+        dimensions, comment = fingerprint.dimensions, fingerprint.comment
         width, height = dimensions
         if max(width, height) > config.max_long or min(width, height) > config.max_short:
             return None
         marker = _parse_current_marker(comment)
-        if marker != (config.recipe_hash, source_stat.st_size, source_stat.st_mtime_ns):
+        if marker != (
+            MARKER_VERSION,
+            config.recipe_hash,
+            source_stat.st_size,
+            source_stat.st_mtime_ns,
+            source_sha256,
+        ):
             return None
-        return output.stat().st_size, dimensions
+        return fingerprint
     except Exception:
         return None
 
 
 def _copied_output_matches(
-    source: Path,
     output: Path,
     source_stat: os.stat_result,
+    source_sha256: str,
     config: ImageConfig,
-) -> tuple[int, tuple[int, int]] | None:
+) -> OutputFingerprint | None:
     if not output.is_file():
         return None
     try:
-        output_stat = output.stat()
+        fingerprint = _capture_output_fingerprint(output)
+        output_stat = fingerprint.stat
         if output_stat.st_size != source_stat.st_size or output_stat.st_mtime_ns != source_stat.st_mtime_ns:
             return None
-        dimensions, _ = _inspect_jpeg(output)
+        dimensions = fingerprint.dimensions
         if max(dimensions) > config.max_long or min(dimensions) > config.max_short:
             return None
-        with source.open("rb") as source_stream, output.open("rb") as output_stream:
-            while True:
-                source_chunk = source_stream.read(1024 * 1024)
-                if source_chunk != output_stream.read(1024 * 1024):
-                    return None
-                if not source_chunk:
-                    break
-        return output_stat.st_size, dimensions
+        if fingerprint.sha256 != source_sha256:
+            return None
+        return fingerprint
     except Exception:
         return None
 
@@ -425,15 +642,20 @@ def _save_jpeg(
     raise ValueError("JPEG candidate could not be saved with its required marker") from last_error
 
 
-def _verify_candidate(path: Path, expected_size: tuple[int, int], config: ImageConfig) -> int:
-    dimensions, comment = _inspect_jpeg(path)
+def _verify_candidate(
+    path: Path,
+    expected_size: tuple[int, int],
+    config: ImageConfig,
+) -> OutputFingerprint:
+    fingerprint = _capture_output_fingerprint(path)
+    dimensions, comment = fingerprint.dimensions, fingerprint.comment
     if dimensions != expected_size:
         raise ValueError(f"JPEG output dimensions differ: expected {expected_size}, got {dimensions}")
     if max(dimensions) > config.max_long or min(dimensions) > config.max_short:
         raise ValueError(f"JPEG output exceeds dimension limits: {dimensions}")
     if not _has_karufile_marker(comment):
         raise ValueError("JPEG output marker is missing")
-    return path.stat().st_size
+    return fingerprint
 
 
 def _replace_staged(
@@ -442,19 +664,28 @@ def _replace_staged(
     input_root: Path,
     output_root: Path,
     protected_source: Path,
+    source_fingerprint: SourceFingerprint,
 ) -> None:
+    # 正式出力へ一切触れる前と os.replace の直前の双方で確認する。
+    # これにより、競合検知時は既存の正常出力をそのまま残せる。
+    _assert_source_unchanged(protected_source, source_fingerprint, input_root)
     validate_output_destination(input_root, output_root, output)
     if is_link_like(output):
         raise PathValidationError(f"Linked output file is not allowed: {output}")
-    source_identity = _file_identity(protected_source)
-    if source_identity is not None:
-        _validate_existing_output_identity(output, {source_identity})
+    source_identity = (
+        source_fingerprint.stat.st_dev,
+        source_fingerprint.stat.st_ino,
+    )
+    _validate_existing_output_identity(output, {source_identity})
     make_writable(temporary)
-    if output.exists():
-        make_writable(output)
     validate_output_destination(input_root, output_root, output)
-    if source_identity is not None:
-        _validate_existing_output_identity(output, {source_identity})
+    _validate_existing_output_identity(output, {source_identity})
+    _assert_source_unchanged(protected_source, source_fingerprint, input_root)
+    # source SHAの再読中にoutput側の親がjunction等へ差し替わる場合があるため、
+    # source確認後にもdestinationと既存ファイルの安全性を確定する。
+    validate_output_destination(input_root, output_root, output)
+    _validate_existing_output_identity(output, {source_identity})
+    _validate_replaceable_file(output, label="image output")
     os.replace(temporary, output)
 
 
@@ -463,14 +694,33 @@ def _publish_copy(
     output: Path,
     input_root: Path,
     output_root: Path,
-) -> int:
+    source_fingerprint: SourceFingerprint,
+) -> OutputFingerprint:
     with staged_path(output, input_root=input_root, output_root=output_root) as temporary:
         shutil.copy2(source, temporary)
         make_writable(temporary)
-        _inspect_jpeg(temporary)
         size = temporary.stat().st_size
-        _replace_staged(temporary, output, input_root, output_root, source)
-    return size
+        if (
+            size != source_fingerprint.stat.st_size
+            or _sha256_file(temporary) != source_fingerprint.sha256
+        ):
+            raise SourceChangedError(f"Source changed while copying: {source}")
+        _inspect_jpeg(temporary)
+        _replace_staged(
+            temporary,
+            output,
+            input_root,
+            output_root,
+            source,
+            source_fingerprint,
+        )
+    published = _capture_output_fingerprint(output)
+    if (
+        published.stat.st_size != size
+        or published.sha256 != source_fingerprint.sha256
+    ):
+        raise OutputCollisionError(f"Published image copy changed unexpectedly: {output}")
+    return published
 
 
 def _result(
@@ -483,6 +733,8 @@ def _result(
     *,
     original_dimensions: tuple[int, int] | None = None,
     new_dimensions: tuple[int, int] | None = None,
+    source_fingerprint: SourceFingerprint,
+    output_fingerprint: OutputFingerprint | None = None,
 ) -> dict[str, Any]:
     return {
         "source": str(source),
@@ -495,6 +747,8 @@ def _result(
         "orig_dims": original_dimensions,
         "new_dims": new_dimensions,
         "warnings": warnings,
+        "_source_fingerprint": source_fingerprint,
+        "_output_fingerprint": output_fingerprint,
     }
 
 
@@ -521,7 +775,9 @@ def process_image(
     source_identity = _file_identity(source)
     if source_identity is not None:
         _validate_existing_output_identity(output, {source_identity})
-    source_stat = source.stat()
+    source_fingerprint = _capture_source_fingerprint(source)
+    source_stat = source_fingerprint.stat
+    source_sha256 = source_fingerprint.sha256
     warnings: list[str] = []
     with Image.open(source) as opened:
         source_format = opened.format
@@ -543,8 +799,20 @@ def process_image(
 
         source_is_jpeg = source_format == "JPEG"
         existing_comment = _combined_comment(opened)
-        if source_is_jpeg and _has_karufile_marker(existing_comment):
+        reprocess_generated = source_is_jpeg and _generated_jpeg_requires_reprocessing(
+            existing_comment,
+            cfg,
+        )
+        generated_copy_safe = (
+            source_is_jpeg
+            and _known_generated_preset(existing_comment) is not None
+            and not reprocess_generated
+            and not orientation_applied
+            and calculate_output_size(original_dimensions, cfg) == original_dimensions
+        )
+        if generated_copy_safe:
             if cfg.dry_run:
+                _assert_source_unchanged(source, source_fingerprint, effective_input_root)
                 return _result(
                     source,
                     output,
@@ -554,51 +822,83 @@ def process_image(
                     warnings,
                     original_dimensions=original_dimensions,
                     new_dimensions=original_dimensions,
+                    source_fingerprint=source_fingerprint,
                 )
-            copied_size = _publish_copy(
+            copied = _publish_copy(
                 source,
                 output,
                 effective_input_root,
                 effective_output_root,
+                source_fingerprint,
             )
             return _result(
                 source,
                 output,
                 "SKIPPED_GENERATED",
                 source_stat.st_size,
-                copied_size,
+                copied.stat.st_size,
                 warnings,
                 original_dimensions=original_dimensions,
                 new_dimensions=original_dimensions,
+                source_fingerprint=source_fingerprint,
+                output_fingerprint=copied,
             )
 
-        completed = _completed_output_matches(output, source_stat, cfg)
+        completed = _completed_output_matches(output, source_stat, source_sha256, cfg)
         if completed is not None:
-            output_size, dimensions = completed
+            _assert_source_unchanged(source, source_fingerprint, effective_input_root)
+            completed = _assert_reusable_output_unchanged(
+                output,
+                completed,
+                input_root=effective_input_root,
+                output_root=effective_output_root,
+                source_identity=(source_stat.st_dev, source_stat.st_ino),
+            )
+            _assert_source_unchanged(source, source_fingerprint, effective_input_root)
             return _result(
                 source,
                 output,
                 "SKIPPED_COMPLETE",
                 source_stat.st_size,
-                output_size,
+                completed.stat.st_size,
                 warnings,
                 original_dimensions=original_dimensions,
-                new_dimensions=dimensions,
+                new_dimensions=completed.dimensions,
+                source_fingerprint=source_fingerprint,
+                output_fingerprint=completed,
             )
 
-        if source_is_jpeg and not orientation_applied:
-            copied = _copied_output_matches(source, output, source_stat, cfg)
+        # 原本コピーにはmarkerを書けないため、どのレシピで候補が却下されたか
+        # 後から識別できない。compactでは毎回再評価し、standard時のコピーを
+        # SKIPPED_COPYとして誤再利用しない。
+        if (
+            source_is_jpeg
+            and not orientation_applied
+            and not reprocess_generated
+            and cfg.preset == "standard"
+        ):
+            copied = _copied_output_matches(output, source_stat, source_sha256, cfg)
             if copied is not None:
-                output_size, dimensions = copied
+                _assert_source_unchanged(source, source_fingerprint, effective_input_root)
+                copied = _assert_reusable_output_unchanged(
+                    output,
+                    copied,
+                    input_root=effective_input_root,
+                    output_root=effective_output_root,
+                    source_identity=(source_stat.st_dev, source_stat.st_ino),
+                )
+                _assert_source_unchanged(source, source_fingerprint, effective_input_root)
                 return _result(
                     source,
                     output,
                     "SKIPPED_COPY",
                     source_stat.st_size,
-                    output_size,
+                    copied.stat.st_size,
                     warnings,
                     original_dimensions=original_dimensions,
-                    new_dimensions=dimensions,
+                    new_dimensions=copied.dimensions,
+                    source_fingerprint=source_fingerprint,
+                    output_fingerprint=copied,
                 )
 
         predicted_oriented_dimensions = (
@@ -628,6 +928,7 @@ def process_image(
                 working = resized
 
             if cfg.dry_run:
+                _assert_source_unchanged(source, source_fingerprint, effective_input_root)
                 return _result(
                     source,
                     output,
@@ -637,23 +938,31 @@ def process_image(
                     warnings,
                     original_dimensions=original_dimensions,
                     new_dimensions=expected_dimensions,
+                    source_fingerprint=source_fingerprint,
                 )
 
-            marker = _marker_for(source_stat, cfg)
+            marker = _marker_for(source_stat, source_sha256, cfg)
+            candidate_comment = (
+                _without_karufile_marker_lines(existing_comment)
+                if reprocess_generated
+                else existing_comment
+            )
             must_resize = oriented_dimensions != expected_dimensions
             with staged_path(
                 output,
                 input_root=effective_input_root,
                 output_root=effective_output_root,
             ) as temporary:
-                _save_jpeg(working, temporary, marker, existing_comment, metadata, warnings, cfg)
-                candidate_size = _verify_candidate(temporary, expected_dimensions, cfg)
+                _save_jpeg(working, temporary, marker, candidate_comment, metadata, warnings, cfg)
+                candidate = _verify_candidate(temporary, expected_dimensions, cfg)
+                candidate_size = candidate.stat.st_size
                 savings = source_stat.st_size - candidate_size
                 reduction = savings / source_stat.st_size if source_stat.st_size else 0.0
                 adopt_candidate = (
                     not source_is_jpeg
                     or must_resize
                     or orientation_applied
+                    or (reprocess_generated and savings > 0)
                     or (savings >= JPEG_MIN_SAVINGS and reduction >= JPEG_MIN_REDUCTION)
                 )
                 if adopt_candidate:
@@ -665,7 +974,17 @@ def process_image(
                         effective_input_root,
                         effective_output_root,
                         source,
+                        source_fingerprint,
                     )
+                    published = _capture_output_fingerprint(output)
+                    if (
+                        published.sha256 != candidate.sha256
+                        or published.dimensions != candidate.dimensions
+                        or published.comment != candidate.comment
+                    ):
+                        raise OutputCollisionError(
+                            f"Published image changed unexpectedly: {output}"
+                        )
                     return _result(
                         source,
                         output,
@@ -675,45 +994,58 @@ def process_image(
                         warnings,
                         original_dimensions=original_dimensions,
                         new_dimensions=expected_dimensions,
+                        source_fingerprint=source_fingerprint,
+                        output_fingerprint=published,
                     )
 
-            copied_size = _publish_copy(
+            copied = _publish_copy(
                 source,
                 output,
                 effective_input_root,
                 effective_output_root,
+                source_fingerprint,
             )
             return _result(
                 source,
                 output,
                 "COPIED_ORIGINAL",
                 source_stat.st_size,
-                copied_size,
+                copied.stat.st_size,
                 [],
                 original_dimensions=original_dimensions,
                 new_dimensions=original_dimensions,
+                source_fingerprint=source_fingerprint,
+                output_fingerprint=copied,
             )
         except Exception as exc:
+            if isinstance(
+                exc,
+                (SourceChangedError, OutputCollisionError, PathValidationError),
+            ):
+                raise
             if not source_is_jpeg:
                 raise
             if cfg.dry_run:
                 raise
             _append_warning(warnings, "ENCODE_FAILED_ORIGINAL_COPIED")
-            copied_size = _publish_copy(
+            copied = _publish_copy(
                 source,
                 output,
                 effective_input_root,
                 effective_output_root,
+                source_fingerprint,
             )
             result = _result(
                 source,
                 output,
                 "COPIED_ENCODE_FAILED",
                 source_stat.st_size,
-                copied_size,
+                copied.stat.st_size,
                 warnings,
                 original_dimensions=original_dimensions,
                 new_dimensions=original_dimensions,
+                source_fingerprint=source_fingerprint,
+                output_fingerprint=copied,
             )
             if requires_pixel_transform:
                 result["error"] = (
@@ -728,18 +1060,27 @@ def process_image(
 
 def _error_result(plan: ImagePlan, exc: BaseException) -> dict[str, Any]:
     try:
-        original_size = plan.source.stat().st_size
+        source_fingerprint: SourceFingerprint | None = _capture_source_fingerprint(
+            plan.source
+        )
+        original_size = source_fingerprint.stat.st_size
     except OSError:
+        source_fingerprint = None
         original_size = 0
     return {
         "source": str(plan.source),
         "src": str(plan.source),
         "planned_output": str(plan.output),
         "dst": str(plan.output),
+        "action": "ERROR",
         "error": f"{type(exc).__name__}: {exc}",
         "orig_size": original_size,
         "new_size": 0,
+        "orig_dims": None,
+        "new_dims": None,
         "warnings": [],
+        "_source_fingerprint": source_fingerprint,
+        "_output_fingerprint": None,
     }
 
 
@@ -800,6 +1141,166 @@ def error_report_path(output_dir: Path) -> Path:
     return Path(f"{output_dir}.image-errors.csv")
 
 
+def manifest_path(output_dir: Path, *, dry_run: bool) -> Path:
+    suffix = ".image-manifest.dry-run.csv" if dry_run else ".image-manifest.csv"
+    return Path(f"{output_dir}{suffix}")
+
+
+def _dimension_columns(
+    dimensions: tuple[int, int] | None,
+) -> tuple[int | str, int | str]:
+    if dimensions is None:
+        return "", ""
+    return dimensions
+
+
+def _validated_dimensions(
+    value: object,
+    *,
+    label: str,
+    required: bool,
+) -> tuple[int, int] | None:
+    if value is None and not required:
+        return None
+    if (
+        not isinstance(value, tuple)
+        or len(value) != 2
+        or any(not isinstance(item, int) or isinstance(item, bool) or item <= 0 for item in value)
+    ):
+        raise OutputCollisionError(f"Invalid {label} dimensions: {value!r}")
+    return value
+
+
+def _validated_manifest_rows(
+    input_dir: Path,
+    output_dir: Path,
+    results: list[dict[str, Any]],
+    config: ImageConfig,
+) -> list[dict[str, Any]]:
+    """処理時snapshotと現在の全source/outputが一致する行だけを構築する。"""
+
+    rows: list[dict[str, Any]] = []
+    for result in results:
+        source = Path(str(result["source"]))
+        output = Path(str(result["planned_output"]))
+        expected_source = result.get("_source_fingerprint")
+        if not isinstance(expected_source, SourceFingerprint):
+            raise SourceChangedError(f"Stable source fingerprint is unavailable: {source}")
+        _assert_source_unchanged(source, expected_source, input_dir)
+        validate_output_destination(input_dir, output_dir, output)
+
+        action = str(result.get("action") or "ERROR")
+        error = str(result.get("error") or "")
+        expected_output = result.get("_output_fingerprint")
+        if config.dry_run:
+            if action not in DRY_RUN_IMAGE_ACTIONS | {"ERROR"}:
+                raise OutputCollisionError(f"Invalid dry-run image action: {action}")
+        elif action not in NORMAL_IMAGE_ACTIONS | {"ERROR"}:
+            raise OutputCollisionError(f"Invalid image action: {action}")
+        if action == "ERROR" and not error:
+            raise OutputCollisionError(f"Image ERROR row has no error: {source}")
+        if error and action not in {"ERROR", "COPIED_ENCODE_FAILED"}:
+            raise OutputCollisionError(
+                f"Image action/error combination is invalid: {action}"
+            )
+        has_planned_image = action != "ERROR"
+        original_dimensions = _validated_dimensions(
+            result.get("orig_dims"),
+            label="original",
+            required=has_planned_image,
+        )
+        new_dimensions = _validated_dimensions(
+            result.get("new_dims"),
+            label="new",
+            required=has_planned_image,
+        )
+        if new_dimensions is not None and (
+            max(new_dimensions) > config.max_long
+            or min(new_dimensions) > config.max_short
+        ):
+            raise OutputCollisionError(
+                f"Image result exceeds {config.preset} dimension limits: {new_dimensions}"
+            )
+        observed_output: OutputFingerprint | None = None
+        if expected_output is not None:
+            if not isinstance(expected_output, OutputFingerprint):
+                raise OutputCollisionError(f"Invalid output fingerprint: {output}")
+            if config.dry_run:
+                raise OutputCollisionError(
+                    f"Dry-run result unexpectedly owns an output: {output}"
+                )
+            observed_output = _assert_reusable_output_unchanged(
+                output,
+                expected_output,
+                input_root=input_dir,
+                output_root=output_dir,
+                source_identity=(
+                    expected_source.stat.st_dev,
+                    expected_source.stat.st_ino,
+                ),
+            )
+            _assert_source_unchanged(source, expected_source, input_dir)
+            if observed_output.dimensions != new_dimensions:
+                raise OutputCollisionError(
+                    f"Image output dimensions differ from result: {output}"
+                )
+        elif not error and not config.dry_run:
+            raise OutputCollisionError(
+                f"Successful image result has no stable output: {output}"
+            )
+
+        orig_width, orig_height = _dimension_columns(original_dimensions)
+        new_width, new_height = _dimension_columns(new_dimensions)
+        rows.append(
+            {
+                "source_path": str(source.resolve(strict=True)),
+                "source_size": expected_source.stat.st_size,
+                "source_sha256": expected_source.sha256,
+                "output_path": str(output.resolve(strict=False)),
+                "output_size": (
+                    observed_output.stat.st_size if observed_output is not None else ""
+                ),
+                "output_sha256": (
+                    observed_output.sha256 if observed_output is not None else ""
+                ),
+                "action": action,
+                "error": error,
+                "preset": config.preset,
+                "recipe_hash": config.recipe_hash,
+                "orig_width": orig_width,
+                "orig_height": orig_height,
+                "new_width": new_width,
+                "new_height": new_height,
+            }
+        )
+    return rows
+
+
+def write_result_manifest(
+    input_dir: Path,
+    output_dir: Path,
+    results: list[dict[str, Any]],
+    config: ImageConfig,
+) -> Path:
+    """全件manifestを検証後にnormal/dry-run別のsiblingへ原子的に公開する。"""
+
+    report = manifest_path(output_dir, dry_run=config.dry_run)
+    validate_auxiliary_output(input_dir, report)
+    rows = _validated_manifest_rows(input_dir, output_dir, results, config)
+    with staged_path(report) as temporary:
+        with temporary.open("w", encoding="utf-8", newline="") as stream:
+            writer = csv.DictWriter(stream, fieldnames=MANIFEST_COLUMNS)
+            writer.writeheader()
+            writer.writerows(rows)
+
+        # 一時CSV構築中のsource/output差し替えを公開直前にもう一度検出する。
+        _validated_manifest_rows(input_dir, output_dir, results, config)
+        validate_auxiliary_output(input_dir, report)
+        _validate_replaceable_file(report, label="image manifest")
+        os.replace(temporary, report)
+    return report
+
+
 def write_error_report(output_dir: Path, results: list[dict[str, Any]]) -> Path:
     """現在実行のエラーだけで sibling CSV を原子的に置き換える。"""
 
@@ -817,11 +1318,6 @@ def write_error_report(output_dir: Path, results: list[dict[str, Any]]) -> Path:
                             "error": result["error"],
                         }
                     )
-        if report.exists():
-            if is_link_like(report) or report.stat().st_nlink > 1:
-                raise PathValidationError(
-                    f"Linked image error report cannot be replaced safely: {report}"
-                )
-            make_writable(report)
+        _validate_replaceable_file(report, label="image error report")
         os.replace(temporary, report)
     return report

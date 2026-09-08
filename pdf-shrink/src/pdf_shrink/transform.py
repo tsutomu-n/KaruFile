@@ -1,12 +1,18 @@
 """PDF圧縮候補の生成。出力先への採用は ``output`` が担当する。"""
 from __future__ import annotations
 
+import math
 from pathlib import Path
 
 import pymupdf as fitz  # PyMuPDF
 
 from .config import LossyOptions, QpdfOptions
-from .inspect_pdf import _effective_image_dpi, _page_image_infos
+from .inspect_pdf import (
+    _effective_image_dpis,
+    _is_dct_jpeg,
+    _page_image_infos,
+    _should_rewrite_image,
+)
 from .qpdf import qpdf_optimize
 from .utils import ensure_dir, logger
 
@@ -27,11 +33,11 @@ def optimize_lossy(
     candidate: Path,
     options: LossyOptions,
 ) -> None:
-    """配置実効DPIが目標を超える画像を縮小した非可逆圧縮候補を生成する。"""
+    """配置画像をプリセットに従って縮小または再圧縮した候補を生成する。"""
     ensure_dir(candidate.parent)
     doc = fitz.open(source)
     try:
-        _downsample_oversampled_images(doc, options)
+        _rewrite_pdf_images(doc, options)
         doc.save(
             candidate,
             garbage=4,
@@ -43,73 +49,103 @@ def optimize_lossy(
         doc.close()
 
 
-def _downsample_oversampled_images(doc: fitz.Document, options: LossyOptions) -> int:
+def _rewrite_pdf_images(doc: fitz.Document, options: LossyOptions) -> int:
     if options.dpi_target <= 0:
         return 0
 
-    max_dpi_by_xref = _xref_max_effective_dpi(doc)
+    max_dpis_by_xref = _xref_max_effective_dpis(doc)
     replaced: set[int] = set()
     for page in doc:
         images = {int(img[0]): img for img in page.get_images(full=True)}
         for xref, img in images.items():
             if xref in replaced or xref <= 0:
                 continue
-            dpi = max_dpi_by_xref.get(xref, 0.0)
-            if dpi <= options.dpi_target:
+            dpi_x, dpi_y = max_dpis_by_xref.get(xref, (0.0, 0.0))
+            if dpi_x <= 0 or dpi_y <= 0:
+                continue
+            should_downsample = (
+                dpi_x > options.dpi_target or dpi_y > options.dpi_target
+            )
+            should_recompress = (
+                options.recompress_existing_jpeg and _is_dct_jpeg(img)
+            )
+            if not should_downsample and not should_recompress:
                 continue
             if not _should_rewrite_image(img, options):
                 continue
             width = int(img[2])
             height = int(img[3])
-            scale = options.dpi_target / dpi
-            new_width = max(1, round(width * scale))
-            new_height = max(1, round(height * scale))
-            if new_width >= width and new_height >= height:
+            if should_downsample:
+                new_width = _dimension_at_target_dpi(
+                    width, dpi_x, options.dpi_target
+                )
+                new_height = _dimension_at_target_dpi(
+                    height, dpi_y, options.dpi_target
+                )
+                if new_width >= width and new_height >= height:
+                    continue
+            elif should_recompress:
+                new_width = width
+                new_height = height
+            else:
                 continue
             jpeg, channels = _jpeg_bytes_for_xref(
                 doc, xref, new_width, new_height, options.quality
             )
+            if should_recompress and not should_downsample:
+                original_stream = doc.xref_stream_raw(xref)
+                if not original_stream:
+                    continue
+                saved_percent = 1 - len(jpeg) / len(original_stream)
+                if saved_percent < options.jpeg_recompress_min_percent:
+                    logger.debug(
+                        "Kept PDF JPEG xref %d because recompression saved only %.2f%%",
+                        xref,
+                        saved_percent * 100,
+                    )
+                    continue
             _put_jpeg_in_xref(doc, xref, jpeg, new_width, new_height, channels)
             replaced.add(xref)
     if replaced:
-        logger.info("Downsampled %d PDF image(s) to %s DPI", len(replaced), options.dpi_target)
+        logger.info(
+            "Re-encoded %d PDF image(s) with a maximum of %s DPI",
+            len(replaced),
+            options.dpi_target,
+        )
     return len(replaced)
 
 
-def _xref_max_effective_dpi(doc: fitz.Document) -> dict[int, float]:
-    max_dpi_by_xref: dict[int, float] = {}
+def _dimension_at_target_dpi(dimension: int, dpi: float, target: int) -> int:
+    """Scale one pixel axis down without rounding above the DPI target."""
+    if dpi <= target:
+        return dimension
+    return max(1, min(dimension, math.floor(dimension * target / dpi)))
+
+
+def _xref_max_effective_dpis(
+    doc: fitz.Document,
+) -> dict[int, tuple[float, float]]:
+    max_dpis_by_xref: dict[int, tuple[float, float]] = {}
     for page in doc:
         for info in _page_image_infos(page):
             xref = int(info.get("xref") or 0)
             if xref <= 0:
                 continue
-            dpi = _effective_image_dpi(info)
-            if dpi > max_dpi_by_xref.get(xref, 0.0):
-                max_dpi_by_xref[xref] = dpi
-    return max_dpi_by_xref
+            dpi_x, dpi_y = _effective_image_dpis(info)
+            previous_x, previous_y = max_dpis_by_xref.get(xref, (0.0, 0.0))
+            max_dpis_by_xref[xref] = (
+                max(previous_x, dpi_x),
+                max(previous_y, dpi_y),
+            )
+    return max_dpis_by_xref
 
 
-def _should_rewrite_image(img: tuple, options: LossyOptions) -> bool:
-    smask = int(img[1] or 0)
-    if smask:
-        return False
-    bpc = int(img[4] or 0)
-    if bpc == 1 and not options.bitonal:
-        return False
-    colorspace = str(img[5] or "")
-    image_filter = str(img[8] or "")
-    is_gray = colorspace in {"DeviceGray", "CalGray", "G"}
-    is_color = not is_gray
-    if is_gray and not options.gray:
-        return False
-    if is_color and not options.color:
-        return False
-    is_jpeg = "DCTDecode" in image_filter
-    if is_jpeg and not options.lossy:
-        return False
-    if not is_jpeg and not options.lossless:
-        return False
-    return True
+def _xref_max_effective_dpi(doc: fitz.Document) -> dict[int, float]:
+    """Compatibility view used by callers that only need the maximum axis."""
+    return {
+        xref: max(dpis)
+        for xref, dpis in _xref_max_effective_dpis(doc).items()
+    }
 
 
 def _jpeg_bytes_for_xref(
@@ -145,7 +181,14 @@ def _put_jpeg_in_xref(
     else:
         doc.xref_set_key(xref, "ColorSpace", "/DeviceRGB")
     keys = set(doc.xref_get_keys(xref))
-    for extra in ("DecodeParms", "SMask", "Mask", "Intent", "Metadata"):
+    for extra in (
+        "Decode",
+        "DecodeParms",
+        "SMask",
+        "Mask",
+        "Intent",
+        "Metadata",
+    ):
         if extra in keys:
             doc.xref_set_key(xref, extra, "null")
 

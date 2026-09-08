@@ -3,6 +3,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pymupdf as fitz
+
 from pdf_shrink import cli, config, discovery, inspect_pdf, output, qpdf, validate
 from pdf_shrink.models import ProcessStatus
 from pdf_shrink.utils import sha256_file
@@ -34,10 +36,74 @@ def test_validate_identical_pdf(sample_pdfs: dict[str, Path]) -> None:
     assert ok, reason
 
 
+def test_validate_rejects_local_loss_hidden_by_global_average(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    source = tmp_path / "source.pdf"
+    candidate = tmp_path / "candidate.pdf"
+    for path, include_patch in ((source, True), (candidate, False)):
+        document = fitz.open()
+        page = document.new_page(width=256, height=256)
+        if include_patch:
+            page.draw_rect(
+                fitz.Rect(64, 64, 84, 84),
+                color=(0, 0, 0),
+                fill=(0, 0, 0),
+            )
+        document.save(path)
+        document.close()
+    monkeypatch.setattr(validate, "qpdf_check", lambda *_args: 0)
+
+    ok, mean_diff, max_tile_diff = validate._compare_render(
+        source,
+        candidate,
+        enhanced=True,
+    )
+    assert mean_diff < validate._GLOBAL_RENDER_DIFF_THRESHOLD
+    assert max_tile_diff > validate._LOCAL_RENDER_DIFF_THRESHOLD
+    assert not ok
+
+    valid, reason = validate.validate(
+        source,
+        candidate,
+        tmp_path / "qpdf.exe",
+        enhanced=True,
+    )
+    assert not valid
+    assert reason.startswith("render_local_diff_too_large")
+
+
+def test_validate_rejects_chromatic_change_with_similar_grayscale(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    source = tmp_path / "source-color.pdf"
+    candidate = tmp_path / "candidate-color.pdf"
+    colors = ((222 / 255, 98 / 255, 33 / 255), (33 / 255, 157 / 255, 220 / 255))
+    for path, color in zip((source, candidate), colors):
+        document = fitz.open()
+        page = document.new_page(width=128, height=128)
+        page.draw_rect(page.rect, color=color, fill=color)
+        document.save(path)
+        document.close()
+    monkeypatch.setattr(validate, "qpdf_check", lambda *_args: 0)
+
+    valid, reason = validate.validate(
+        source,
+        candidate,
+        tmp_path / "qpdf.exe",
+        enhanced=True,
+    )
+
+    assert not valid
+    assert reason.startswith("render_diff_too_large")
+
+
 def test_transform_copy_original(tmp_path: Path, sample_pdfs: dict[str, Path]) -> None:
     dst = tmp_path / "out" / "text_copy.pdf"
     output.copy_original(
-        sample_pdfs["text"],
+        discovery.snapshot(sample_pdfs["text"], tmp_path / "PDF"),
         dst,
         input_root=tmp_path / "PDF",
         output_root=tmp_path / "out",

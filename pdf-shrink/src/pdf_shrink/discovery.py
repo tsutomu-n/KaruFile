@@ -9,6 +9,10 @@ from .models import SourceSnapshot
 from .utils import sha256_file
 
 
+class SourceChangedError(OSError):
+    """The input no longer matches its immutable discovery snapshot."""
+
+
 def _is_nested(parent: Path, child: Path) -> bool:
     try:
         child.relative_to(parent)
@@ -35,6 +39,40 @@ def _is_link_or_junction(path: Path) -> bool:
         return True
     is_junction = getattr(path, "is_junction", None)
     return bool(is_junction is not None and is_junction())
+
+
+def _stat_signature(value: os.stat_result) -> tuple[int, int, int, int, int]:
+    return (
+        value.st_dev,
+        value.st_ino,
+        value.st_size,
+        value.st_mtime_ns,
+        value.st_ctime_ns,
+    )
+
+
+def _capture_stable_hash(path: Path) -> tuple[os.stat_result, str]:
+    before = path.stat()
+    digest = sha256_file(path)
+    after = path.stat()
+    if _stat_signature(before) != _stat_signature(after):
+        raise SourceChangedError(f"Input changed while hashing: {path}")
+    return after, digest
+
+
+def _has_link_component(root: Path, path: Path) -> bool:
+    try:
+        relative = path.relative_to(root)
+    except ValueError:
+        return True
+    current = root
+    if _is_link_or_junction(current):
+        return True
+    for part in relative.parts:
+        current = current / part
+        if _is_link_or_junction(current):
+            return True
+    return False
 
 
 def collect_pdfs(input_dir: Path) -> list[Path]:
@@ -95,12 +133,46 @@ def snapshot(path: Path, input_dir: Path) -> SourceSnapshot:
     resolved = path.resolve(strict=True)
     if not _is_nested(input_root, resolved):
         raise ValueError(f"Input file resolves outside the input root: {path}")
-    file_hash = sha256_file(resolved)
-    stat = resolved.stat()
+    if _has_link_component(input_root, resolved):
+        raise ValueError(f"Input path contains a symlink or junction: {path}")
+    stat, file_hash = _capture_stable_hash(resolved)
     return SourceSnapshot(
         path=resolved,
         relative_path=resolved.relative_to(input_root),
         sha256=file_hash,
         size=stat.st_size,
         mtime_ns=stat.st_mtime_ns,
+        device=stat.st_dev,
+        inode=stat.st_ino,
+        ctime_ns=stat.st_ctime_ns,
     )
+
+
+def assert_source_unchanged(source: SourceSnapshot, input_dir: Path) -> None:
+    """Re-hash an input and require its full filesystem identity to be stable."""
+    try:
+        input_root = input_dir.resolve(strict=True)
+        if not _is_nested(input_root, source.path):
+            raise SourceChangedError(f"Input escaped its root: {source.path}")
+        if _has_link_component(input_root, source.path):
+            raise SourceChangedError(
+                f"Input path became a symlink or junction: {source.path}"
+            )
+        resolved = source.path.resolve(strict=True)
+        if resolved != source.path:
+            raise SourceChangedError(f"Input path identity changed: {source.path}")
+        observed, digest = _capture_stable_hash(source.path)
+    except SourceChangedError:
+        raise
+    except (OSError, RuntimeError, ValueError) as exc:
+        raise SourceChangedError(f"Input changed during processing: {source.path}") from exc
+    if _stat_signature(observed) != source.stat_signature or digest != source.sha256:
+        raise SourceChangedError(f"Input changed during processing: {source.path}")
+
+
+def source_is_unchanged(source: SourceSnapshot, input_dir: Path) -> bool:
+    try:
+        assert_source_unchanged(source, input_dir)
+    except SourceChangedError:
+        return False
+    return True

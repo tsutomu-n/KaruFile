@@ -5,8 +5,15 @@ import argparse
 import logging
 from pathlib import Path
 
-from .config import ImageConfig
-from .image import OutputCollisionError, error_report_path, process_all, write_error_report
+from .config import IMAGE_PRESETS, ImageConfig
+from .image import (
+    OutputCollisionError,
+    error_report_path,
+    manifest_path,
+    process_all,
+    write_error_report,
+    write_result_manifest,
+)
 from .utils import (
     PathValidationError,
     human_size,
@@ -44,7 +51,7 @@ def _build_parser() -> argparse.ArgumentParser:
         "-n",
         "--dry-run",
         action="store_true",
-        help="Decode and plan without writing image outputs; the error CSV is refreshed",
+        help="Decode and plan without writing image outputs; reports are refreshed",
     )
     resize.add_argument(
         "-j",
@@ -52,6 +59,12 @@ def _build_parser() -> argparse.ArgumentParser:
         type=_positive_int,
         default=4,
         help="Number of parallel workers (default: 4)",
+    )
+    resize.add_argument(
+        "--preset",
+        choices=IMAGE_PRESETS,
+        default="standard",
+        help="Compression preset (default: standard)",
     )
     resize.add_argument("-v", "--verbose", action="store_true", help="Verbose logging")
     resize.set_defaults(func=cmd_resize)
@@ -64,11 +77,17 @@ def cmd_resize(args: argparse.Namespace) -> int:
     try:
         input_dir, output_dir = validate_input_output(requested_input, requested_output)
         validate_auxiliary_output(input_dir, error_report_path(output_dir))
+        validate_auxiliary_output(input_dir, manifest_path(output_dir, dry_run=False))
+        validate_auxiliary_output(input_dir, manifest_path(output_dir, dry_run=True))
     except PathValidationError as exc:
         logger.error("%s", exc)
         return 1
 
-    config = ImageConfig(workers=args.workers, dry_run=args.dry_run)
+    config = ImageConfig(
+        workers=args.workers,
+        dry_run=args.dry_run,
+        preset=getattr(args, "preset", "standard"),
+    )
     if not config.dry_run:
         try:
             output_dir.mkdir(parents=True, exist_ok=True)
@@ -98,16 +117,24 @@ def cmd_resize(args: argparse.Namespace) -> int:
         report_failed = True
         logger.error("Could not update image error report: %s", exc)
 
+    manifest_failed = False
+    try:
+        manifest = write_result_manifest(input_dir, output_dir, results, config)
+        logger.info("Image result manifest: %s", manifest)
+    except (OSError, PathValidationError, OutputCollisionError) as exc:
+        manifest_failed = True
+        logger.error("Could not update image result manifest: %s", exc)
+
     successful = [result for result in results if "error" not in result]
     image_errors = [result for result in results if "error" in result]
-    displayed_errors = len(image_errors) + int(report_failed)
+    displayed_errors = len(image_errors) + int(report_failed) + int(manifest_failed)
     total_input = sum(int(result.get("orig_size", 0)) for result in successful)
     total_output = sum(int(result.get("new_size", 0)) for result in successful)
 
     # orchestrator が利用している既存 stdout 契約を維持する。
     print(f"Resized {len(successful)} images ({displayed_errors} errors)")
     print(f"  {human_size(total_input)} -> {human_size(total_output)}")
-    return 1 if image_errors or report_failed else 0
+    return 1 if image_errors or report_failed or manifest_failed else 0
 
 
 def main(argv: list[str] | None = None) -> int:

@@ -33,6 +33,19 @@ class SourceSnapshot:
     sha256: str
     size: int
     mtime_ns: int
+    device: int
+    inode: int
+    ctime_ns: int
+
+    @property
+    def stat_signature(self) -> tuple[int, int, int, int, int]:
+        return (
+            self.device,
+            self.inode,
+            self.size,
+            self.mtime_ns,
+            self.ctime_ns,
+        )
 
     def output_path(self, output_dir: Path) -> Path:
         # resolve() は出力配下のjunctionを辿り、入力ファイルそのものへ化け得る。

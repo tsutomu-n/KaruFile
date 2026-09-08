@@ -1,7 +1,7 @@
 # KaruFile
 
-KaruFileは、フォルダー内のPDFと画像を、入力原本を変更・削除せず別フォルダーへ
-一括で軽量化するWindows向けCLIです。
+KaruFileは、フォルダー内のPDFと画像、およびcompact presetで対応する動画を、
+入力原本を変更・削除せず別フォルダーへ一括で軽量化するWindows向けCLIです。
 
 ## 利用者向け正本
 
@@ -13,20 +13,38 @@ KaruFileは、フォルダー内のPDFと画像を、入力原本を変更・削
 
 処理全体は、Archifyで生成・検証した図から先に確認できます。
 
-[![KaruFile実行時アーキテクチャ](docs/architecture/karufile-runtime.visual-check.1440x900.light.png)](docs/architecture/karufile-runtime.html)
+[![KaruFile実行時アーキテクチャ](docs/architecture/karufile-runtime.compact.visual-check.1440x900.light.png)](docs/architecture/karufile-runtime.compact.html)
 
-- [対話型HTMLを開く](docs/architecture/karufile-runtime.html)
+- [対話型HTMLを開く](docs/architecture/karufile-runtime.compact.html)
 - [図の検証済みJSONを確認する](docs/architecture/karufile-runtime.architecture.json)
 
 ## 最短の実行手順
 
 必要環境はWindows、Python 3.13以上、[uv](https://docs.astral.sh/uv/)です。
+`karufile.py`があるリポジトリ直下のPowerShellで実行します。
+PDFの通常実行ではqpdfを使い、未検出時は自動取得します。
 
 ```powershell
 uv sync --project pdf-shrink --dev
 uv sync --project media-shrink-tool
+```
+
+準備後、PDF・画像を既定の`standard`で処理する場合:
+
+```powershell
 uv run --script karufile.py --dry-run -i "D:\作業\資料" -o "D:\作業\資料_軽量化"
 uv run --script karufile.py -i "D:\作業\資料" -o "D:\作業\資料_軽量化"
+```
+
+既定の`standard`はPDF・画像を処理し、動画は探索・コピーしません。
+PDF・画像をより強く圧縮し、対応動画も処理する場合は、上の実行手順に代えて
+次の`compact`手順を使います。動画の通常実行には対応機能を備えた外部FFmpeg/ffprobeが必要です。
+自動取得はしないため、[マニュアルの必要環境](MANUAL.md#必要なもの)を先に確認してください。
+
+```powershell
+uv sync --project video-shrink
+uv run --script karufile.py --preset compact --dry-run -i "D:\作業\資料" -o "D:\作業\資料_軽量化"
+uv run --script karufile.py --preset compact -i "D:\作業\資料" -o "D:\作業\資料_軽量化"
 ```
 
 `-o` を省略すると、入力と同じ階層の `<入力フォルダー名>_軽量化` を使います。
@@ -40,14 +58,16 @@ uv run --script karufile.py -i "D:\作業\資料" -o "D:\作業\資料_軽量化
 | パス | 役割 |
 |---|---|
 | `karufile.py` | 通常使うCLI入口 |
-| `orchestrator/` | PDFと画像の処理コンポーネントを順に呼び、結果を集計 |
+| `orchestrator/` | PDF・画像・compact動画の処理コンポーネントを順に呼び、結果を集計 |
 | `pdf-shrink/` | PDF処理の正本。PyMuPDF、qpdf、SQLiteを使用 |
 | `media-shrink-tool/` | 画像をJPEGへ変換する処理コンポーネント |
+| `video-shrink/` | compact動画を外部FFmpegで変換・検証する処理コンポーネント |
 
 コンポーネント固有のCLIと内部契約:
 
 - [pdf-shrink](pdf-shrink/README.md)
 - [media-shrink-tool](media-shrink-tool/README.md)
+- [video-shrink](video-shrink/README.md)
 - [orchestrator](orchestrator/README.md)
 
 文書の正本・補足・履歴の区別は [文書ガイド](docs/README.md)、AI向けのリポジトリ指示は
@@ -55,13 +75,6 @@ uv run --script karufile.py -i "D:\作業\資料" -o "D:\作業\資料_軽量化
 
 ## 開発検証
 
-```powershell
-uv run --project pdf-shrink python -m pytest -q pdf-shrink/tests
-uv run --project media-shrink-tool --extra dev python -m pytest -q media-shrink-tool/tests
-Push-Location orchestrator
-uv run --with pytest python -m pytest -q
-Pop-Location
-uv run --script karufile.py --help
-```
-
-自動テストは小さな合成データが中心です。今回の実装では実データPilotを実施していません。
+検証コマンドと変更範囲ごとの実行方針は [AGENTS.md](AGENTS.md#validation)を参照してください。
+自動テストは小さな合成データが中心で、代表実データでのPilotは未実施です。
+compactの最終検証は [ExecPlan索引](.agent/execplans/README.md)上で中断・再開待ちです。

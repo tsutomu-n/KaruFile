@@ -8,7 +8,9 @@ import tempfile
 from collections.abc import Iterable
 from pathlib import Path
 
-from .utils import ensure_dir
+from . import discovery
+from .models import SourceSnapshot
+from .utils import ensure_dir, sha256_file
 
 
 def _is_within(path: Path, parent: Path) -> bool:
@@ -82,7 +84,10 @@ def validate_destination(
             f"{destination} -> {destination_resolved}"
         )
     if destination.exists():
-        if destination.stat().st_nlink > 1:
+        destination_stat = destination.stat()
+        if not destination_stat.st_mode & stat.S_IWRITE:
+            raise ValueError(f"Read-only output destination is not replaced: {destination}")
+        if destination_stat.st_nlink > 1:
             raise ValueError(f"Output destination is a hard link: {destination}")
         for protected in protected_sources:
             try:
@@ -106,16 +111,36 @@ def _make_writable(path: Path) -> None:
     os.chmod(path, mode | stat.S_IWRITE)
 
 
+def _stat_signature(value: os.stat_result) -> tuple[int, int, int, int, int]:
+    return (
+        value.st_dev,
+        value.st_ino,
+        value.st_size,
+        value.st_mtime_ns,
+        value.st_ctime_ns,
+    )
+
+
+def _stable_sha256(path: Path) -> str:
+    before = path.stat()
+    digest = sha256_file(path)
+    after = path.stat()
+    if _stat_signature(before) != _stat_signature(after):
+        raise OSError(f"Copy source changed while hashing: {path}")
+    return digest
+
+
 def _publish_copy(
-    source: Path,
+    copy_source: Path,
     destination: Path,
-    timestamp_source: Path,
+    protected_source: SourceSnapshot,
+    expected_copy_sha256: str,
     *,
     input_root: Path,
     output_root: Path,
 ) -> None:
     """同一ディレクトリ内の一時ファイルを経由して出力を置換する。"""
-    protected_sources = (timestamp_source,)
+    protected_sources = (protected_source.path,)
     validate_destination(
         destination,
         input_root=input_root,
@@ -137,18 +162,30 @@ def _publish_copy(
     os.close(fd)
     temp_path = Path(temp_name)
     try:
-        shutil.copy2(source, temp_path)
+        # Copying may take long enough for either the input or a generated
+        # candidate to be replaced.  Anchor both before starting the copy.
+        discovery.assert_source_unchanged(protected_source, input_root)
+        if _stable_sha256(copy_source) != expected_copy_sha256:
+            raise OSError(f"Copy source does not match its verified digest: {copy_source}")
+        shutil.copy2(copy_source, temp_path)
         # copy2 はWindowsのread-only属性も複製する。公開・cleanup前に解除する。
         _make_writable(temp_path)
-        timestamp = timestamp_source.stat()
-        os.utime(temp_path, ns=(timestamp.st_atime_ns, timestamp.st_mtime_ns))
+        if _stable_sha256(temp_path) != expected_copy_sha256:
+            raise OSError(f"Staged copy verification failed: {copy_source}")
+        os.utime(
+            temp_path,
+            ns=(protected_source.mtime_ns, protected_source.mtime_ns),
+        )
+        # Re-hashing the input is comparatively slow, so destination topology
+        # must be checked again afterwards.  The final sequence intentionally
+        # mirrors the image pipeline: source -> destination -> replace.
+        discovery.assert_source_unchanged(protected_source, input_root)
         validate_destination(
             destination,
             input_root=input_root,
             output_root=output_root,
             protected_sources=protected_sources,
         )
-        _make_writable(destination)
         os.replace(temp_path, destination)
     finally:
         _make_writable(temp_path)
@@ -156,25 +193,27 @@ def _publish_copy(
 
 
 def copy_original(
-    source: Path,
+    source: SourceSnapshot,
     destination: Path,
     *,
     input_root: Path,
     output_root: Path,
 ) -> None:
     _publish_copy(
-        source,
+        source.path,
         destination,
         source,
+        source.sha256,
         input_root=input_root,
         output_root=output_root,
     )
 
 
 def adopt_candidate(
-    original: Path,
+    original: SourceSnapshot,
     candidate: Path,
     destination: Path,
+    candidate_sha256: str,
     *,
     input_root: Path,
     output_root: Path,
@@ -183,6 +222,7 @@ def adopt_candidate(
         candidate,
         destination,
         original,
+        candidate_sha256,
         input_root=input_root,
         output_root=output_root,
     )

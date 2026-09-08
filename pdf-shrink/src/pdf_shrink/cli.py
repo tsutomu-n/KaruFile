@@ -6,7 +6,7 @@ import logging
 import sys
 
 from . import runner
-from .config import build_config
+from .config import CompressionPreset, build_config
 from .utils import logger, setup_logging
 
 
@@ -30,6 +30,12 @@ def build_parser() -> argparse.ArgumentParser:
     run_parser.add_argument("--input", required=True, help="入力PDFフォルダー")
     run_parser.add_argument("--output", help="出力フォルダー（未指定時は <input>_軽量化）")
     run_parser.add_argument("--workers", type=int, default=2, help="並列プロセス数（デフォルト2）")
+    run_parser.add_argument(
+        "--preset",
+        choices=tuple(preset.value for preset in CompressionPreset),
+        default=CompressionPreset.STANDARD.value,
+        help="圧縮プリセット（デフォルトstandard）",
+    )
     run_parser.add_argument(
         "--dry-run",
         action="store_true",

@@ -26,12 +26,13 @@ ExecPlanは当時の判断と検証を残す履歴であり、現行仕様の正
 | [AGENTS.md](../AGENTS.md) | AI・保守者向けの短い作業契約 | 責務境界、正本、検証入口の変更 |
 | [pdf-shrink README](../pdf-shrink/README.md) | PDF個別CLIと内部契約 | PDF処理、status、レポート、依存関係の変更 |
 | [media-shrink-tool README](../media-shrink-tool/README.md) | 画像個別CLIと内部契約 | 画像recipe、再利用、警告、エラーCSVの変更 |
+| [video-shrink README](../video-shrink/README.md) | 動画個別CLIと内部契約 | 動画適格性、品質gate、状態、レポート、FFmpeg境界の変更 |
 | [orchestrator README](../orchestrator/README.md) | 統合CLIと保存先 | 実行順序、集計、環境変数の変更 |
 | [orchestrator設計](../orchestrator/docs/shrink_orchestrator_design.md) | 内部責務、安全性検査、結果照合 | `orchestrator/shrink_all.py` の境界変更 |
 | [文書ガイド](README.md) | 文書の正本順序、現行性、監査結果 | 文書の追加、役割、保存方針の変更 |
 | [ExecPlan索引](../.agent/execplans/README.md) | 完了済み計画の状態と導線 | ExecPlanの追加または状態変更 |
 | [Architecture JSON](architecture/karufile-runtime.architecture.json) | Archify図の編集可能な正本 | 実行時コンポーネントやデータ経路の変更 |
-| [Architecture HTML](architecture/karufile-runtime.html) | 対話型の閲覧用生成物 | Architecture JSONを変更して再生成したとき |
+| [Architecture HTML](architecture/karufile-runtime.compact.html) | 対話型の閲覧用生成物 | Architecture JSONを変更して再生成したとき |
 
 生成HTMLは直接編集しません。Architecture JSONを更新し、Archifyのvalidate、deliver、
 visual-checkを実行してから、light/darkの画像を確認します。

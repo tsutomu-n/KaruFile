@@ -36,6 +36,7 @@ uv run --project pdf-shrink pdf-shrink run `
 | `--input PATH` | 入力フォルダー。必須 |
 | `--output PATH` | 出力フォルダー。省略時は `<input>_軽量化` |
 | `--workers N` | 並列プロセス数。既定値は2、最小値は1 |
+| `--preset standard|compact` | 圧縮プリセット。既定値は `standard` |
 | `--dry-run` | 出力PDFを作らず、判定結果を記録 |
 | `--safe` | 非可逆画像縮小を無効化し、qpdfの可逆候補だけを作成 |
 | `--limit N` | サイズ上位 `floor(N/2)` 件と、残りから固定seedで選ぶ `N-floor(N/2)` 件のPilot実行。Nが奇数ならランダム側が1件多い |
@@ -44,6 +45,8 @@ uv run --project pdf-shrink pdf-shrink run `
 | `-v`, `--verbose` | 詳細ログ |
 
 入力と出力に、同じフォルダーや互いに親子となるフォルダーは指定できません。
+`--safe` と `--preset compact` は非可逆処理の有無が矛盾するため同時指定できず、
+終了コード `2` になります。
 
 ## 出力、状態、レポート
 
@@ -60,26 +63,45 @@ uv run --project pdf-shrink pdf-shrink run `
 dry-runでも状態DBと `report.dry-run.csv` を更新する場合があります。完成PDFと処理用の
 一時PDFは作りません。レポートは状態DB全体ではなく、現在選択した入力だけを対象にします。
 
-状態DBには、対象を決めた時点の入力SHA-256を保存します。処理中に入力が変わった場合は、
+状態DBには入力と完成出力のSHA-256を保存します。処理中に入力または出力が変わった場合は、
 新しい内容を誤って処理済みと記録せず、次回に再処理します。ただし、処理中の入力自体は
 ロックしません。
+プリセットで選ばれた実際の画像処理値は再開判定用の設定ハッシュに含まれるため、
+`standard` と `compact` を切り替えた入力は再処理されます。
+JPEGの `/Decode` 色変換と非等方配置の軸別DPI判定を修正し、出力SHA-256を必須にした
+このversionでは、設定ハッシュまたは旧record検出により既存stateのPDFを初回に再処理します。
 
 ## 圧縮対象の判定
 
 - 256 KiB未満のPDFは圧縮せず、通常実行では原本をコピーします。
 - 暗号化、電子署名、フォーム、添付ファイル、修復済みPDFなどは圧縮しません。
+  添付ファイルまたは電子署名の有無を検査できない場合も、安全側で `SKIPPED_COMPLEX`
+  として原本を採用します。
 - ページ内で最大の画像配置がページ面積の80%以上、実効解像度が450 DPI超、
   可視テキストが20文字以下のページをスキャンページと判定し、`scan_page_ratio` に記録します。
   非可逆候補にするかの判定には使いません。
-- 実効解像度は、画像のpixel寸法と表示bboxから90度回転も考慮して求めます。
+- 実効解像度は、画像のpixel寸法と配置transformのX/Y基底長から軸別に求めます。
+  回転・skew・非等方配置と、同じ画像の複数配置を考慮します。
 - 可視文字数はtexttraceを優先し、非表示または透明なspanだけを除外します。
   白色だけでは不可視扱いしません。
-- 配置サイズから見た画像実効DPIが300を超える画像がある場合、その画像を300 DPI、
+- どちらのプリセットも、縮小候補を作るときの固定目標は各軸300 DPIです。
+- `standard` は、配置サイズから見た画像実効DPIが300を超える画像を300 DPI、
   JPEG quality 92へ縮小した非可逆候補を作ります。
-- 実効DPIはpixel寸法と表示bboxから求めます。JPEGのxres/yresメタデータは使いません。
-- 拡大しません。1bit画像とsoft mask付き画像は縮小しません。ベクター文字は残します。
+- `compact` は、300 DPI超の画像を300 DPI、JPEG quality 80へ縮小します。
+  300 DPI以下の既存DCTDecode JPEGも、pixel寸法を変えずquality 80の再圧縮候補にします。
+  ただし、個別画像streamが5%以上小さくならない場合はその画像を書き換えません。
+- 実効DPIはpixel寸法と配置transformから軸別に求めます。JPEGのxres/yresメタデータは
+  使いません。300 DPI未満の軸は拡大しません。
+- 拡大しません。1bit画像とsoft mask付き画像は縮小も再圧縮もしません。
+  ベクター文字は残します。
+- xrefを持たないinline画像はいずれかの軸が300 DPIを超える場合に安全に縮小できないため、
+  非safe実行では `SKIPPED_COMPLEX` として原本を採用します。`--safe` の可逆処理は妨げません。
 - 可視テキストが多くても、300DPI超の画像があれば非可逆候補を作ります。
 - `--safe` では常にqpdfの可逆候補だけを作ります。
+
+非可逆候補が表示検証または削減条件を満たさない場合は原本を採用するため、その出力には
+入力由来の300 DPI超画像が残ることがあります。300 DPIは検証前候補の固定目標であり、
+画質gateを無効化する強制上限ではありません。
 
 ## 候補の検証と採用
 
@@ -88,7 +110,9 @@ dry-runでも状態DBと `report.dry-run.csv` を更新する場合がありま�
 - qpdfの構造検査
 - ページ数の一致
 - NFC正規化後の抽出テキストの一致
-- 72 DPIグレースケール表示の平均絶対差が5%以下
+- `standard`: 72 DPIグレースケール表示の平均絶対差が5%以下
+- `compact`: 72 DPI RGB表示のチャンネル平均絶対差が5%以下で、かつ最大32×32 pixelに
+  分けた局所タイルごとのチャンネル平均絶対差が20%以下
 
 採用条件:
 
@@ -122,7 +146,7 @@ dry-runでも状態DBと `report.dry-run.csv` を更新する場合がありま�
 レポート列:
 
 ```text
-source_path,source_size,output_size,saved_bytes,saved_percent,mode,status,page_count,scan_page_ratio,error_message
+source_path,source_size,source_sha256,output_path,output_size,output_sha256,saved_bytes,saved_percent,preset,mode,status,page_count,scan_page_ratio,error_message
 ```
 
 ## モジュール境界
@@ -163,10 +187,10 @@ qpdfを実行する統合テストがあり、初回はqpdfを取得する場合
 
    バージョンと展開先は固定・検査しますが、配布ZIPのSHA-256または署名は検証しません。
 
-2. 表示検証の局所差分
+2. 表示検証の解像度
 
-   現在の表示検証は全ページの72 DPIグレースケール画素の平均絶対差を使います。
-   小さな領域だけの欠落はページ全体の平均で薄まる可能性があります。
+   `compact` では全体平均に加えて局所タイル差分も検査しますが、表示検証は
+   72 DPI RGBです。それより小さい細部の欠落を見逃す可能性は残ります。
 
 3. 入力ファイルの同時更新
 
