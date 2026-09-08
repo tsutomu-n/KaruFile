@@ -156,6 +156,8 @@ def qpdf_optimize(
     src: Path,
     dst: Path,
     options: QpdfOptions,
+    *,
+    reject_warnings: bool = False,
 ) -> None:
     """qpdf による可逆最適化を実行する。"""
     cmd = [str(exe)]
@@ -178,6 +180,6 @@ def qpdf_optimize(
         timeout=300,
     )
     # 終了コード3は警告のみ。処理後の検証（qpdf --check）で詳細を判定する。
-    if result.returncode == 2 or result.returncode not in (0, 3):
+    if result.returncode not in ((0,) if reject_warnings else (0, 3)):
         err = result.stderr[-500:] if result.stderr else ""
         raise RuntimeError(f"qpdf optimize failed (rc={result.returncode}): {err}")

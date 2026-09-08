@@ -71,6 +71,20 @@ qpdfを探し、見つからない場合はqpdf 12.3.2のWindows向け配布ZIP�
 取得します。初回実行時に取得が必要になる場合があります。PDFを含まない実行と
 `--dry-run` ではqpdfを使用しません。
 
+JPEG画像の解像度を変えない追加最適化は、`--pdf-lossless-jpeg`で有効にできます（既定OFF）。
+[公式libjpeg-turbo 3.2.0 Windows x64配布物](https://github.com/libjpeg-turbo/libjpeg-turbo/releases/tag/3.2.0)を
+手動で準備し、公式配布物のSHA-256とWindows署名を確認してください。自動取得・インストールはしません。
+`jpegtran.exe`と同梱DLLの配置を維持し、明示パスまたはPATHを使います。
+
+```powershell
+uv run --script karufile.py -i "D:\作業\資料" -o "D:\作業\JPEG検証\資料_軽量化" --pdf-lossless-jpeg --pdf-jpegtran-path "C:\Tools\libjpeg-turbo\bin\jpegtran.exe"
+```
+
+パス指定だけでは有効になりません。有効時にツールが見つからない、または3.2.0でない場合はPDF処理開始前に
+エラーとなります。dry-runではツールを探索・実行せず、要求設定だけをCSVへ記録します。
+この指定は可逆候補を追加します。presetや写真指定による既存の非可逆候補も比較対象に残るため、
+「完成出力は必ず可逆」を意味しません。可逆処理だけが必要な場合はPDF個別CLIの`--safe --lossless-jpeg`を使います。
+
 compactで動画を処理する場合は、`ffmpeg` と `ffprobe` が `PATH` に必要です。KaruFileは
 これらを自動取得・同梱しません。別の実行ファイルを使う場合は `--ffmpeg-path` と
 `--ffprobe-path` で指定できます。利用するFFmpeg buildにはSVT-AV1、AAC、Opus、libvmaf、
@@ -288,6 +302,9 @@ xrefを持たないinline画像がいずれかの軸で300 DPIを超えるPDFは
 
 非可逆候補を作る場合は元PDFから可逆候補も作り、検証と採用条件を満たす最小の候補を選びます。
 同サイズなら可逆候補を優先します。採用条件を満たす候補がなければ原本を採用します。
+可逆候補は16 KiB以上かつ2%以上の削減が必要です。JPEG可逆を指定した場合の同サイズ優先順は
+qpdf単独、JPEG baseline、JPEG progressive、非可逆です。JPEG候補は原寸画素と完成PDFの
+描画一致を検査しますが、全ビューアーでの互換性やOCR精度を保証するものではありません。
 ツール、構造検査、I/Oの失敗は`ERROR`であり、
 回復コピーが成功しても成功扱いにしません。300 DPI・200 DPIは候補作成の目標であり、最終出力の
 強制上限ではありません。

@@ -7,7 +7,7 @@
     "quality_profile": "showcase",
     "repository": {
       "url": "https://github.com/tsutomu-n/KaruFile",
-      "revision": "2a529fc09eeb3e20f12ebea8a2a48e95911eb834"
+      "revision": "3d98c66df6eb936c2c5bffbfdb0111b4e40ebb9f"
     },
     "legend": {
       "mode": "auto",
@@ -97,13 +97,14 @@
       "id": "pdf_engines",
       "type": "external",
       "label": "PDF・JPEG処理エンジン",
-      "sublabel": "PyMuPDF / qpdf",
+      "sublabel": "PyMuPDF・qpdf・任意jpegtran",
       "tag": "任意jpegtran 3.2.0・手動準備",
       "pos": [900, 0],
       "size": [215, 82],
       "sources": [
         { "path": "pdf-shrink/pyproject.toml", "label": "PyMuPDF" },
-        { "path": "pdf-shrink/src/pdf_shrink/qpdf.py", "label": "qpdf" }
+        { "path": "pdf-shrink/src/pdf_shrink/qpdf.py", "label": "qpdf" },
+        { "path": "pdf-shrink/src/pdf_shrink/lossless_jpeg.py", "label": "JPEG可逆" }
       ]
     },
     {
@@ -309,7 +310,7 @@
       "items": [
         "PDFは通常300 DPI、写真指定だけ約200 DPI・詳細検証",
         "compact画像は1024x768、動画は720p・30fps・AV1",
-        "任意JPEG可逆は作業ツリー実装。リンクは変更前commit"
+        "JPEG可逆は未commit修正を含む。リンクは基準commit"
       ]
     }
   ]

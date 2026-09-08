@@ -1208,8 +1208,9 @@ def test_pdf_photo_report_requires_selected_profile_and_its_savings_gate(
 
 
 @pytest.mark.parametrize("selected", [False, True])
+@pytest.mark.parametrize("jpeg_requested", [False, True])
 def test_main_sends_photo_patterns_only_to_pdf_and_matches_each_profile(
-    tmp_path: Path, monkeypatch, selected: bool,
+    tmp_path: Path, monkeypatch, selected: bool, jpeg_requested: bool,
 ) -> None:
     input_dir = tmp_path / "input"
     output_dir = tmp_path / "output"
@@ -1223,6 +1224,8 @@ def test_main_sends_photo_patterns_only_to_pdf_and_matches_each_profile(
         calls.append(name)
         patterns = [arg for arg in args if arg.startswith("--photo-pattern=")]
         if name == "pdf-shrink":
+            assert ("--lossless-jpeg" in args) is jpeg_requested
+            assert args[args.index("--jpegtran-path") + 1] == "manually-prepared.exe"
             assert patterns == (["--photo-pattern=photos/*.pdf", "--photo-pattern=-extra.pdf"] if selected else [])
             rows = []
             for index, source in enumerate(sources):
@@ -1242,10 +1245,12 @@ def test_main_sends_photo_patterns_only_to_pdf_and_matches_each_profile(
                     "status": "UNCHANGED",
                     "preset": "standard",
                     "profile": "photo" if selected and index == 0 else "standard",
+                    "lossless_jpeg_requested": "true" if jpeg_requested else "false",
                 })
             _write_pdf_report(output_dir.parent / "report.csv", rows)
         else:
             assert name == "media-shrink"
+            assert "--lossless-jpeg" not in args and "--jpegtran-path" not in args
             assert patterns == []
             assert args[args.index("--preset") + 1] == "standard"
             Path(f"{output_dir}.image-errors.csv").write_text("source,planned_output,error\n", encoding="utf-8")
@@ -1254,6 +1259,9 @@ def test_main_sends_photo_patterns_only_to_pdf_and_matches_each_profile(
 
     monkeypatch.setattr(shrink_all, "run_command", fake_run)
     cli_args = ["-i", str(input_dir), "-o", str(output_dir)]
+    cli_args.extend(["--pdf-jpegtran-path", "manually-prepared.exe"])
+    if jpeg_requested:
+        cli_args.append("--pdf-lossless-jpeg")
     if selected:
         cli_args.extend(["--pdf-photo-pattern", r"photos\*.pdf", "--pdf-photo-pattern=-extra.pdf"])
 
@@ -1261,10 +1269,11 @@ def test_main_sends_photo_patterns_only_to_pdf_and_matches_each_profile(
     assert calls == ["pdf-shrink", "media-shrink"]
 
 
-def test_parse_pdf_report_rejects_legacy_report_without_profile(tmp_path: Path) -> None:
+@pytest.mark.parametrize("missing", ["profile", "lossless_jpeg_requested"])
+def test_parse_pdf_report_rejects_legacy_report_without_required_column(tmp_path: Path, missing: str) -> None:
     report = tmp_path / "report.csv"
     report.write_text(
-        ",".join(field for field in PDF_REPORT_FIELDS if field != "profile") + "\n",
+        ",".join(field for field in PDF_REPORT_FIELDS if field != missing) + "\n",
         encoding="utf-8",
     )
 

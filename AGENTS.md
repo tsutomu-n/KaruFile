@@ -69,7 +69,18 @@ The root CLI's `standard` preset does not discover or copy videos. The standalon
   recompress when neither dimension shrinks. Never upscale or rebuild PDF through HTML.
 - Photo candidates add bounded 300 DPI changed-placement validation; this does not guarantee readability
   or OCR accuracy. Photo lossy adoption requires `64 KiB` and `5%`; other lossy candidates require `256 KiB`
-  and `5%`, lossless candidates `64 KiB` and `2%`. The below-256-KiB PDF skip remains in every profile.
+  and `5%`, lossless candidates `16 KiB` and `2%`. The below-256-KiB PDF skip remains in every profile.
+- Optional root `--pdf-lossless-jpeg` / PDF `--lossless-jpeg` adds baseline/progressive JPEG candidates;
+  default OFF, compatible with PDF `--safe`. Manually prepared jpegtran 3.2.0 only, explicit path then PATH;
+  path alone does not enable it. No jpegtran download/install code. Dry-run never executes it.
+- JPEG optimization preserves simple 8-bit DeviceRGB/DeviceGray single-DCT image dictionaries and dimensions,
+  DQT/components and decoded pixels. Masks, Decode/DecodeParms, complex colors and inline images are excluded.
+  Limits: 20 MP, 32 MiB stream, 128M tool memory, 100 input scans, 30 seconds/call, 300 seconds/document
+  cooperative JPEG budget. Exact geometry/text/paths and full-page tiled RGB at 72/300 DPI are checked.
+  Pixel/render mismatch and budget exhaustion reject that candidate; tool/structure/I/O failures remain ERROR.
+- Candidate size ties prefer qpdf, JPEG baseline, JPEG progressive, then lossy. JPEG adoption uses
+  ADOPTED_LOSSLESS; history kinds are jpeg_lossless_baseline/jpeg_lossless_progressive. All PDF CSV rows
+  include lossless_jpeg_requested as true/false; root rejects missing or mismatched values.
 - For lossy processing, also create a lossless candidate from the original; select the smallest validated
   candidate meeting its reduction gates, preferring lossless on a size tie. Real tool, structure, and I/O
   failures remain `ERROR`, including when recovery copying succeeds. Retain primary-candidate

@@ -203,3 +203,59 @@ def test_exact_render_rejects_pixel_changes(tmp_path):
         doc.save(candidate)
     with pytest.raises(jpeg.CandidateRejected, match="render_mismatch"):
         jpeg.validate_exact(source, candidate, time.monotonic() + 300)
+
+
+@pytest.mark.parametrize("failure", ["tool", "budget", "pixels"])
+def test_jpeg_failure_preserves_primary_diagnostics_and_recovers_or_uses_alternative(tmp_path, monkeypatch, failure):
+    from test_photo_worker import _case
+    source, cfg = _case(tmp_path, monkeypatch)
+    cfg = replace(cfg, lossless_jpeg=True)
+    deadlines = []
+
+    def optimize(src, path, cfg, tool, *, progressive, deadline):
+        deadlines.append(deadline)
+        if not progressive or failure == "tool":
+            if failure == "tool":
+                raise RuntimeError("tool broke")
+            raise jpeg.CandidateRejected("jpeg_document_time_limit" if failure == "budget" else "jpeg_pixel_mismatch")
+        path.write_bytes(b"P" * 200_000)
+        return 3
+
+    monkeypatch.setattr(jpeg, "optimize", optimize)
+    monkeypatch.setattr(jpeg, "validate_exact", lambda *a: None)
+    monkeypatch.setattr(worker.validate, "qpdf_check", lambda *a: 0)
+    result = worker.process_one_file(source, cfg, tmp_path / "temp", Path("qpdf"))
+    assert result.candidate_size == 350_000
+    if failure == "tool":
+        assert result.status is Status.ERROR
+        assert result.output_path.read_bytes() == source.path.read_bytes()
+        assert result.candidate_details[-1].reason == "processing_error"
+        assert not any(c.selected for c in result.candidate_details)
+    else:
+        assert result.status is Status.ADOPTED_LOSSLESS
+        assert result.candidate_details[2].reason == "quality_rejected"
+        assert result.candidate_details[3].selected
+        assert len(deadlines) == 2 and deadlines[0] == deadlines[1]
+
+
+def test_changed_executable_is_error_before_candidate_generation(tmp_path):
+    source, _, _ = image_pdf(tmp_path)
+    exe = tmp_path / "changed-tool"
+    exe.write_bytes(b"new")
+    cfg = replace(config.default_config(input_dir=tmp_path), lossless_jpeg=True, jpegtran_path=exe, jpegtran_sha256="old")
+    with pytest.raises(RuntimeError, match="changed"):
+        jpeg.optimize(source, tmp_path / "candidate.pdf", cfg, Path("qpdf"), progressive=False, deadline=time.monotonic() + 300)
+
+
+def test_qpdf_warning_is_error_in_jpeg_pipeline(tmp_path, monkeypatch):
+    monkeypatch.setattr(qpdf.subprocess, "run", lambda *a, **k: subprocess.CompletedProcess(a, 3, "", "warning"))
+    with pytest.raises(RuntimeError, match="rc=3"):
+        qpdf.qpdf_optimize(Path("qpdf"), tmp_path / "source", tmp_path / "candidate", config.QpdfOptions(), reject_warnings=True)
+
+
+def test_expired_budget_never_runs_jpegtran(tmp_path, monkeypatch):
+    source, _, _ = image_pdf(tmp_path)
+    cfg = config.default_config(input_dir=tmp_path)
+    monkeypatch.setattr(jpeg.subprocess, "run", lambda *a, **k: pytest.fail("tool ran after budget expired"))
+    with pytest.raises(jpeg.CandidateRejected, match="time_limit"):
+        jpeg.optimize(source, tmp_path / "candidate", cfg, Path("qpdf"), progressive=False, deadline=0)

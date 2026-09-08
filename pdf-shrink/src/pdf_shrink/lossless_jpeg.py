@@ -205,7 +205,7 @@ def optimize(source: Path, candidate: Path, cfg: RunConfig, qpdf: Path, *, progr
             intermediate = work / "streams.pdf"
             doc.save(intermediate, garbage=0, deflate=False, raise_on_repair=True)
         check_budget(deadline)
-        qpdf_optimize(qpdf, intermediate, candidate, cfg.qpdf)
+        qpdf_optimize(qpdf, intermediate, candidate, cfg.qpdf, reject_warnings=True)
         check_budget(deadline)
     return changed
 

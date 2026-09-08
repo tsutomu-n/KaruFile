@@ -39,7 +39,9 @@ uv run --project pdf-shrink pdf-shrink run `
 | `--preset standard|compact` | 圧縮プリセット。既定値は `standard` |
 | `--photo-pattern PATTERN` | 一致するPDFだけphoto profileにする入力相対パターン。反復可 |
 | `--dry-run` | 出力PDFを作らず、判定結果を記録 |
-| `--safe` | 非可逆画像縮小を無効化し、qpdfの可逆候補だけを作成 |
+| `--safe` | 非可逆処理を無効化し、可逆候補だけを作成 |
+| `--lossless-jpeg` | JPEG可逆候補を追加。既定OFF、safeと併用可能 |
+| `--jpegtran-path PATH` | 手動準備したjpegtran 3.2.0を明示。パスだけでは有効化しない |
 | `--limit N` | サイズ上位 `floor(N/2)` 件と、残りから固定seedで選ぶ `N-floor(N/2)` 件のPilot実行。Nが奇数ならランダム側が1件多い |
 | `--retry-errors` | 前回 `ERROR` の入力を再処理 |
 | `--qpdf-path PATH` | `qpdf.exe` を明示 |
@@ -78,7 +80,7 @@ dry-runでも状態DBと `report.dry-run.csv` を更新する場合がありま�
 新しい内容を誤って処理済みと記録せず、次回に再処理します。ただし、処理中の入力自体は
 ロックしません。
 プリセットの画像処理値、写真選択パターンとphoto recipeは再開判定用の設定ハッシュに含みます。
-候補診断と可逆候補への切り替えを導入した版は`processing_schema=2`を含むため、以前のstateも
+任意JPEG可逆と採用下限変更を導入した版は`processing_schema=3`を含むため、以前のstateも
 一度再処理します。状態DBは診断列の追加で移行し、既存行は削除しません。
 
 ## 圧縮対象の判定
@@ -108,7 +110,7 @@ dry-runでも状態DBと `report.dry-run.csv` を更新する場合がありま�
   standard/compactの非safe実行では `SKIPPED_COMPLEX` として原本を採用します。
   `--safe` の可逆処理は妨げません。photoではinline画像をそのまま残します。
 - 可視テキストが多くても、300DPI超の画像があれば非可逆候補を作ります。
-- `--safe` では常にqpdfの可逆候補だけを作ります。
+- `--safe` では可逆候補だけを作ります。qpdf単独に加え、明示時のみJPEG可逆候補も比較します。
 
 photoでは単純な8bit DeviceRGB/DeviceGrayのDCT JPEGだけを約200 DPI・quality 80へ縮小します。
 非JPEG、1bit、Mask/SMask、Decode/DecodeParms、複雑な色空間、画像参照の同定が曖昧な群は
@@ -139,7 +141,7 @@ photoでは単純な8bit DeviceRGB/DeviceGrayのDCT JPEGだけを約200 DPI・qu
 
 | 候補 | 最小削減量 | 最小削減率 |
 |---|---:|---:|
-| 可逆 | 64 KiB | 2% |
+| 可逆 | 16 KiB | 2% |
 | 非可逆（standard/compact） | 256 KiB | 5% |
 | 非可逆（photo） | 64 KiB | 5% |
 
@@ -151,6 +153,15 @@ I/Oの失敗は回復コピーが成功しても`ERROR`です。出力は同じ�
 入力または別の保存先へ書く可能性がある場合は拒否します。
 
 ## レポートのstatus
+
+`--lossless-jpeg`は原本からbaseline/progressiveの可逆候補を追加し、既存の非可逆候補を無効化しません。
+手動準備したlibjpeg-turbo 3.2.0のjpegtranだけを使用し、明示パス→PATHで解決します。
+未検出/版不一致は処理開始前エラー。dry-runでは外部toolを実行しません。
+単純な8-bit DeviceRGB/DeviceGray DCT画像のstreamだけを変更し、辞書・原寸画素・DQTと
+全ページの形状・文字・パス・72/300 DPI RGBの一致を確認します。Mask、Decode、複雑な色空間、inlineは対象外です。
+20 MP/32 MiB、128M/100 scans/30秒、文書300秒協調予算を使用します。
+同サイズ優先順はqpdf、JPEG baseline、JPEG progressive、非可逆です。
+詳細は[任意JPEG可逆の契約](../docs/REFERENCE.md#任意のjpeg可逆候補)を参照してください。
 
 | status | 意味 |
 |---|---|
@@ -171,7 +182,7 @@ I/Oの失敗は回復コピーが成功しても`ERROR`です。出力は同じ�
 レポート列:
 
 ```text
-source_path,source_size,source_sha256,output_path,output_size,output_sha256,saved_bytes,saved_percent,preset,mode,status,page_count,scan_page_ratio,error_message,profile,decision_reason,candidate_size,candidate_saved_bytes,candidate_saved_percent,images_changed,candidate_details
+source_path,source_size,source_sha256,output_path,output_size,output_sha256,saved_bytes,saved_percent,preset,mode,status,page_count,scan_page_ratio,error_message,profile,decision_reason,candidate_size,candidate_saved_bytes,candidate_saved_percent,images_changed,candidate_details,lossless_jpeg_requested
 ```
 
 `profile`はファイルに適用した`standard`・`compact`・`photo`です。`preset`は起動時の値を維持します。
@@ -180,7 +191,10 @@ source_path,source_size,source_sha256,output_path,output_size,output_sha256,save
 0.05が5%の割合です。候補未生成のサイズは空欄であり、0 byteとは異なります。
 
 `candidate_details`は`kind`、`size`、`images_changed`、`reason`、`validation_reason`、`selected`を
-持つJSON配列です。`kind`は非可逆候補でprofile名、可逆候補で`lossless`を記録します。
+持つJSON配列です。`kind`は非可逆候補でprofile名、可逆候補で`lossless`、
+`jpeg_lossless_baseline`、`jpeg_lossless_progressive`を記録します。
+`lossless_jpeg_requested`は全行`true`/`false`で保存し、統合CLIが指定と照合します。
+DBは旧行を保持した列追加移行。hashには採用下限、JPEG有効状態、固定recipe/検証、tool version/SHA-256を含めます。
 採用候補だけ`selected=true`で、原本採用時は全て`false`です。最終理由と
 一次候補だけで判断せず、後続候補の経緯も確認できます。各理由の意味は
 [PDFレポートの診断列](../docs/REFERENCE.md#pdfレポートの診断列)を参照してください。
@@ -197,6 +211,7 @@ source_path,source_size,source_sha256,output_path,output_size,output_sha256,save
 | `worker.py` | 1ファイルの検査、候補生成、検証、採否判断 |
 | `inspect_pdf.py` | 安全性検査とスキャン主体判定 |
 | `transform.py` | 可逆・非可逆候補の生成 |
+| `lossless_jpeg.py` | 任意jpegtran検出、JPEG可逆stream生成、原寸画素・完全描画検査 |
 | `validate.py` | 元PDFと候補の構造・内容比較 |
 | `output.py` | 原本または検証済み候補の原子的な公開 |
 | `state.py` | SQLite永続化と再開判定 |

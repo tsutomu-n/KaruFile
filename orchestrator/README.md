@@ -25,6 +25,8 @@ uv run --script karufile.py `
 | `--video-workers` | 動画の並列数。既定値は1、最小値は1 |
 | `--preset` | `standard` または `compact`。既定値は `standard` |
 | `--pdf-photo-pattern PATTERN` | 一致するPDFだけphoto profileにする入力相対パターン。反復可 |
+| `--pdf-lossless-jpeg` | JPEG可逆候補を追加。既定OFF |
+| `--pdf-jpegtran-path PATH` | 手動準備したjpegtran 3.2.0を明示。パスだけでは有効化しない |
 | `--ffmpeg-path` | compact動画用ffmpeg。省略時はPATH |
 | `--ffprobe-path` | compact動画用ffprobe。省略時はPATH |
 | `-n`, `--dry-run` | 完成出力を作らず判定を確認 |
@@ -80,6 +82,9 @@ PDFレポートの`profile`は必須で、各相対入力パスに対しパタ�
 `standard`・`compact`・`photo`へ一致することを検証します。`ADOPTED_LOSSY`の削減量は
 photoで64 KiB以上、他は256 KiB以上、削減率はどちらも5%以上です。集計には実出力のサイズを
 使い、棄却された候補の診断サイズは使いません。
+`ADOPTED_LOSSLESS`は16 KiB以上かつ2%以上を実出力へ照合します。
+`lossless_jpeg_requested`は全行必須の`true`/`false`で、実行指定と不一致・欠落のCSVは拒否します。
+JPEG指定はPDF子CLIへだけ委譲し、既存presetの非可逆候補も残します。準備手順はマニュアルを参照してください。
 
 画像の統合集計は子プロセスのstdoutではなく、現在実行で原子的に更新された画像manifestを
 使います。入力・予定出力path、preset/recipe、size/SHA-256、action、寸法上限、画像エラーCSV

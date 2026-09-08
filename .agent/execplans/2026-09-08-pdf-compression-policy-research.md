@@ -8,7 +8,7 @@
 
 ### CP-009: 独立JPEG比較
 
-- Status: In progress
+- Status: 数値・完全一致検証合格。Edge表示確認待ち
 - Objective: 写真2冊でjpegtranの追加利益と完全一致を測定する。
 - Dependencies: 公式libjpeg-turbo 3.2.0 Windows x64配布物のhash・署名確認。
 - Files or components: 独立検証スクリプト、新規検証parent、現地写真・採取写真。
@@ -20,7 +20,7 @@
 
 ### CP-010: 合格時だけ明示CLIへ組込み
 
-- Status: Pending CP-009
+- Status: ローカル実装・自動検証済。CP-009のEdge表示確認は保留
 - Objective: 既定OFFの追加可逆候補を安全に利用できる。
 - Dependencies: CP-009組込み条件合格。
 - Files or components: PDF config/cli/worker/transform/validate/state/report、root CLI、tests、architecture。
@@ -32,7 +32,7 @@
 
 ### CP-011: 閾値・状態・文書・最終検証
 
-- Status: Not started
+- Status: 実装・自動検証・実資料検証済
 - Objective: 可逆採用を16 KiBかつ2%以上へ統一し、以前棄却された3冊の採用を確認する。
 - Dependencies: 閾値変更はCP-009の利益判定に独立。JPEG関連項目はCP-010実装時のみ。
 - Files or components: PDF ReductionOptions/config hash、root照合、tests、manual/reference/README、当計画。
@@ -46,7 +46,96 @@
 
 - 公式release API掲載SHA-256とダウンロードしたVC x64配布物が一致: `662761d8ba8dae04aec74023ebaeceb856c2b56b9b59cfd180759d26300dda42`。
 - Windows Authenticode: Valid / Signature verified、署名者SignPath Foundation、thumbprint `1C539760AE21976C7ACFF383930DCA4221BC0460`。
-- 検証用配布物はOS一時領域へ取得。製品の自動取得処理は追加しない。CP-010の実装可否は未確定。
+- 検証用配布物はOS一時領域へ取得し、既存7-Zipで展開した。インストーラーは実行せず、製品の自動取得処理も追加していない。
+- 実行ファイル: `C:\Users\tn\AppData\Local\Temp\karufile-jpeg-16d9a7a3e93f41bf8eea2a49864866d6\extracted\bin\jpegtran.exe`。
+  version `libjpeg-turbo version 3.2.0 (build 20260630)`、SHA-256 `671166b760a6b0e6b9888ce471fcb97c2a245db07512cd75c23ee29148d0acd0`。
+- 数値・完全一致gate合格を受けてCP-010をローカル実装した。Edge検証を代替検証だけで合格扱いにはせず、全体完了は保留。
+- `jpegtran -version`はstderrに版情報を出す。通常成功でも空白だけの進捗消去文字がstderrへ出るため、非空白警告と区別した。
+  最初の2回はこの検証スクリプト側の判定で停止し、出力を上書きせず`run3`で完走した。
+- 合成試験のPyMuPDF生成画像はColorSpaceが間接参照だった。対象仕様に合わせた直接DeviceRGB/Grayのfixtureを作成し、製品の対象判定は緩めていない。
+  小さなGray画像はprogressiveで増大したため、実際に不採用となることを検証した。
+- 2026-09-08 18:55頃のGit再確認で、別操作によってHEADが開始時`2a529fc09eeb3e20f12ebea8a2a48e95911eb834`から
+  `3d98c66df6eb936c2c5bffbfdb0111b4e40ebb9f`へ進み、実装の一部がcommit済みと確認。担当agentはcommit/pushを実行していない。
+  履歴は変更せず、残る文書・qpdf警告処理・検証を現在のコードへ反映した。
+
+### CP-009 比較結果
+
+独立スクリプト: `pdf-shrink/experiments/compare_lossless_jpeg.py`。
+保存先: `C:\Users\tn\Downloads\KaruFile_JPEG比較_20260908_run3`。
+`comparison.json`に全JPEGのxref・元/候補bytes・header/画素一致・置換有無、PDFごとのhash・全ページ検証・時間を記録。
+各候補を原本から独立生成。PyMuPDF 1.28.2、qpdf 12.3.2、固定jpegtran 3.2.0を使用。
+
+| PDF | 原本bytes | qpdf単独bytes | baseline bytes | progressive bytes | progressiveの対qpdf削減 |
+|---|---:|---:|---:|---:|---:|
+| 現地写真 | 3,556,324 | 3,550,522 | 3,346,775 | 3,294,592 | 255,930 / 7.2082% |
+| 採取写真 | 2,539,782 | 2,534,216 | 2,407,212 | 2,344,904 | 189,312 / 7.4702% |
+
+全6完成候補でqpdf exit 0、ページ形状・抽出文字・描画パス一致、全ページ72/300 DPI RGB完全一致。
+両写真の全28/20 JPEGはbaseline/progressiveとも寸法・成分・量子化表・原寸画素一致。
+時間（生成＋検証）: 現地写真 qpdf 2.50秒/baseline 4.15秒/progressive 5.11秒、採取写真 2.18/3.28/4.18秒。
+baselineも対qpdfでそれぞれ203,747 bytes（5.7385%）、127,004 bytes（5.0116%）削減し、数値gate合格。
+
+### CP-010/011 実装と検証
+
+- `lossless_jpeg.py`に手動tool検出、JPEG header/画素検証、xref stream専用置換、文書共通予算、完全描画検査を分離。
+- root/PDFの明示オプション、16 KiBかつ2%の照合、schema3/hash、状態追加移行、全CSVの要求bool、候補tie順を実装。
+- qpdf追加JPEG工程では警告exit3もERRORとして扱い、既存qpdf単独の挙動は維持。
+- 全suite: PDF **180 passed**、画像 **64 passed**、動画 **104 passed**、orchestrator **157 passed**、合計**505 passed**。
+  AGENTS.md指定コマンドを使用し、PDF試験時だけ`KARUFILE_TEST_JPEGTRAN`へ上記手動準備pathを指定。追加実tool試験4件もskipせず実行。
+- AGENTS.md指定の4つのcompileall成功。PDF experimentsも追加compile成功。root `--help`とPDF `run --help`成功。
+- 最終`git diff --check`成功。改行正規化のGit通知のみで、空白エラーなし。
+- 合成試験: baseline/progressive、Gray/RGB、低DPI・共有xref、対象外属性、破損・画素差・増大、同サイズ優先順、
+  tool欠落/版不一致/変更/警告/失敗/timeout/I/O、予算棄却、復旧ERROR、primary診断維持、閾値前後・一致、DB移行・CSV往復、旧CSV拒否、root要求照合。
+
+### 実資料5冊の最終Pilot
+
+保存先: `C:\Users\tn\Downloads\KaruFile_JPEG実装検証_20260908`。各caseは独立parentの`files`へ出力。
+全caseの入力は`C:\Users\tn\Downloads\西牧分遣所アスベスト調査報告書`。
+写真指定は`--pdf-photo-pattern '2.*.pdf' --pdf-photo-pattern '5.*.pdf'`。
+
+| case | 条件 | 合計削減bytes / 率 | 時間 | 結果 |
+|---|---|---:|---:|---|
+| standard | JPEG有効、写真指定なし | 647,383 / 7.58% | 29.38秒 | 5冊ADOPTED_LOSSLESS |
+| photo | JPEG有効、写真指定あり | 1,640,933 / 19.21% | 43.11秒 | 3冊可逆、写真2冊非可逆 |
+| threshold-only | JPEG無効、写真指定あり | 1,568,304 / 18.36% | 23.78秒 | 3冊可逆、写真2冊非可逆 |
+| dry-run | JPEG要求、存在しないtool path、写真指定あり | 出力なし | 2.35秒 | 3件DRY_RUN_LOSSLESS、2件DRY_RUN_LOSSY |
+
+時間は単発観測であり、photoとthreshold-onlyは一部同時実行のため速度比較のbenchmarkではない。
+standard再実行はPDF 0件処理・5件再利用、PDF子処理0.52秒、root成功。要求trueと全診断履歴を維持。
+PDF単体`--safe --lossless-jpeg --limit 1`も別case `safe/files`で成功（選択された分析報告書、候補progressive、112,082 bytes削減、処理6.96秒）。
+
+| PDF | standard出力bytes / 採用候補 | photo出力bytes / 採用候補 | threshold-only出力bytes / 採用候補 |
+|---|---:|---:|---:|
+| 1 現地調査報告書 | 279,191 / lossless | 279,191 / lossless | 279,191 / lossless |
+| 2 現地写真 | 3,294,592 / jpeg_lossless_progressive | 2,674,925 / photo | 2,674,925 / photo |
+| 3 試料採取箇所 | 570,958 / lossless | 570,958 / lossless | 570,958 / lossless |
+| 4 分析報告書 | 1,405,184 / jpeg_lossless_progressive | 1,405,184 / jpeg_lossless_progressive | 1,477,813 / lossless |
+| 5 採取写真 | 2,344,904 / jpeg_lossless_progressive | 1,971,021 / photo | 1,971,021 / photo |
+
+閾値変更だけで1/3/4の61,345 / 17,346 / 39,453 bytesの可逆候補を実際に採用（計118,144 bytes）。
+独立検証スクリプト`pdf-shrink/experiments/verify_lossless_jpeg_pilot.py`は全CSVと入力/出力hash・bytes・selectedを照合し、
+採用可逆PDFはさらに全ページ72/300 DPI RGB完全一致を検査した。photo採用PDFはページ形状・文字・パス一致を検査し、RGB完全一致とは扱わない。
+比較開始時の入力・既存出力/補助情報の**279ファイル**はSHA-256不変。結果は検証parentの`pilot-verification.json`に保存。
+
+### 構成図
+
+Archifyでarchitecture JSON更新→validate→deliver→visual-check。showcase9/9、errors/warnings0。
+4viewport（1440×900、1600×1000、1920×1080、2048×1320）でoverflowなし。
+最小/最大viewportのlight/dark4画像を主agentが目視し、jpegtran表示、切れ・重なりなしを確認。
+`visualReview: pending`は自動receiptの仕様のまま保持し、この段落を目視記録とする。
+source SHA-256 `bb725f32617734b458849b994e473625b7db8085b5b08efa22bdea33e2b23918`、
+HTML SHA-256 `fc68f6fdec72ede1585a11628de7bf3cdd698e2bf7faaa68b24330495ce9f8f2`。
+source基準commitは`3d98c66df6eb936c2c5bffbfdb0111b4e40ebb9f`、未commit修正を含むことを図中に明示。
+
+### 未解決事項・停止条件
+
+- Edgeの接続は`Browser is not available: edge`、Windows操作は`Computer Use native pipe is unavailable ... os error 2`。
+  headless EdgeのPDF screenshotは灰色だけで、表示成功の証拠にできなかった。
+  利用者へ`photo-2/progressive.pdf`と`photo-5/progressive.pdf`のEdge先頭ページ表示結果を照会中。
+  **Edge表示確認を完了扱いにしない。CP-009と全体の最終受入はこの確認待ち。**
+- 全ビューアー互換性、OCR精度、画像中の文字の読取り精度は未保証。比較検査をその保証へ言い換えない。
+- JPEG単独の5冊合計削減は7.58%。既存200 DPI写真候補を併用した19.21%は非可逆2冊を含む。
+- 実資料・既存出力を削除/上書きせず、HTML/OCR/JPEG2000等の別方式は追加していない。
 
 この文書はliving documentである。前半は調査時点の記録。2026-09-08に利用者から実装指示を受け、末尾の実装チェックポイントと実資料検証まで完了した。
 

@@ -11,6 +11,7 @@
 - 入力、出力、予定出力、状態DB、レポートの保存先を事前検査する。
 - `pdf-shrink`、`media-shrink-tool`、compact時の `video-shrink` の順にsubprocessで実行する。
 - `--pdf-photo-pattern`をPDF子CLIの`--photo-pattern`へ渡し、レポートのprofileを相対入力パスと照合する。
+- `--pdf-lossless-jpeg`/`--pdf-jpegtran-path`をPDF子CLIへだけ委譲する。既定OFF、パスだけでは有効化しない。
 - 現在実行の原子的レポートを入力・出力の実ファイルへ照合し、統合サマリーと終了コードを返す。
 
 PDF・画像・動画の変換、候補検証、状態管理、出力公開は複製しません。
@@ -46,6 +47,8 @@ karufile.py
   `profile`は必須で、各入力が写真選択パターンに一致すれば`photo`、それ以外はpresetの値に
   一致する必要がある。photoの非可逆採用は64 KiBかつ5%以上、他は256 KiBかつ5%以上の削減を
   実出力に照合する。一次候補の診断値は完成出力の集計に使用しない。
+  可逆採用は16 KiBかつ2%以上。全行の`lossless_jpeg_requested`が`true`/`false`で実行指定に
+  一致することを要求し、旧CSVの欠落、不正表記、不一致は拒否する。
 - 画像manifestは入力との1:1対応、予定出力、preset/recipe、source/outputの安定したsizeとSHA-256、
   action別shape、寸法上限、画像エラーCSVとの対応を検査する。統合集計はmanifestのexact totalsを
   使い、子プロセスのstdoutサマリーは使用しない。
