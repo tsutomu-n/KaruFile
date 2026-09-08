@@ -1,4 +1,4 @@
-"""CP-012: independent 200/180 DPI photo trial, never used by the product CLI.
+"""CP-012/013: independent 200/180/150 DPI trial, never used by the product CLI.
 
 Uses the current photo transform and validation, changing only the experimental
 target DPI. Requires existing qpdf, original PDFs and corresponding 200 DPI PDFs.
@@ -23,16 +23,18 @@ from pdf_shrink.models import OptimizationMode
 from pdf_shrink.transform import optimize_lossy
 from pdf_shrink.validate import validate
 
+TRIAL_DPIS = (200, 180, 150)
+
 
 @dataclass(frozen=True)
 class TrialPhotoOptions(LossyOptions):
-    """Allow two experimental targets without modifying production's guard."""
+    """Allow experimental targets without modifying production's guard."""
 
     def __post_init__(self) -> None:
         expected = asdict(photo_lossy_options())
         actual = asdict(self)
-        if actual.pop("dpi_target") not in (180, 200):
-            raise ValueError("trial supports only 180 and 200 DPI")
+        if actual.pop("dpi_target") not in TRIAL_DPIS:
+            raise ValueError(f"trial supports only {TRIAL_DPIS} DPI")
         expected.pop("dpi_target")
         if actual != expected:
             raise ValueError("all non-DPI options must match the production photo recipe")
@@ -104,7 +106,7 @@ def render_views(paths: dict[str, Path], folder: Path) -> list[dict]:
     with fitz.open(paths["original"]) as source:
         for page in source:
             regions = [("ページ全体", page.rect, 144)]
-            regions += [(f"写真 {n}", fitz.Rect(info["bbox"]) & page.rect, 300)
+            regions += [(f"写真 {n}", (fitz.Rect(info["bbox"]) * page.rotation_matrix) & page.rect, 300)
                         for n, info in enumerate(page.get_image_info(), 1)]
             for region_index, (label, rect, dpi) in enumerate(regions):
                 if rect.is_empty:
@@ -135,7 +137,7 @@ def run_case(source: Path, reference: Path, folder: Path, qpdf: Path, label: str
               "reference_200dpi": {"path": str(reference), "bytes": reference.stat().st_size,
                                    "sha256": sha(reference)}, "candidates": {}}
     paths = {"original": source}
-    for dpi in (200, 180):
+    for dpi in TRIAL_DPIS:
         started = time.perf_counter()
         options = recipe(dpi)
         inspection = inspect_file(source, ScanOptions(), safe=False, lossy_options=options)
@@ -169,6 +171,12 @@ def run_case(source: Path, reference: Path, folder: Path, qpdf: Path, label: str
     a, b = (result["candidates"][str(dpi)]["bytes"] for dpi in (200, 180))
     result["additional_saved_bytes"] = a - b
     result["additional_saved_percent_of_200dpi"] = (a - b) / a * 100
+    result["reductions"] = {}
+    for before, after in ((200, 180), (200, 150), (180, 150)):
+        first, last = (result["candidates"][str(dpi)]["bytes"] for dpi in (before, after))
+        result["reductions"][f"{before}_to_{after}"] = {
+            "saved_bytes": first - last, "saved_percent": (first - last) / first * 100,
+        }
     result["views"] = render_views(paths, folder)
     write_json(folder / "evidence.json", result)
     return result
@@ -176,7 +184,7 @@ def run_case(source: Path, reference: Path, folder: Path, qpdf: Path, label: str
 
 HTML = r'''<!doctype html>
 <html lang="ja"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>写真の解像度比較 — 200 / 180 DPI</title>
+<title>写真の解像度比較 - 200 / 180 / 150 DPI</title>
 <style>
 :root{font:15px/1.6 "Yu Gothic UI",Meiryo,sans-serif;color:#172a36;background:#f3f5f5;color-scheme:light}
 *{box-sizing:border-box}body{margin:0}header,main{max-width:1500px;margin:auto;padding:24px 32px}
@@ -185,36 +193,38 @@ header{padding-bottom:8px}h1{font-size:28px;margin:4px 0}h2{font-size:19px;margi
 table{border-collapse:collapse;width:100%;background:#fff;margin:14px 0}td,th{text-align:right;padding:12px 16px;border-bottom:1px solid #dfe6e6;font-variant-numeric:tabular-nums}th:first-child,td:first-child{text-align:left}th{font-size:13px;color:#52636a}a{color:#075f6d;text-underline-offset:3px}
 .toolbar{background:#fff;border:1px solid #dbe2e3;border-radius:10px;padding:14px;display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin:14px 0}
 label{display:flex;gap:7px;align-items:center}button,select{font:inherit;border:1px solid #b9c8cb;border-radius:6px;background:#fff;padding:7px 12px;color:inherit}button{cursor:pointer}button.active{background:#14675e;border-color:#14675e;color:#fff}button:focus-visible,select:focus-visible,input:focus-visible{outline:3px solid #f1bb4c;outline-offset:2px}
-.buttons{display:flex;gap:5px}.stage{height:70vh;min-height:420px;overflow:auto;background:#dbe1e2;border:1px solid #bdcace;border-radius:10px;padding:20px}
-.panels{display:flex;align-items:flex-start;gap:20px;width:max-content;min-width:100%;justify-content:center}.panel{flex:none}.caption{padding:7px 10px;background:#fff;border-bottom:1px solid #dbe1e2;font-weight:600;position:sticky;top:-20px}.panel img{display:block;background:white;box-shadow:0 2px 10px #243e4220;height:auto}.note{font-size:13px;margin-top:12px}footer{padding:20px 0;color:#53636d;font-size:13px}
+.buttons{display:flex;gap:5px;flex-wrap:wrap}.pass{font-size:12px;color:#14675e}.fail{font-size:12px;color:#a52b2b}.stage{height:70vh;min-height:420px;overflow:auto;background:#dbe1e2;border:1px solid #bdcace;border-radius:10px;padding:20px}
+.panels{display:flex;align-items:flex-start;gap:20px;width:max-content;min-width:100%;justify-content:center}.panel{flex:none}.caption{height:64px;overflow:auto;padding:7px 10px;background:#fff;border-bottom:1px solid #dbe1e2;font-weight:600;position:sticky;top:-20px}.panel img{display:block;background:white;box-shadow:0 2px 10px #243e4220;height:auto}.note{font-size:13px;margin-top:12px}footer{padding:20px 0;color:#53636d;font-size:13px}
 @media(max-width:700px){header,main{padding:16px}h1{font-size:23px}.tablewrap{overflow:auto}td,th{padding:10px;white-space:nowrap}.toolbar{gap:9px}.stage{padding:10px}.panels{justify-content:flex-start}}
 </style>
 <header><div class="eyebrow">KaruFile / 写真DPI比較試験</div><h1>表示サイズはそのまま。写真の細部を比べる。</h1>
-<p class="muted">原本から200 DPI・180 DPIをそれぞれ生成。どちらもJPEG品質80。通常CLIの200 DPI設定は変更していません。</p></header>
-<main><div class="tablewrap"><table><thead><tr><th>資料</th><th>原本</th><th>200 DPI</th><th>180 DPI</th><th>200 → 180の追加削減</th></tr></thead><tbody id="summary"></tbody></table></div>
+<p class="muted">原本から200 DPI・180 DPI・150 DPIをそれぞれ生成。すべてJPEG品質80。通常CLIの200 DPI設定は変更していません。</p></header>
+<main><div class="tablewrap"><table><thead><tr><th>資料</th><th>原本</th><th>200 DPI</th><th>180 DPI</th><th>150 DPI</th><th>200 → 150の追加削減</th><th>180 → 150の追加削減</th></tr></thead><tbody id="summary"></tbody></table></div>
 <p class="note" id="validation"></p><h2>同じ位置・倍率で切り替える</h2>
-<p>黒板の文字や表面の細部は、表示範囲を「写真」にして比較してください。写真領域は300 DPIで描画しています。キー <b>1 / 2 / 3</b> でも原本・200・180を切り替えられます。</p>
+<p>黒板の文字や表面の細部は、表示範囲を「写真」にして比較してください。写真領域は300 DPIで描画しています。キー <b>1 / 2 / 3 / 4</b> でも原本・200・180・150を切り替えられます。</p>
 <div class="toolbar"><label>資料 <select id="book"></select></label><label>ページ <select id="page"></select></label><label>表示範囲 <select id="region"></select></label>
-<div class="buttons" id="variants"><button data-kind="original">1 原本</button><button data-kind="200" class="active">2 200 DPI</button><button data-kind="180">3 180 DPI</button></div>
-<label><input type="checkbox" id="side">3枚を並べる</label><label>倍率 <input type="range" id="zoom" min="50" max="250" step="25" value="100"><output id="zoomValue">100%</output></label></div>
+<div class="buttons" id="variants"><button data-kind="original">1 原本</button><button data-kind="200">2 200 DPI</button><button data-kind="180">3 180 DPI</button><button data-kind="150" class="active">4 150 DPI</button></div>
+<label><input type="checkbox" id="side">4枚を並べる</label><label>倍率 <input type="range" id="zoom" min="50" max="250" step="25" value="100"><output id="zoomValue">100%</output></label></div>
 <div class="stage" id="stage"><div class="panels" id="panels"></div></div>
-<p class="note">100%はPDFの1 inchを96 CSS pxで表示します。実際の画面上の物理寸法は端末設定に依存します。3候補の表示寸法は共通です。ページ全体は144 DPI描画、写真範囲は300 DPI描画。拡大表示は画素情報を増やしません。</p>
+<p class="note">100%はPDFの1 inchを96 CSS pxで表示します。実際の画面上の物理寸法は端末設定に依存します。4種類の表示寸法は共通です。ページ全体は144 DPI描画、写真範囲は300 DPI描画。拡大表示は画素情報を増やしません。</p>
 <footer>写真の画素は変わる非可逆比較です。自動検査の合格は、すべての細字の可読性・OCR精度・全ビューアー互換性の保証ではありません。生成と検査は各1回の観測で、速度のベンチマークではありません。<br><a href="comparison.json">検証結果 JSON</a> · <a href="comparison.md">比較記録</a></footer></main>
 <script>
-const data=__DATA__, $=id=>document.getElementById(id), names={original:'原本',200:'200 DPI / 品質80',180:'180 DPI / 品質80'};
-const fmt=n=>(n/1e6).toFixed(3)+' MB';let selected='200';
-$('summary').innerHTML=data.cases.map(c=>`<tr><td>${c.label}</td><td>${fmt(c.original_bytes)}</td>${['200','180'].map(k=>`<td><a href="${c.candidates[k].file}">${fmt(c.candidates[k].bytes)} ↗</a></td>`).join('')}<td>${(c.additional_saved_bytes/1024).toFixed(1)} KiB / ${c.additional_saved_percent_of_200dpi.toFixed(2)}%</td></tr>`).join('');
-$('validation').textContent=data.all_valid?'4候補すべて自動検査合格。全17ページの形状・抽出文字・描画パス・画像配置は原本と一致。200 DPI再生成版は既存出力と全ページ300 DPI RGBが一致。':'未合格の候補があります。comparison.jsonの検証結果を確認してください。';
+const data=__DATA__, $=id=>document.getElementById(id), names={original:'原本',200:'200 DPI / 品質80',180:'180 DPI / 品質80',150:'150 DPI / 品質80'};
+const fmt=n=>(n/1e6).toFixed(3)+' MB', esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));let selected='150';
+const status=c=>!c.validation_ok?'未合格: '+c.validation_reason:!c.changed_images?'画像変更なし':!c.meets_photo_size_gate?'自動検査合格 / 容量条件未達':'自動検査・容量条件合格';
+$('summary').innerHTML=data.cases.map(c=>`<tr><td>${esc(c.label)}</td><td>${fmt(c.original_bytes)}</td>${data.target_dpis.map(k=>`<td><a href="${c.candidates[k].file}">${fmt(c.candidates[k].bytes)} ↗</a><div class="${c.candidates[k].validation_ok?'pass':'fail'}">${esc(status(c.candidates[k]))}</div></td>`).join('')}${['200_to_150','180_to_150'].map(k=>`<td>${(c.reductions[k].saved_bytes/1024).toFixed(1)} KiB / ${c.reductions[k].saved_percent.toFixed(2)}%</td>`).join('')}</tr>`).join('');
+const count=data.cases.reduce((n,c)=>n+Object.keys(c.candidates).length,0), pageCount=data.cases.reduce((n,c)=>n+c.candidates['200'].structure.pages,0);
+$('validation').textContent=data.all_valid?`${count}候補すべて自動検査・容量条件合格。全${pageCount}ページの形状・抽出文字・描画パス・画像配置は原本と一致。200 DPI再生成版は既存出力と全ページ300 DPI RGBが一致。`:'未合格の候補があります。各容量欄と表示中の検査結果を確認してください。比較用であり自動採用しません。';
 data.cases.forEach((c,i)=>$('book').add(new Option(c.label,i)));
 function current(){return data.cases[Number($('book').value)]}
 function pages(){const c=current();$('page').replaceChildren();[...new Set(c.views.map(v=>v.page))].forEach(p=>$('page').add(new Option(p+' / '+c.candidates['200'].structure.pages,p)));regions()}
 function regions(){$('region').replaceChildren();current().views.filter(v=>v.page===Number($('page').value)).forEach(v=>$('region').add(new Option(v.label,v.region)));render()}
-function render(){const view=current().views.find(v=>v.page===Number($('page').value)&&v.region===Number($('region').value));const kinds=$('side').checked?['original','200','180']:[selected];const width=view.css_width*Number($('zoom').value)/100;$('zoomValue').value=$('zoom').value+'%';
+function render(){const view=current().views.find(v=>v.page===Number($('page').value)&&v.region===Number($('region').value));const kinds=$('side').checked?['original',...data.target_dpis.map(String)]:[selected];const width=view.css_width*Number($('zoom').value)/100;$('zoomValue').value=$('zoom').value+'%';
  const stage=$('stage'),left=stage.scrollLeft,top=stage.scrollTop;
- $('panels').replaceChildren(...kinds.map(k=>{const panel=document.createElement('div');panel.className='panel';const cap=document.createElement('div');cap.className='caption';cap.textContent=names[k];const img=document.createElement('img');img.src=view.images[k];img.alt=`${current().label} ${view.page}ページ ${view.label} ${names[k]}`;img.width=view.pixel_width;img.height=view.pixel_height;img.style.width=width+'px';panel.append(cap,img);return panel}));stage.scrollLeft=left;stage.scrollTop=top;
+ $('panels').replaceChildren(...kinds.map(k=>{const panel=document.createElement('div');panel.className='panel';const cap=document.createElement('div');cap.className='caption';cap.textContent=names[k]+(k==='original'?'':' / '+status(current().candidates[k]));const img=document.createElement('img');img.src=view.images[k];img.alt=`${current().label} ${view.page}ページ ${view.label} ${names[k]}`;img.width=view.pixel_width;img.height=view.pixel_height;img.style.width=width+'px';panel.style.width=width+'px';panel.append(cap,img);return panel}));stage.scrollLeft=left;stage.scrollTop=top;
  document.querySelectorAll('[data-kind]').forEach(b=>{b.classList.toggle('active',b.dataset.kind===selected);b.setAttribute('aria-pressed',String(b.dataset.kind===selected))})}
 $('book').onchange=pages;$('page').onchange=regions;$('region').onchange=render;$('side').onchange=render;$('zoom').oninput=render;
-document.querySelectorAll('[data-kind]').forEach(b=>b.onclick=()=>{selected=b.dataset.kind;render()});document.addEventListener('keydown',e=>{if(['INPUT','SELECT','TEXTAREA'].includes(e.target.tagName))return;const k={'1':'original','2':'200','3':'180'}[e.key];if(k){selected=k;render()}});pages();
+document.querySelectorAll('[data-kind]').forEach(b=>b.onclick=()=>{selected=b.dataset.kind;render()});document.addEventListener('keydown',e=>{if(['INPUT','SELECT','TEXTAREA'].includes(e.target.tagName))return;const k={'1':'original','2':'200','3':'180','4':'150'}[e.key];if(k){selected=k;render()}});pages();
 </script></html>'''
 
 
@@ -251,7 +261,7 @@ def main() -> int:
               "code_sha256": {str(p.relative_to(repo)): sha(p) for p in code_files},
               "recipe": "independent originals; existing photo transform; JPEG q80; no extra qpdf optimization",
               "validation": "unchanged production 72 DPI global/local and bounded 300 DPI detail; exact geometry/text/paths/placements",
-              "cases": []}
+              "target_dpis": TRIAL_DPIS, "cases": []}
     try:
         for slug, label, name in cases:
             result["cases"].append(run_case(args.input / name, args.reference / name, args.output / slug, args.qpdf, label))
@@ -266,22 +276,23 @@ def main() -> int:
         write_json(args.output / "comparison.json", result)
         if changed:
             raise RuntimeError(f"protected files changed: {changed}")
-    result["all_valid"] = all(c["validation_ok"] and c["meets_photo_size_gate"] for book in result["cases"] for c in book["candidates"].values())
+    result["all_valid"] = all(c["validation_ok"] and c["meets_photo_size_gate"] and c["changed_images"] > 0 for book in result["cases"] for c in book["candidates"].values())
     write_json(args.output / "comparison.json", result)
     # Escape '<' to keep source labels from terminating the inline JSON script.
     payload = json.dumps(result, ensure_ascii=False).replace("<", "\\u003c")
     (args.output / "比較.html").write_text(HTML.replace("__DATA__", payload), encoding="utf-8")
-    lines = ["# 写真200 / 180 DPI比較", "", "原本から独立生成、JPEG品質80、配置寸法維持。通常CLIは未変更。", "",
-             "| 資料 | 原本bytes | 200 DPI bytes | 180 DPI bytes | 追加削減bytes / 対200 DPI |", "|---|---:|---:|---:|---:|"]
+    lines = ["# 写真200 / 180 / 150 DPI比較", "", "原本から独立生成、JPEG品質80、配置寸法維持。通常CLIは未変更。", "",
+             "| 資料 | 原本bytes | 200 DPI bytes | 180 DPI bytes | 150 DPI bytes | 180→150の追加削減 |", "|---|---:|---:|---:|---:|---:|"]
     for b in result["cases"]:
-        lines.append(f"| {b['label']} | {b['original_bytes']:,} | {b['candidates']['200']['bytes']:,} | {b['candidates']['180']['bytes']:,} | {b['additional_saved_bytes']:,} / {b['additional_saved_percent_of_200dpi']:.2f}% |")
+        reduction = b["reductions"]["180_to_150"]
+        lines.append(f"| {b['label']} | {b['original_bytes']:,} | {b['candidates']['200']['bytes']:,} | {b['candidates']['180']['bytes']:,} | {b['candidates']['150']['bytes']:,} | {reduction['saved_bytes']:,} / {reduction['saved_percent']:.2f}% |")
     for b in result["cases"]:
         for dpi, c in b["candidates"].items():
             lines.append(f"\n{b['label']} {dpi} DPI: 生成 {c['generation_seconds']:.2f}秒、検査/照合 {c['validation_seconds']:.2f}秒、変更 {c['changed_images']}画像、検証 {c['validation_ok']} {c['validation_reason']}。")
     lines += ["", f"保護対象 {len(before)}ファイルのSHA-256不変。既存200 DPIとの画像画素・全ページ300 DPI RGB一致。",
               "全ページの形状・抽出文字・描画パス・画像配置一致。写真自体の画素は非可逆に変化する。",
               "自動検査の合格は細字の可読性、OCR精度、全ビューアーの互換性を保証しない。",
-              "描画はPyMuPDF 1.28.2を使用。Popplerは環境に未検出。別ビューアーでの主観比較は完成PDFでも実施できる。",
+              f"描画はPyMuPDF {fitz.VersionBind}を使用。別ビューアーでの主観比較は完成PDFでも実施できる。",
               "時間は各1回の観測。200 DPIの検査時間には既存出力との追加照合を含むため速度比較には使わない。"]
     (args.output / "comparison.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
     print(f"Completed: {args.output}; all_valid={result['all_valid']}; protected={len(before)}", flush=True)
