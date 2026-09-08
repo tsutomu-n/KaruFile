@@ -21,12 +21,12 @@ def test_lossless_report_reduction_boundary_and_request_match(tmp_path, original
         "output_path": str(output), "output_size": original - saved,
         "output_sha256": hashlib.sha256(output.read_bytes()).hexdigest(),
         "saved_bytes": saved, "saved_percent": saved / original,
-        "status": "ADOPTED_LOSSLESS", "preset": "standard", "profile": "standard",
+        "status": "ADOPTED_LOSSLESS", "preset": "standard", "profile": "photo",
         "lossless_jpeg_requested": "true" if requested else "false",
     }
     report = tmp_path / "report.csv"
     _write_pdf_report(report, [row])
     parsed = shrink_all.parse_pdf_report(report)
-    options = dict(input_dir=inputs, output_dir=outputs, preset="standard", dry_run=False)
+    options = dict(input_dir=inputs, output_dir=outputs, preset="standard", dry_run=False, photo_patterns=["*.pdf"])
     assert shrink_all.pdf_report_matches_inputs(parsed, [source], lossless_jpeg_requested=requested, **options) is accepted
     assert not shrink_all.pdf_report_matches_inputs(parsed, [source], lossless_jpeg_requested=not requested, **options)

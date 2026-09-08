@@ -163,6 +163,9 @@ class RunConfig:
     pymupdf_version: str = ""
     qpdf_version: str = ""
     photo_patterns: tuple[str, ...] = ()
+    preserve_patterns: tuple[str, ...] = ()
+    text_patterns: tuple[str, ...] = ()
+    text_scan_patterns: tuple[str, ...] = ()
     photo_dpi: int = PHOTO_IMAGE_DPI_TARGET
     preview: bool = False
     preview_dpis: tuple[int, ...] = ()
@@ -173,18 +176,20 @@ class RunConfig:
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "photo_patterns", normalize_photo_patterns(self.photo_patterns))
+        for name in ("preserve_patterns", "text_patterns", "text_scan_patterns"):
+            object.__setattr__(self, name, normalize_photo_patterns(getattr(self, name)))
         validate_photo_dpi(self.photo_dpi)
         object.__setattr__(self, "preview_dpis", normalize_preview_dpis(self.preview_dpis))
         if not isinstance(self.preview, bool):
             raise ValueError("--preview must be a boolean")
         if self.photo_dpi != PHOTO_IMAGE_DPI_TARGET and not self.photo_patterns:
             raise ValueError("--photo-dpi requires --photo-pattern")
-        if self.preview and not self.photo_patterns:
-            raise ValueError("--preview requires --photo-pattern")
         if self.preview_dpis and not self.preview:
             raise ValueError("--preview-dpi requires --preview")
         if self.safe and self.photo_patterns:
             raise ValueError("--safe cannot be combined with --photo-pattern")
+        if self.safe and self.text_scan_patterns:
+            raise ValueError("--safe cannot be combined with --text-scan-pattern")
 
     def with_tool_versions(self, *, pymupdf: str, qpdf: str) -> RunConfig:
         return replace(self, pymupdf_version=pymupdf, qpdf_version=qpdf)
@@ -263,6 +268,9 @@ def build_config(args: Any) -> RunConfig:
         lossy=lossy_options_for_preset(preset),
         photo_patterns=photo_patterns,
         photo_dpi=PHOTO_IMAGE_DPI_TARGET if photo_dpi is None else photo_dpi,
+        preserve_patterns=tuple(getattr(args, "preserve_pattern", ()) or ()),
+        text_patterns=tuple(getattr(args, "text_pattern", ()) or ()),
+        text_scan_patterns=tuple(getattr(args, "text_scan_pattern", ()) or ()),
         preview=bool(getattr(args, "preview", False)),
         preview_dpis=tuple(getattr(args, "preview_dpi", None) or ()),
         lossless_jpeg=bool(getattr(args, "lossless_jpeg", False)),
@@ -272,7 +280,15 @@ def build_config(args: Any) -> RunConfig:
 
 def profile_for_path(cfg: RunConfig, relative_path: Path) -> str:
     path = relative_path.as_posix().casefold()
-    return "photo" if any(fnmatchcase(path, p) for p in cfg.photo_patterns) else str(cfg.preset)
+    if any(fnmatchcase(path, p) for p in cfg.preserve_patterns):
+        return "preserve"
+    matches = [name for name, patterns in (
+        ("photo", cfg.photo_patterns), ("text", cfg.text_patterns),
+        ("text_scan", cfg.text_scan_patterns),
+    ) if any(fnmatchcase(path, p) for p in patterns)]
+    if len(matches) > 1:
+        raise ValueError(f"conflicting PDF permissions: {relative_path}: {', '.join(matches)}")
+    return matches[0] if matches else str(cfg.preset)
 
 
 def config_for_path(cfg: RunConfig, relative_path: Path) -> RunConfig:
@@ -296,7 +312,12 @@ def config_hash(cfg: RunConfig) -> str:
         lossy.pop("jpeg_recompress_min_percent")
     relevant = {
         # Legacy rows lack the requested photo DPI and must run once again.
-        "processing_schema": 4,
+        "processing_schema": 5,
+        "protection_policy": "text-only-auto-v1",
+        "preserve_patterns": cfg.preserve_patterns,
+        "text_patterns": cfg.text_patterns,
+        "text_scan_patterns": cfg.text_scan_patterns,
+        "text_recipe": {"dpi": 300, "qualities": [92, 85, 80], "minimum": "strictly_smaller", "pages": 100, "image_pixels": 80000000, "stream_bytes": 67108864, "validation_pixels": 600000000, "seconds": 300},
         "lossless_jpeg": cfg.lossless_jpeg,
         "jpeg_recipe": RECIPE,
         "jpegtran_version": cfg.jpegtran_version if cfg.lossless_jpeg else "",

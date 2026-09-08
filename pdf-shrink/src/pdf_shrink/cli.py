@@ -30,6 +30,11 @@ def build_parser() -> argparse.ArgumentParser:
     run_parser.add_argument("--input", required=True, help="入力PDFフォルダー")
     run_parser.add_argument("--output", help="出力フォルダー（未指定時は <input>_軽量化）")
     run_parser.add_argument("--workers", type=int, default=2, help="並列プロセス数（デフォルト2）")
+    for name, help_text in (("preserve", "すべての許可に優先して原本を保護"),
+                            ("text", "文章と単純な水平・垂直罫線表の処理を許可"),
+                            ("text-scan", "文章だけのスキャンを300 DPIグレーJPEG候補へ処理")):
+        run_parser.add_argument(f"--{name}-pattern", action="append", default=[], metavar="PATTERN",
+                                help=f"{help_text}（入力相対glob、反復可）")
     run_parser.add_argument(
         "--preset",
         choices=tuple(preset.value for preset in CompressionPreset),
@@ -46,7 +51,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     run_parser.add_argument(
         "--preview", action="store_true",
-        help="写真PDFのローカルHTML比較も出力する（--photo-pattern必須）",
+        help="PDFの原本と実際の出力をローカルHTMLで比較する（保護理由も表示）",
     )
     run_parser.add_argument(
         "--preview-dpi", type=int, action="append", default=[], metavar="DPI",

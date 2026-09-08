@@ -38,7 +38,6 @@ def test_programmatic_photo_dpi_rejects_invalid_values(tmp_path: Path, value) ->
 @pytest.mark.parametrize("options", [
     ("--photo-dpi", "200"),
     ("--photo-dpi", "150"),
-    ("--preview",),
     ("--photo-pattern", "*.pdf", "--preview-dpi", "180"),
     ("--photo-pattern", "*.pdf", "--photo-dpi", "149"),
     ("--photo-pattern", "*.pdf", "--photo-dpi", "301"),
@@ -72,7 +71,7 @@ def test_preview_defaults_and_deduplicated_limit(tmp_path: Path) -> None:
 
 
 @pytest.mark.parametrize("changes", [
-    {"photo_dpi": 150}, {"preview": True},
+    {"photo_dpi": 150},
     {"preview_dpis": (150,)}, {"preview": "true"},
 ])
 def test_programmatic_config_enforces_option_dependencies(tmp_path: Path, changes) -> None:

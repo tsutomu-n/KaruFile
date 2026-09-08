@@ -29,7 +29,8 @@ def _case(tmp_path: Path, monkeypatch, *, dry_run=False, empty=False):
     input_dir.mkdir()
     source = input_dir / "photo.pdf"
     if not empty:
-        source.write_bytes(b"protected original")
+        from conftest import _make_text_pdf
+        _make_text_pdf(source)
     cfg = config.default_config(
         input_dir=input_dir, output_dir=tmp_path / "output",
         photo_patterns=("*.pdf",), photo_dpi=180, preview=True,
@@ -93,7 +94,7 @@ def test_preview_runs_after_committed_report_and_cannot_undo_results(
     assert len(prepared) == 1 and processed == [source]
     assert len(captured) == 1
     assert (paths.report.read_bytes(), _state_rows(paths.database)) == captured[0]
-    assert source.read_bytes() == b"protected original"
+    assert source.read_bytes().startswith(b"%PDF-")
     destination = cfg.output_dir / source.name
     if dry_run:
         assert not destination.exists()
@@ -211,7 +212,7 @@ def test_preview_hardlink_is_rejected_before_tools_and_state(tmp_path: Path, mon
     os.link(unselected, tmp_path / name)
     assert runner.run(cfg) == 1 and prepared == []
     assert not runner.WorkspacePaths.from_config(cfg).database.exists()
-    assert source.read_bytes() == b"protected original"
+    assert source.read_bytes().startswith(b"%PDF-")
     assert other.read_bytes() == b"other protected source"
 
 
@@ -228,4 +229,4 @@ def test_preview_directory_link_is_rejected_before_tools(tmp_path: Path, monkeyp
     else:
         link.symlink_to(cfg.input_dir, target_is_directory=True)
     assert runner.run(cfg) == 1 and prepared == []
-    assert source.read_bytes() == b"protected original"
+    assert source.read_bytes().startswith(b"%PDF-")

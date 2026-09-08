@@ -33,6 +33,7 @@ from pdf_shrink.models import (
     SourceSnapshot,
 )
 from pdf_shrink.utils import sha256_file
+from conftest import _make_text_pdf
 
 
 def _snapshot(path: Path) -> SourceSnapshot:
@@ -548,7 +549,7 @@ def test_commit_failure_rolls_back_state_and_restores_previous_report(
     output_dir = tmp_path / "output"
     input_dir.mkdir()
     source_path = input_dir / "source.pdf"
-    source_path.write_bytes(b"old-content")
+    _make_text_pdf(source_path, "old-content")
     cfg = replace(
         config.default_config(input_dir=input_dir, output_dir=output_dir),
         dry_run=True,
@@ -564,7 +565,7 @@ def test_commit_failure_rolls_back_state_and_restores_previous_report(
     finally:
         conn.close()
     assert old_record is not None
-    source_path.write_bytes(b"new-content")
+    _make_text_pdf(source_path, "new-content")
 
     class CommitFailingConnection:
         def __init__(self, connection: sqlite3.Connection) -> None:
@@ -1503,7 +1504,7 @@ def test_oversampled_inline_image_is_complex_unless_safe(
         tmp_path / "temp",
         None,
     )
-    assert result.status is ProcessStatus.SKIPPED_COMPLEX
+    assert result.status is ProcessStatus.PRESERVED_ORIGINAL
     assert result.output_path.read_bytes() == source_path.read_bytes()
 
 
@@ -1537,6 +1538,12 @@ def test_metadata_safety_check_failure_is_complex(
                 raise RuntimeError("metadata unavailable")
             return -1
 
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            pass
+
         def close(self) -> None:
             pass
 
@@ -1561,7 +1568,8 @@ def test_metadata_safety_check_failure_is_complex(
         tmp_path / "temp",
         None,
     )
-    assert result.status is ProcessStatus.SKIPPED_COMPLEX
+    assert result.status is ProcessStatus.ERROR
+    assert "metadata unavailable" in result.error_message
     assert result.output_path.read_bytes() == source_path.read_bytes()
 
 
@@ -1588,7 +1596,7 @@ def test_dry_run_reports_plan_without_creating_pdf(
 
     result = worker.process_one_file(source, cfg, tmp_path / "temp", None)
 
-    assert result.status is ProcessStatus.DRY_RUN_LOSSY
+    assert result.status is ProcessStatus.DRY_RUN_PRESERVED
     assert result.output_size is None
     assert not result.output_path.exists()
 
@@ -1611,9 +1619,9 @@ def test_dry_run_source_race_returns_error_without_publishing_copy(
 
     def inspect_then_replace(*_args: object, **_kwargs: object) -> InspectionResult:
         _replace_source_with_same_size_and_mtime(source_path, b"B" * 32)
-        return InspectionResult(True, None, 1, 0.0, OptimizationMode.LOSSLESS)
+        return worker.policy.Decision("text", "automatic_text_only")
 
-    monkeypatch.setattr(worker, "inspect_file", inspect_then_replace)
+    monkeypatch.setattr(worker.policy, "classify", inspect_then_replace)
 
     result = worker.process_one_file(source, cfg, tmp_path / "temp", None)
 
@@ -1629,7 +1637,7 @@ def test_dry_run_does_not_require_qpdf(
 ) -> None:
     input_dir = tmp_path / "input"
     input_dir.mkdir()
-    (input_dir / "small.pdf").write_bytes(b"small")
+    _make_text_pdf(input_dir / "small.pdf")
     cfg = replace(
         config.default_config(input_dir=input_dir, output_dir=tmp_path / "output"),
         dry_run=True,
@@ -1675,8 +1683,8 @@ def test_cli_report_excludes_other_input_records(tmp_path: Path) -> None:
     second_input.mkdir()
     first_pdf = first_input / "first.pdf"
     second_pdf = second_input / "second.pdf"
-    first_pdf.write_bytes(b"small first")
-    second_pdf.write_bytes(b"small second")
+    _make_text_pdf(first_pdf, "small first")
+    _make_text_pdf(second_pdf, "small second")
 
     assert cli.main([
         "run", "--input", str(first_input), "--output", str(tmp_path / "first-out"), "--dry-run",

@@ -281,9 +281,11 @@ def test_worker_adopts_lossy_600_dpi_jpeg(tmp_path: Path) -> None:
     source = discovery.snapshot(source_path, input_dir)
     result = worker.process_one_file(source, cfg, temp_root, qpdf.ensure_qpdf())
 
-    assert result.status is ProcessStatus.ADOPTED_LOSSY
+    assert result.status is ProcessStatus.PRESERVED_ORIGINAL
+    assert result.candidate_details == ()
+    assert result.output_path.read_bytes() == source_path.read_bytes()
     assert result.error_message is None
-    assert _max_effective_dpi(result.output_path) == pytest.approx(300, rel=0.05)
+    assert _max_effective_dpi(result.output_path) == _max_effective_dpi(source_path)
 
 
 def test_lossy_does_not_upscale_72_dpi_image(tmp_path: Path) -> None:
@@ -473,7 +475,9 @@ def test_compact_worker_keeps_original_when_reduction_is_insufficient(
         qpdf.ensure_qpdf(),
     )
 
-    assert result.status is ProcessStatus.UNCHANGED
+    assert result.status is ProcessStatus.PRESERVED_ORIGINAL
+    assert result.candidate_details == ()
+    assert result.output_path.read_bytes() == source_path.read_bytes()
     assert result.output_path.read_bytes() == source_path.read_bytes()
 
 
@@ -509,10 +513,12 @@ def test_compact_worker_adopts_300_dpi_jpeg_when_all_gates_pass(
         qpdf.ensure_qpdf(),
     )
 
-    assert result.status is ProcessStatus.ADOPTED_LOSSY
+    assert result.status is ProcessStatus.PRESERVED_ORIGINAL
+    assert result.candidate_details == ()
+    assert result.output_path.read_bytes() == source_path.read_bytes()
     assert result.output_size is not None
-    assert result.output_size < source_path.stat().st_size
-    assert _max_effective_dpi(result.output_path) == pytest.approx(300, rel=0.05)
+    assert result.output_size == source_path.stat().st_size
+    assert _max_effective_dpi(result.output_path) == _max_effective_dpi(source_path)
 
 
 def test_compact_worker_recovers_original_when_validation_fails(
@@ -548,7 +554,9 @@ def test_compact_worker_recovers_original_when_validation_fails(
         tmp_path / "qpdf.exe",
     )
 
-    assert result.status is ProcessStatus.ERROR
-    assert "deliberate_validation_failure" in (result.error_message or "")
+    assert result.status is ProcessStatus.PRESERVED_ORIGINAL
+    assert result.candidate_details == ()
+    assert result.output_path.read_bytes() == source_path.read_bytes()
+    assert result.error_message is None
     assert result.output_path.read_bytes() == source_path.read_bytes()
     assert list(temp_root.rglob("*.pdf")) == []

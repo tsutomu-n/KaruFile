@@ -1,0 +1,183 @@
+........ssss................................................F..........F [ 22%]
+FF...................................................................... [ 45%]
+........................................................................ [ 67%]
+.....FFF............................................F................... [ 90%]
+...................FFF.FFF.F..                                           [100%]
+================================== FAILURES ===================================
+____________________ test_worker_adopts_lossy_600_dpi_jpeg ____________________
+pdf-shrink\tests\test_lossy_placed_dpi.py:284: in test_worker_adopts_lossy_600_dpi_jpeg
+    assert result.status is ProcessStatus.ADOPTED_LOSSY
+E   AssertionError: assert <ProcessStatus.PRESERVED_ORIGINAL: 'PRESERVED_ORIGINAL'> is <ProcessStatus.ADOPTED_LOSSY: 'ADOPTED_LOSSY'>
+E    +  where <ProcessStatus.PRESERVED_ORIGINAL: 'PRESERVED_ORIGINAL'> = ProcessResult(output_path=WindowsPath('C:/Users/tn/AppData/Local/Temp/pytest-of-tn/pytest-267/test_worker_adopts_lossy...tion='protected', permission_basis='automatic_text_only', preservation_reason='unpermitted_image', processing_schema=5).status
+E    +  and   <ProcessStatus.ADOPTED_LOSSY: 'ADOPTED_LOSSY'> = ProcessStatus.ADOPTED_LOSSY
+______ test_compact_worker_keeps_original_when_reduction_is_insufficient ______
+pdf-shrink\tests\test_lossy_placed_dpi.py:476: in test_compact_worker_keeps_original_when_reduction_is_insufficient
+    assert result.status is ProcessStatus.UNCHANGED
+E   AssertionError: assert <ProcessStatus.PRESERVED_ORIGINAL: 'PRESERVED_ORIGINAL'> is <ProcessStatus.UNCHANGED: 'UNCHANGED'>
+E    +  where <ProcessStatus.PRESERVED_ORIGINAL: 'PRESERVED_ORIGINAL'> = ProcessResult(output_path=WindowsPath('C:/Users/tn/AppData/Local/Temp/pytest-of-tn/pytest-267/test_compact_worker_keep...tion='protected', permission_basis='automatic_text_only', preservation_reason='unpermitted_image', processing_schema=5).status
+E    +  and   <ProcessStatus.UNCHANGED: 'UNCHANGED'> = ProcessStatus.UNCHANGED
+_________ test_compact_worker_adopts_300_dpi_jpeg_when_all_gates_pass _________
+pdf-shrink\tests\test_lossy_placed_dpi.py:512: in test_compact_worker_adopts_300_dpi_jpeg_when_all_gates_pass
+    assert result.status is ProcessStatus.ADOPTED_LOSSY
+E   AssertionError: assert <ProcessStatus.PRESERVED_ORIGINAL: 'PRESERVED_ORIGINAL'> is <ProcessStatus.ADOPTED_LOSSY: 'ADOPTED_LOSSY'>
+E    +  where <ProcessStatus.PRESERVED_ORIGINAL: 'PRESERVED_ORIGINAL'> = ProcessResult(output_path=WindowsPath('C:/Users/tn/AppData/Local/Temp/pytest-of-tn/pytest-267/test_compact_worker_adop...tion='protected', permission_basis='automatic_text_only', preservation_reason='unpermitted_image', processing_schema=5).status
+E    +  and   <ProcessStatus.ADOPTED_LOSSY: 'ADOPTED_LOSSY'> = ProcessStatus.ADOPTED_LOSSY
+_________ test_compact_worker_recovers_original_when_validation_fails _________
+pdf-shrink\tests\test_lossy_placed_dpi.py:551: in test_compact_worker_recovers_original_when_validation_fails
+    assert result.status is ProcessStatus.ERROR
+E   AssertionError: assert <ProcessStatus.PRESERVED_ORIGINAL: 'PRESERVED_ORIGINAL'> is <ProcessStatus.ERROR: 'ERROR'>
+E    +  where <ProcessStatus.PRESERVED_ORIGINAL: 'PRESERVED_ORIGINAL'> = ProcessResult(output_path=WindowsPath('C:/Users/tn/AppData/Local/Temp/pytest-of-tn/pytest-267/test_compact_worker_reco...tion='protected', permission_basis='automatic_text_only', preservation_reason='unpermitted_image', processing_schema=5).status
+E    +  and   <ProcessStatus.ERROR: 'ERROR'> = ProcessStatus.ERROR
+_ test_preview_hardlink_is_rejected_before_tools_and_state[pdf-preview.json] __
+pdf-shrink\tests\test_preview_runner.py:215: in test_preview_hardlink_is_rejected_before_tools_and_state
+    assert source.read_bytes() == b"protected original"
+E   AssertionError: assert b'%PDF-1.7\n%...n528\n%%EOF\n' == b'protected original'
+E     
+E     At index 0 diff: b'%' != b'p'
+E     Use -v to get more diff
+------------------------------ Captured log call ------------------------------
+ERROR    pdf_shrink:runner.py:377 PDF preflight failed: preview report is hard-linked: C:\Users\tn\AppData\Local\Temp\pytest-of-tn\pytest-267\test_preview_hardlink_is_rejec0\pdf-preview.json
+_ test_preview_hardlink_is_rejected_before_tools_and_state[pdf-preview.dry-run.json] _
+pdf-shrink\tests\test_preview_runner.py:215: in test_preview_hardlink_is_rejected_before_tools_and_state
+    assert source.read_bytes() == b"protected original"
+E   AssertionError: assert b'%PDF-1.7\n%...n528\n%%EOF\n' == b'protected original'
+E     
+E     At index 0 diff: b'%' != b'p'
+E     Use -v to get more diff
+------------------------------ Captured log call ------------------------------
+ERROR    pdf_shrink:runner.py:377 PDF preflight failed: dry-run preview report is hard-linked: C:\Users\tn\AppData\Local\Temp\pytest-of-tn\pytest-267\test_preview_hardlink_is_rejec1\pdf-preview.dry-run.json
+____________ test_preview_directory_link_is_rejected_before_tools _____________
+pdf-shrink\tests\test_preview_runner.py:232: in test_preview_directory_link_is_rejected_before_tools
+    assert source.read_bytes() == b"protected original"
+E   AssertionError: assert b'%PDF-1.7\n%...n528\n%%EOF\n' == b'protected original'
+E     
+E     At index 0 diff: b'%' != b'p'
+E     Use -v to get more diff
+------------------------------ Captured log call ------------------------------
+ERROR    pdf_shrink:runner.py:377 PDF preflight failed: preview directory contains a symlink or junction: C:\Users\tn\AppData\Local\Temp\pytest-of-tn\pytest-267\test_preview_directory_link_is0\pdf-preview
+______ test_commit_failure_rolls_back_state_and_restores_previous_report ______
+pdf-shrink\tests\test_refactor_contracts.py:556: in test_commit_failure_rolls_back_state_and_restores_previous_report
+    assert runner.run(cfg) == 0
+E   AssertionError: assert 1 == 0
+E    +  where 1 = <function run at 0x000002659BEAFA60>(RunConfig(input_dir=WindowsPath('C:/Users/tn/AppData/Local/Temp/pytest-of-tn/pytest-267/test_commit_failure_rolls_back...=200, preview=False, preview_dpis=(), lossless_jpeg=False, jpegtran_path=None, jpegtran_version='', jpegtran_sha256=''))
+E    +    where <function run at 0x000002659BEAFA60> = runner.run
+---------------------------- Captured stdout call -----------------------------
+
+==================================================
+PDF Shrink Summary
+==================================================
+Files            : 1
+Total input      : 11.0 B
+Total output     : 11.0 B
+Saved            : 0.0 B (0.00%)
+Elapsed          : 0.24s
+Throughput       : 0.00 MiB/s
+Files/sec        : 4.13
+--------------------------------------------------
+Status counts:
+  ERROR                    :    1
+==================================================
+---------------------------- Captured stderr call -----------------------------
+Failed to process C:\Users\tn\AppData\Local\Temp\pytest-of-tn\pytest-267\test_commit_failure_rolls_back0\input\source.pdf: Failed to open file 'C:\\Users\\tn\\AppData\\Local\\Temp\\pytest-of-tn\\pytest-267\\test_commit_failure_rolls_back0\\input\\source.pdf' as type pdf.
+____________ test_oversampled_inline_image_is_complex_unless_safe _____________
+pdf-shrink\tests\test_refactor_contracts.py:1506: in test_oversampled_inline_image_is_complex_unless_safe
+    assert result.status is ProcessStatus.SKIPPED_COMPLEX
+E   AssertionError: assert <ProcessStatus.PRESERVED_ORIGINAL: 'PRESERVED_ORIGINAL'> is <ProcessStatus.SKIPPED_COMPLEX: 'SKIPPED_COMPLEX'>
+E    +  where <ProcessStatus.PRESERVED_ORIGINAL: 'PRESERVED_ORIGINAL'> = ProcessResult(output_path=WindowsPath('C:/Users/tn/AppData/Local/Temp/pytest-of-tn/pytest-267/test_oversampled_inline_...tion='protected', permission_basis='automatic_text_only', preservation_reason='no_confirmed_text', processing_schema=5).status
+E    +  and   <ProcessStatus.SKIPPED_COMPLEX: 'SKIPPED_COMPLEX'> = ProcessStatus.SKIPPED_COMPLEX
+_ test_metadata_safety_check_failure_is_complex[attachment-attachment_check_failed: metadata unavailable] _
+pdf-shrink\tests\test_refactor_contracts.py:1564: in test_metadata_safety_check_failure_is_complex
+    assert result.status is ProcessStatus.SKIPPED_COMPLEX
+E   AssertionError: assert <ProcessStatus.ERROR: 'ERROR'> is <ProcessStatus.SKIPPED_COMPLEX: 'SKIPPED_COMPLEX'>
+E    +  where <ProcessStatus.ERROR: 'ERROR'> = ProcessResult(output_path=WindowsPath('C:/Users/tn/AppData/Local/Temp/pytest-of-tn/pytest-267/test_metadata_safety_che...ted_policy='standard', classification='unclassified', permission_basis='', preservation_reason='', processing_schema=5).status
+E    +  and   <ProcessStatus.SKIPPED_COMPLEX: 'SKIPPED_COMPLEX'> = ProcessStatus.SKIPPED_COMPLEX
+------------------------------ Captured log call ------------------------------
+ERROR    pdf_shrink:worker.py:374 Failed to process C:\Users\tn\AppData\Local\Temp\pytest-of-tn\pytest-267\test_metadata_safety_check_fai0\input\metadata.pdf: 'MetadataDocument' object does not support the context manager protocol
+_ test_metadata_safety_check_failure_is_complex[signature-signature_check_failed: metadata unavailable] _
+pdf-shrink\tests\test_refactor_contracts.py:1564: in test_metadata_safety_check_failure_is_complex
+    assert result.status is ProcessStatus.SKIPPED_COMPLEX
+E   AssertionError: assert <ProcessStatus.ERROR: 'ERROR'> is <ProcessStatus.SKIPPED_COMPLEX: 'SKIPPED_COMPLEX'>
+E    +  where <ProcessStatus.ERROR: 'ERROR'> = ProcessResult(output_path=WindowsPath('C:/Users/tn/AppData/Local/Temp/pytest-of-tn/pytest-267/test_metadata_safety_che...ted_policy='standard', classification='unclassified', permission_basis='', preservation_reason='', processing_schema=5).status
+E    +  and   <ProcessStatus.SKIPPED_COMPLEX: 'SKIPPED_COMPLEX'> = ProcessStatus.SKIPPED_COMPLEX
+------------------------------ Captured log call ------------------------------
+ERROR    pdf_shrink:worker.py:374 Failed to process C:\Users\tn\AppData\Local\Temp\pytest-of-tn\pytest-267\test_metadata_safety_check_fai1\input\metadata.pdf: 'MetadataDocument' object does not support the context manager protocol
+_______________ test_dry_run_reports_plan_without_creating_pdf ________________
+pdf-shrink\tests\test_refactor_contracts.py:1591: in test_dry_run_reports_plan_without_creating_pdf
+    assert result.status is ProcessStatus.DRY_RUN_LOSSY
+E   AssertionError: assert <ProcessStatus.DRY_RUN_PRESERVED: 'DRY_RUN_PRESERVED'> is <ProcessStatus.DRY_RUN_LOSSY: 'DRY_RUN_LOSSY'>
+E    +  where <ProcessStatus.DRY_RUN_PRESERVED: 'DRY_RUN_PRESERVED'> = ProcessResult(output_path=WindowsPath('C:/Users/tn/AppData/Local/Temp/pytest-of-tn/pytest-267/test_dry_run_reports_pla...tion='protected', permission_basis='automatic_text_only', preservation_reason='unpermitted_image', processing_schema=5).status
+E    +  and   <ProcessStatus.DRY_RUN_LOSSY: 'DRY_RUN_LOSSY'> = ProcessStatus.DRY_RUN_LOSSY
+_______ test_dry_run_source_race_returns_error_without_publishing_copy ________
+pdf-shrink\tests\test_refactor_contracts.py:1622: in test_dry_run_source_race_returns_error_without_publishing_copy
+    assert "changed" in (result.error_message or "").lower()
+E   assert 'changed' in "failed to open file 'c:\\\\users\\\\tn\\\\appdata\\\\local\\\\temp\\\\pytest-of-tn\\\\pytest-267\\\\test_dry_run_sour...\local\\\\temp\\\\pytest-of-tn\\\\pytest-267\\\\test_dry_run_source_race_retur0\\\\input\\\\source.pdf' as type pdf.\n"
+E    +  where "failed to open file 'c:\\\\users\\\\tn\\\\appdata\\\\local\\\\temp\\\\pytest-of-tn\\\\pytest-267\\\\test_dry_run_sour...\local\\\\temp\\\\pytest-of-tn\\\\pytest-267\\\\test_dry_run_source_race_retur0\\\\input\\\\source.pdf' as type pdf.\n" = <built-in method lower of str object at 0x000002659AC18A90>()
+E    +    where <built-in method lower of str object at 0x000002659AC18A90> = ("Failed to open file 'C:\\\\Users\\\\tn\\\\AppData\\\\Local\\\\Temp\\\\pytest-of-tn\\\\pytest-267\\\\test_dry_run_sour...\Local\\\\Temp\\\\pytest-of-tn\\\\pytest-267\\\\test_dry_run_source_race_retur0\\\\input\\\\source.pdf' as type pdf.\n").lower
+E    +      where "Failed to open file 'C:\\\\Users\\\\tn\\\\AppData\\\\Local\\\\Temp\\\\pytest-of-tn\\\\pytest-267\\\\test_dry_run_sour...\Local\\\\Temp\\\\pytest-of-tn\\\\pytest-267\\\\test_dry_run_source_race_retur0\\\\input\\\\source.pdf' as type pdf.\n" = ProcessResult(output_path=WindowsPath('C:/Users/tn/AppData/Local/Temp/pytest-of-tn/pytest-267/test_dry_run_source_race...ted_policy='standard', classification='unclassified', permission_basis='', preservation_reason='', processing_schema=5).error_message
+------------------------------ Captured log call ------------------------------
+ERROR    pdf_shrink:worker.py:374 Failed to process C:\Users\tn\AppData\Local\Temp\pytest-of-tn\pytest-267\test_dry_run_source_race_retur0\input\source.pdf: Failed to open file 'C:\\Users\\tn\\AppData\\Local\\Temp\\pytest-of-tn\\pytest-267\\test_dry_run_source_race_retur0\\input\\source.pdf' as type pdf.
+_____________________ test_dry_run_does_not_require_qpdf ______________________
+pdf-shrink\tests\test_refactor_contracts.py:1643: in test_dry_run_does_not_require_qpdf
+    assert runner.run(cfg) == 0
+E   AssertionError: assert 1 == 0
+E    +  where 1 = <function run at 0x000002659BEAFA60>(RunConfig(input_dir=WindowsPath('C:/Users/tn/AppData/Local/Temp/pytest-of-tn/pytest-267/test_dry_run_does_not_require_...=200, preview=False, preview_dpis=(), lossless_jpeg=False, jpegtran_path=None, jpegtran_version='', jpegtran_sha256=''))
+E    +    where <function run at 0x000002659BEAFA60> = runner.run
+---------------------------- Captured stdout call -----------------------------
+
+==================================================
+PDF Shrink Summary
+==================================================
+Files            : 1
+Total input      : 5.0 B
+Total output     : 5.0 B
+Saved            : 0.0 B (0.00%)
+Elapsed          : 0.22s
+Throughput       : 0.00 MiB/s
+Files/sec        : 4.55
+--------------------------------------------------
+Status counts:
+  ERROR                    :    1
+==================================================
+---------------------------- Captured stderr call -----------------------------
+Failed to process C:\Users\tn\AppData\Local\Temp\pytest-of-tn\pytest-267\test_dry_run_does_not_require_0\input\small.pdf: Failed to open file 'C:\\Users\\tn\\AppData\\Local\\Temp\\pytest-of-tn\\pytest-267\\test_dry_run_does_not_require_0\\input\\small.pdf' as type pdf.
+________________ test_cli_report_excludes_other_input_records _________________
+pdf-shrink\tests\test_refactor_contracts.py:1681: in test_cli_report_excludes_other_input_records
+    assert cli.main([
+E   AssertionError: assert 1 == 0
+E    +  where 1 = <function main at 0x000002659BEAFB00>(['run', '--input', 'C:\\Users\\tn\\AppData\\Local\\Temp\\pytest-of-tn\\pytest-267\\test_cli_report_excludes_other0\\fi...:\\Users\\tn\\AppData\\Local\\Temp\\pytest-of-tn\\pytest-267\\test_cli_report_excludes_other0\\first-out', '--dry-run'])
+E    +    where <function main at 0x000002659BEAFB00> = cli.main
+---------------------------- Captured stdout call -----------------------------
+
+==================================================
+PDF Shrink Summary
+==================================================
+Files            : 1
+Total input      : 11.0 B
+Total output     : 11.0 B
+Saved            : 0.0 B (0.00%)
+Elapsed          : 0.22s
+Throughput       : 0.00 MiB/s
+Files/sec        : 4.46
+--------------------------------------------------
+Status counts:
+  ERROR                    :    1
+==================================================
+---------------------------- Captured stderr call -----------------------------
+Failed to process C:\Users\tn\AppData\Local\Temp\pytest-of-tn\pytest-267\test_cli_report_excludes_other0\first\first.pdf: Failed to open file 'C:\\Users\\tn\\AppData\\Local\\Temp\\pytest-of-tn\\pytest-267\\test_cli_report_excludes_other0\\first\\first.pdf' as type pdf.
+=========================== short test summary info ===========================
+FAILED pdf-shrink\tests\test_lossy_placed_dpi.py::test_worker_adopts_lossy_600_dpi_jpeg
+FAILED pdf-shrink\tests\test_lossy_placed_dpi.py::test_compact_worker_keeps_original_when_reduction_is_insufficient
+FAILED pdf-shrink\tests\test_lossy_placed_dpi.py::test_compact_worker_adopts_300_dpi_jpeg_when_all_gates_pass
+FAILED pdf-shrink\tests\test_lossy_placed_dpi.py::test_compact_worker_recovers_original_when_validation_fails
+FAILED pdf-shrink\tests\test_preview_runner.py::test_preview_hardlink_is_rejected_before_tools_and_state[pdf-preview.json]
+FAILED pdf-shrink\tests\test_preview_runner.py::test_preview_hardlink_is_rejected_before_tools_and_state[pdf-preview.dry-run.json]
+FAILED pdf-shrink\tests\test_preview_runner.py::test_preview_directory_link_is_rejected_before_tools
+FAILED pdf-shrink\tests\test_refactor_contracts.py::test_commit_failure_rolls_back_state_and_restores_previous_report
+FAILED pdf-shrink\tests\test_refactor_contracts.py::test_oversampled_inline_image_is_complex_unless_safe
+FAILED pdf-shrink\tests\test_refactor_contracts.py::test_metadata_safety_check_failure_is_complex[attachment-attachment_check_failed: metadata unavailable]
+FAILED pdf-shrink\tests\test_refactor_contracts.py::test_metadata_safety_check_failure_is_complex[signature-signature_check_failed: metadata unavailable]
+FAILED pdf-shrink\tests\test_refactor_contracts.py::test_dry_run_reports_plan_without_creating_pdf
+FAILED pdf-shrink\tests\test_refactor_contracts.py::test_dry_run_source_race_returns_error_without_publishing_copy
+FAILED pdf-shrink\tests\test_refactor_contracts.py::test_dry_run_does_not_require_qpdf
+FAILED pdf-shrink\tests\test_refactor_contracts.py::test_cli_report_excludes_other_input_records
+15 failed, 299 passed, 4 skipped in 28.53s

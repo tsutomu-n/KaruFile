@@ -694,3 +694,54 @@ PDF圧縮/JPEG可逆/層別圧縮の概念語で検索後、1回だけcodec名�
 - MANUAL/REFERENCE/rootとPDF README/orchestrator設計/AGENTSを同期。構成図はarchifyのshowcase 9/9、0 errors/warningsでdeliver。4 viewportでoverflowなし、最小/最大light/darkの4枚を目視確認。receiptのvisualReviewはツール出力のpendingを保持し、この記録を手動確認の証拠とする。HTML SHA-256 `763281cb255c9fce0339e38b01ce83a192fcf30a9be440e13845688ce63fdd80`。
 - [再現結果と実画面](../../docs/validation/2026-09-09-photo-preview.md)を保存。比較HTMLと原本・実際出力を含むbundleはローカル実資料parentへ保持。
 - 07:50:41に履歴上のHEADが別経路で`e477a63`へ進み、今回のruntime/文書/図を含むことを最終確認した。本agent群はcommit/pushコマンドを実行していない。生成時の基準revisionを履歴へ合わせて書き換えず、そのまま保持する。
+
+## 2026-09-09 保護優先・文章向け処理（実装中）
+
+Goal: 未許可の図・画像PDFをバイト一致で保護し、許可済み文章候補のうち検証済み最小ファイルだけを別出力へ採用する。
+Facts: 開始時working tree clean。現行schema 4。小容量判定は構造検査前。既存photo/preview/JPEG候補と公開境界を維持する。
+Decision: 共通policy判定と文章専用候補モジュールを追加し、既存候補選択・原本復旧・記録を拡張する。全面置換や依存追加はしない。
+Unknowns: 実資料の利用可能性、グレー完全一致候補の採用可否は実測する。実資料文章スキャンの可読性は検証対象外。
+
+### CP-017: 保護・許可指定
+- Status: In progress
+- Objective: 候補生成前の文書単位保護。
+- Dependencies: 既存CP-016。
+- Files or components: config, policy, worker, CLI, runner。
+- Actions: preserve/text/text-scanパターン、競合preflight、厳格構造判定。
+- Completion criteria: 保護出力SHA一致、候補呼出しゼロ。
+- Validation: 合成PDFと失敗注入。
+- Failure conditions: 未許可PDF加工、検査失敗のskip化。
+- Recovery: 原本復旧しERROR、他ファイル継続。
+
+### CP-018: 文章候補・検証
+- Status: Not started
+- Objective: 原本から独立生成した最小検証済み候補の採用。
+- Dependencies: CP-017。
+- Files or components: text optimization, worker, validation。
+- Actions: qpdf、subset、gray、300 DPI scan JPEG 92/85/80。100 pages/80 MP/64 MiB/600 MP/300 secondsの上限。
+- Completion criteria: 内容と配置保持、RGB/Gray完全一致または既存差分閾値を通過し原本より小さい候補だけ採用。
+- Validation: 小容量、増大、tie、欠落、位置、予算、ツール障害。
+- Failure conditions: 検証不合格採用、障害隠蔽。
+- Recovery: 候補棄却または原本復旧ERROR。
+
+### CP-019: 統合・記録・表示・文書
+- Status: Not started
+- Objective: CLIから報告と比較表示まで同一policyを照合する。
+- Dependencies: CP-017/018。
+- Files or components: orchestrator, state/report, preview, manual/reference, architecture。
+- Actions: additive schema migration/hash、保護SHA照合、preview拡張、文書同期。
+- Completion criteria: 古い報告拒否、dry-run候補なし、保護preview迂回なし。
+- Validation: DB/CSV/CLI/preview合成テスト、HTML表示、wheel。
+- Failure conditions: 旧成功記録の流用、報告と要求の不一致。
+- Recovery: 出力を保持してERROR。
+
+### CP-020: 受入検証
+- Status: Not started
+- Objective: 合成・実資料と全指定検査の証拠を保存。
+- Dependencies: CP-017/018/019。
+- Files or components: 全suite、docs/validation、新規検証出力。
+- Actions: 全pytest/compileall/両help/wheel/diff-check、実資料5冊と日本語300/600 DPI fixture、HTML/構成図表示。
+- Completion criteria: 原本と既存出力不変、無指定全冊保護、写真許可2冊だけ処理、検査成功。
+- Validation: 実行コマンドと実測結果を追記。
+- Failure conditions: 回帰、入力変更、画質条件違反。
+- Recovery: 原本と既存出力を保持。削除・上書き・commit/pushなし。

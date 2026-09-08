@@ -291,6 +291,8 @@ def _worker_crash_result(
         saved_percent=0.0,
         error_message=error_message,
         profile=profile,
+        requested_policy=profile,
+        classification="unclassified",
         decision_reason="processing_error",
         lossless_jpeg_requested=cfg.lossless_jpeg,
         photo_dpi=cfg.photo_dpi if profile == "photo" else None,
@@ -358,6 +360,9 @@ def run(cfg: RunConfig) -> int:
         if cfg.limit is not None:
             logger.info("Limited to %d files for pilot run", len(selected))
         sources = [discovery.snapshot(path, cfg.input_dir) for path in selected]
+        # Validate all permissions before tool execution or output publication.
+        for path in files:
+            profile_for_path(cfg, path.relative_to(cfg.input_dir))
         # --limit の未選択PDFもhardlink保護対象。未選択原本へのchmod/置換も禁止する。
         protected_sources = tuple(files)
         for source in sources:

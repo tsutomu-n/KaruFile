@@ -16,6 +16,7 @@ import pymupdf as fitz
 
 from . import discovery, output, worker
 from .config import RunConfig, config_for_path, photo_lossy_options, profile_for_path
+from .policy import classify
 from .inspect_pdf import inspect_file
 from .models import OptimizationMode, ProcessStatus, SourceSnapshot
 from .state import Record
@@ -192,9 +193,9 @@ def _document(source: SourceSnapshot, record: Record, item: dict, cfg: RunConfig
     _check_completed(source, record, cfg, protected)
     views = _views(source.path, budget)
     options = config_for_path(cfg, source.relative_path)
-    inspection = inspect_file(source.path, cfg.scan, safe=False, lossy_options=options.lossy)
-    if not inspection.ok:
-        raise RuntimeError(f"preview inspection failed: {inspection.skip_reason}")
+    decision = classify(source.path, profile_for_path(cfg, source.relative_path))
+    if decision.protected and record.output_sha256 != source.sha256:
+        raise RuntimeError("protected preview output must equal original")
     budget.check()
     # A fresh opaque directory prevents filenames and reruns from colliding.
     folder = run_dir / uuid.uuid4().hex
@@ -213,7 +214,7 @@ def _document(source: SourceSnapshot, record: Record, item: dict, cfg: RunConfig
     ]
     budget.check()
     original_snapshot = discovery.snapshot(original, folder)
-    for dpi in cfg.preview_dpis:
+    for dpi in (cfg.preview_dpis if decision.classification == "photo" and not decision.protected else ()):
         budget.check()
         key = f"dpi{dpi}"
         variant = {"key": key, "label": f"{dpi} DPI", "status": "REJECTED",
@@ -260,7 +261,7 @@ def _document(source: SourceSnapshot, record: Record, item: dict, cfg: RunConfig
     budget.check()
     item["views"] = views
     item["status"] = "ERROR" if item.get("preview_errors") else "READY"
-    item["reason"] = "; ".join(item.get("preview_errors", [])) or "complete"
+    item["reason"] = "; ".join(item.get("preview_errors", [])) or record.preservation_reason or "complete"
     item["elapsed_seconds"] = round(time.monotonic() - started, 3)
     item["rendered_pixels"] = budget.pixels
 
@@ -269,7 +270,7 @@ def generate(cfg: RunConfig, sources: list[SourceSnapshot], records: list[Record
              qpdf_exe: Path | None, protected_sources: tuple[Path, ...]) -> bool:
     """Publish an independent manifest even for empty selections or dry runs."""
     by_source = {record.source_path: record for record in records}
-    selected = [source for source in sources if profile_for_path(cfg, source.relative_path) == "photo"]
+    selected = list(sources)
     data = {"schema": 1, "requested": True, "dry_run": cfg.dry_run, "photo_dpi": cfg.photo_dpi,
             "preview_dpis": list(cfg.preview_dpis), "input_root": str(cfg.input_dir),
             "output_root": str(cfg.output_dir), "status": "DRY_RUN" if cfg.dry_run else "COMPLETE",
@@ -282,6 +283,9 @@ def generate(cfg: RunConfig, sources: list[SourceSnapshot], records: list[Record
                               "status": "SKIPPED", "reason": "dry_run" if cfg.dry_run else "not_rendered",
                               "source_size": source.size, "output_size": record.output_size,
                               "decision_reason": record.decision_reason,
+                              "classification": record.classification,
+                              "permission_basis": record.permission_basis,
+                              "preservation_reason": record.preservation_reason,
                               "selected_kind": next((d.kind for d in record.candidate_details if d.selected), "original"),
                               "variants": [], "views": []})
     protected = tuple(protected_sources) + tuple(source.output_path(cfg.output_dir) for source in sources

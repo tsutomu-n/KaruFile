@@ -8,7 +8,7 @@ import traceback
 from dataclasses import replace
 from pathlib import Path
 
-from . import discovery, lossless_jpeg, output, transform, validate
+from . import discovery, lossless_jpeg, output, policy, text_optimize, transform, validate
 from .config import ReductionOptions, RunConfig, config_for_path, profile_for_path
 from .inspect_pdf import inspect_file
 from .models import (
@@ -160,6 +160,7 @@ def process_one_file(
     temp_paths: list[Path] = []
     candidates: list[CandidateResult] = []
     recovery_needed = True
+    decision = policy.Decision("unclassified", "")
 
     def finish(
         status: ProcessStatus,
@@ -187,10 +188,30 @@ def process_one_file(
             candidate_details=tuple(candidates),
             lossless_jpeg_requested=cfg.lossless_jpeg,
             photo_dpi=cfg.photo_dpi if profile == "photo" else None,
+            requested_policy=profile,
+            classification=decision.classification,
+            permission_basis=decision.permission_basis,
+            preservation_reason=decision.preservation_reason,
         )
 
     try:
         discovery.assert_source_unchanged(source, cfg.input_dir)
+        decision = policy.classify(source.path, profile)
+        discovery.assert_source_unchanged(source, cfg.input_dir)
+        if decision.protected:
+            if not cfg.dry_run:
+                recovery_needed = False
+                output.copy_original(source, output_path, input_root=cfg.input_dir, output_root=cfg.output_dir)
+                if sha256_file(output_path) != source.sha256:
+                    raise RuntimeError("protected output SHA-256 mismatch")
+            return finish(
+                ProcessStatus.DRY_RUN_PRESERVED if cfg.dry_run else ProcessStatus.PRESERVED_ORIGINAL,
+                output_size=None if cfg.dry_run else source.size,
+                reason=decision.preservation_reason,
+            )
+        text_processing = decision.classification in {"text", "text_table", "text_scan"}
+        if text_processing:
+            cfg = replace(cfg, reduction=ReductionOptions(0, 0, 0, 0, 0))
         if source.size < cfg.reduction.skip_below_bytes:
             if not cfg.dry_run:
                 recovery_needed = False
@@ -208,12 +229,12 @@ def process_one_file(
                 reason="source_too_small",
             )
 
-        inspection = inspect_file(
-            source.path,
-            cfg.scan,
-            safe=cfg.safe,
-            lossy_options=cfg.lossy,
-        )
+        if text_processing:
+            import pymupdf as fitz
+            with fitz.open(source.path) as doc:
+                inspection = InspectionResult(True, None, doc.page_count, 0.0, OptimizationMode.LOSSLESS)
+        else:
+            inspection = inspect_file(source.path, cfg.scan, safe=cfg.safe, lossy_options=cfg.lossy)
         discovery.assert_source_unchanged(source, cfg.input_dir)
         if not inspection.ok:
             reason = inspection.skip_reason or "unknown"
@@ -226,7 +247,7 @@ def process_one_file(
                     output_root=cfg.output_dir,
                 )
             error = reason if "inspect_error" in reason or "open_failed" in reason else None
-            inspection_failed = profile == "photo" and reason.startswith("inspect_error:")
+            inspection_failed = any(token in reason for token in ("error", "failed"))
             return finish(
                 ProcessStatus.ERROR if inspection_failed else _map_skip_reason(reason),
                 output_size=None if cfg.dry_run else output_path.stat().st_size,
@@ -253,10 +274,21 @@ def process_one_file(
         if inspection.mode is OptimizationMode.LOSSY:
             modes.append(OptimizationMode.LOSSLESS)
         kinds: list[str | None] = [None] * len(modes)
-        if cfg.lossless_jpeg:
+        if text_processing:
+            kinds = ["lossless"]
+            if decision.classification == "text_scan":
+                kinds.extend([f"text_scan_jpeg_{quality}" for quality in (92, 85, 80)])
+            else:
+                kinds.append("text_subset")
+                if not cfg.safe:
+                    kinds.append("text_gray")
+            modes = [OptimizationMode.LOSSY if k == "text_gray" or k.startswith("text_scan_jpeg_")
+                     else OptimizationMode.LOSSLESS for k in kinds]
+        if cfg.lossless_jpeg and not text_processing:
             modes.extend([OptimizationMode.LOSSLESS] * 2)
             kinds.extend(["jpeg_lossless_baseline", "jpeg_lossless_progressive"])
         jpeg_deadline = None
+        text_budget = text_optimize.Budget(time.monotonic() + 300)
         for mode, jpeg_kind in zip(modes, kinds):
             descriptor, temp_name = tempfile.mkstemp(
                 prefix=f"{source.path.stem}_", suffix=".pdf", dir=temp_dir,
@@ -264,7 +296,18 @@ def process_one_file(
             os.close(descriptor)
             path = Path(temp_name)
             temp_paths.append(path)
-            if jpeg_kind:
+            if text_processing:
+                candidate = CandidateResult(kind=jpeg_kind)
+                try:
+                    changed = text_optimize.generate(source.path, path, jpeg_kind, cfg, qpdf_exe, text_budget)
+                    candidate = replace(candidate, size=path.stat().st_size, images_changed=changed)
+                    text_optimize.validate_candidate(source.path, path, jpeg_kind, qpdf_exe, text_budget)
+                    candidate = replace(candidate, reason="eligible" if candidate.size < source.size else "candidate_not_smaller")
+                except lossless_jpeg.CandidateRejected as exc:
+                    candidate = replace(candidate, reason="quality_rejected", validation_reason=str(exc))
+                except Exception as exc:
+                    candidate = replace(candidate, reason="processing_error", validation_reason=str(exc))
+            elif jpeg_kind:
                 if jpeg_deadline is None:
                     jpeg_deadline = time.monotonic() + lossless_jpeg.RECIPE["document_seconds"]
                 candidate = _evaluate_candidate(
@@ -280,7 +323,8 @@ def process_one_file(
 
         eligible = [index for index, c in enumerate(candidates) if c.reason == "eligible"]
         if eligible:
-            priorities = {"lossless": 0, "jpeg_lossless_baseline": 1, "jpeg_lossless_progressive": 2}
+            priorities = {"lossless": 0, "text_subset": 1, "jpeg_lossless_baseline": 1, "jpeg_lossless_progressive": 2,
+                          "text_gray": 3, "text_scan_jpeg_92": 4, "text_scan_jpeg_85": 5, "text_scan_jpeg_80": 6}
             chosen = min(eligible, key=lambda i: (candidates[i].size, priorities.get(candidates[i].kind, 3)))
             candidate = candidates[chosen]
             candidate_size = candidate.size

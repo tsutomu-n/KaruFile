@@ -93,7 +93,6 @@ def test_preview_parser_defaults_and_distinct_dpi_order():
 
 @pytest.mark.parametrize("args", [
     ["--pdf-photo-dpi", "150"],
-    ["--pdf-preview"],
     ["--pdf-photo-pattern", "*.pdf", "--pdf-preview-dpi", "180"],
     ["--pdf-photo-pattern", "*.pdf", "--pdf-photo-dpi", "149"],
     ["--pdf-photo-pattern", "*.pdf", "--pdf-photo-dpi", "301"],

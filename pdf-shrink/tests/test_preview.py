@@ -38,6 +38,7 @@ def case(tmp_path):
         output_size=source.size, output_sha256=source.sha256, saved_bytes=0, saved_percent=0,
         page_count=1, scan_page_ratio=0, error_message=None, pymupdf_version="test", qpdf_version="test",
         processed_at="now", profile="photo", photo_dpi=200, decision_reason="candidate_not_smaller",
+        classification="photo", requested_policy="photo", permission_basis="explicit_photo", processing_schema=5,
     )
     cfg = RunConfig(input_dir=inputs, output_dir=outputs, photo_patterns=("*.pdf",), preview=True)
     return cfg, source, record

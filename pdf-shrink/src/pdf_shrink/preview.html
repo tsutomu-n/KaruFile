@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="light">
-  <title>KaruFile | 写真PDFの目視比較</title>
+  <title>KaruFile | PDFの目視比較</title>
   <style>
     :root { font: 15px/1.65 "Yu Gothic UI", Meiryo, sans-serif; color: #18332f; background: #f3f6f4; }
     * { box-sizing: border-box; }
@@ -81,8 +81,8 @@
 <body>
   <header>
     <div class="eyebrow">KaruFile / PDF PHOTO REVIEW</div>
-    <h1>同じ位置・倍率で、写真の細部を確認。</h1>
-    <p class="intro muted">左は原本、右は実際に保存された完成出力です。ページや写真範囲を選んで確認できます。左右のスクロールと倍率は連動します。</p>
+    <h1>同じ位置・倍率で、文字や画像を確認。</h1>
+    <p class="intro muted">左は原本、右は実際に保存された完成出力です。ページや画像範囲を選んで確認できます。左右のスクロールと倍率は連動します。</p>
     <p class="note"><span class="tag">実際の完成出力</span> はCLIの採用結果です。<span class="tag trial">比較専用候補</span> へ切り替えても、採用結果や完成PDFは変更されません。</p>
   </header>
   <main>
@@ -154,7 +154,7 @@
       message($("errors"), Array.isArray(data.errors) && data.errors.length
         ? `比較処理で問題が発生しました。${data.errors.join(" / ")}` : "");
       if (!items.length) {
-        message($("empty"), "写真指定に一致するPDFはありません。入力と写真パターンを確認してください。");
+        message($("empty"), "比較するPDFはありません。入力フォルダーを確認してください。");
         $("toolbar").hidden = $("summary").hidden = $("comparison").hidden = $("candidate-details").hidden = true;
         return;
       }
@@ -247,7 +247,7 @@
         setImage("right", key, view, label);
         $("zoom-value").value = `${$("zoom").value}%`;
         $("view-note").textContent = view
-          ? `表示用画像は${view.render_dpi} DPIで描画しています。写真圧縮の指定値（${data.photo_dpi} DPI）とは別の値です。右側：${label}。`
+          ? `表示用画像は${view.render_dpi} DPIで描画しています。圧縮候補の目標DPIとは別の値です。右側：${label}。`
           : `目視比較：${current().status || "対象外"}。${current().reason || "表示できるページはありません。"}`;
         scrollTo(resetPosition ? 0 : previous.left, resetPosition ? 0 : previous.top);
       }
@@ -269,7 +269,9 @@
         $("output-size").textContent = bytes(item.output_size);
         $("saving").textContent = reduction(item.source_size, item.output_size);
         $("decision").textContent = [
-          `写真の目標：${data.photo_dpi} DPI / JPEG品質80`,
+          item.classification === "photo" ? `写真の目標：${data.photo_dpi} DPI / JPEG品質80` : "",
+          item.classification === "text_scan" ? "文章スキャン：300 DPI・グレーJPEG候補" : "",
+          item.preservation_reason ? `原本保護：${item.preservation_reason}` : "",
           `PDFの処理結果：${item.pdf_status}`,
           item.selected_kind ? `採用候補：${item.selected_kind}` : "",
           item.decision_reason,

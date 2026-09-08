@@ -1,0 +1,55 @@
+F..F..F..F....F......................................................... [ 31%]
+........................................................................ [ 62%]
+.............................................FF......................... [ 93%]
+..............                                                           [100%]
+================================== FAILURES ===================================
+_ test_lossless_report_reduction_boundary_and_request_match[False-300000-16383-False] _
+test_lossless_jpeg_report.py:31: in test_lossless_report_reduction_boundary_and_request_match
+    assert shrink_all.pdf_report_matches_inputs(parsed, [source], lossless_jpeg_requested=requested, **options) is accepted
+E   AssertionError: assert True is False
+E    +  where True = <function pdf_report_matches_inputs at 0x000001EC315CE5C0>({'count': 1, 'orig_size': 300000, 'new_size': 283617, 'saved': 16383, ...}, [WindowsPath('C:/Users/tn/AppData/Local/Temp/pytest-of-tn/pytest-268/test_lossless_report_reduction0/input/file.pdf')], lossless_jpeg_requested=False, **{'input_dir': WindowsPath('C:/Users/tn/AppData/Local/Temp/pytest-of-tn/pytest-268/test_lossless_report_reduction0/inpu...ta/Local/Temp/pytest-of-tn/pytest-268/test_lossless_report_reduction0/output'), 'preset': 'standard', 'dry_run': False})
+E    +    where <function pdf_report_matches_inputs at 0x000001EC315CE5C0> = shrink_all.pdf_report_matches_inputs
+_ test_lossless_report_reduction_boundary_and_request_match[False-1000000-19999-False] _
+test_lossless_jpeg_report.py:31: in test_lossless_report_reduction_boundary_and_request_match
+    assert shrink_all.pdf_report_matches_inputs(parsed, [source], lossless_jpeg_requested=requested, **options) is accepted
+E   AssertionError: assert True is False
+E    +  where True = <function pdf_report_matches_inputs at 0x000001EC315CE5C0>({'count': 1, 'orig_size': 1000000, 'new_size': 980001, 'saved': 19999, ...}, [WindowsPath('C:/Users/tn/AppData/Local/Temp/pytest-of-tn/pytest-268/test_lossless_report_reduction3/input/file.pdf')], lossless_jpeg_requested=False, **{'input_dir': WindowsPath('C:/Users/tn/AppData/Local/Temp/pytest-of-tn/pytest-268/test_lossless_report_reduction3/inpu...ta/Local/Temp/pytest-of-tn/pytest-268/test_lossless_report_reduction3/output'), 'preset': 'standard', 'dry_run': False})
+E    +    where <function pdf_report_matches_inputs at 0x000001EC315CE5C0> = shrink_all.pdf_report_matches_inputs
+_ test_lossless_report_reduction_boundary_and_request_match[True-300000-16383-False] _
+test_lossless_jpeg_report.py:31: in test_lossless_report_reduction_boundary_and_request_match
+    assert shrink_all.pdf_report_matches_inputs(parsed, [source], lossless_jpeg_requested=requested, **options) is accepted
+E   AssertionError: assert True is False
+E    +  where True = <function pdf_report_matches_inputs at 0x000001EC315CE5C0>({'count': 1, 'orig_size': 300000, 'new_size': 283617, 'saved': 16383, ...}, [WindowsPath('C:/Users/tn/AppData/Local/Temp/pytest-of-tn/pytest-268/test_lossless_report_reduction6/input/file.pdf')], lossless_jpeg_requested=True, **{'input_dir': WindowsPath('C:/Users/tn/AppData/Local/Temp/pytest-of-tn/pytest-268/test_lossless_report_reduction6/inpu...ta/Local/Temp/pytest-of-tn/pytest-268/test_lossless_report_reduction6/output'), 'preset': 'standard', 'dry_run': False})
+E    +    where <function pdf_report_matches_inputs at 0x000001EC315CE5C0> = shrink_all.pdf_report_matches_inputs
+_ test_lossless_report_reduction_boundary_and_request_match[True-1000000-19999-False] _
+test_lossless_jpeg_report.py:31: in test_lossless_report_reduction_boundary_and_request_match
+    assert shrink_all.pdf_report_matches_inputs(parsed, [source], lossless_jpeg_requested=requested, **options) is accepted
+E   AssertionError: assert True is False
+E    +  where True = <function pdf_report_matches_inputs at 0x000001EC315CE5C0>({'count': 1, 'orig_size': 1000000, 'new_size': 980001, 'saved': 19999, ...}, [WindowsPath('C:/Users/tn/AppData/Local/Temp/pytest-of-tn/pytest-268/test_lossless_report_reduction9/input/file.pdf')], lossless_jpeg_requested=True, **{'input_dir': WindowsPath('C:/Users/tn/AppData/Local/Temp/pytest-of-tn/pytest-268/test_lossless_report_reduction9/inpu...ta/Local/Temp/pytest-of-tn/pytest-268/test_lossless_report_reduction9/output'), 'preset': 'standard', 'dry_run': False})
+E    +    where <function pdf_report_matches_inputs at 0x000001EC315CE5C0> = shrink_all.pdf_report_matches_inputs
+___________ test_preview_parser_rejects_invalid_combinations[args1] ___________
+test_photo_preview.py:108: in test_preview_parser_rejects_invalid_combinations
+    with pytest.raises(SystemExit) as caught:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE SystemExit
+_ test_pdf_photo_report_requires_selected_profile_and_its_savings_gate[65535] _
+test_shrink_all.py:1217: in test_pdf_photo_report_requires_selected_profile_and_its_savings_gate
+    assert shrink_all.pdf_report_matches_inputs(
+E   AssertionError: assert True is (65535 >= (256 * 1024))
+E    +  where True = <function pdf_report_matches_inputs at 0x000001EC315CE5C0>({'count': 1, 'orig_size': 1048576, 'new_size': 983041, 'saved': 65535, ...}, [WindowsPath('C:/Users/tn/AppData/Local/Temp/pytest-of-tn/pytest-268/test_pdf_photo_report_requires0/input/Photos/site.PDF')], **{'input_dir': WindowsPath('C:/Users/tn/AppData/Local/Temp/pytest-of-tn/pytest-268/test_pdf_photo_report_requires0/inpu...ta/Local/Temp/pytest-of-tn/pytest-268/test_pdf_photo_report_requires0/output'), 'preset': 'standard', 'dry_run': False})
+E    +    where <function pdf_report_matches_inputs at 0x000001EC315CE5C0> = shrink_all.pdf_report_matches_inputs
+_ test_pdf_photo_report_requires_selected_profile_and_its_savings_gate[65536] _
+test_shrink_all.py:1217: in test_pdf_photo_report_requires_selected_profile_and_its_savings_gate
+    assert shrink_all.pdf_report_matches_inputs(
+E   AssertionError: assert True is (65536 >= (256 * 1024))
+E    +  where True = <function pdf_report_matches_inputs at 0x000001EC315CE5C0>({'count': 1, 'orig_size': 1048576, 'new_size': 983040, 'saved': 65536, ...}, [WindowsPath('C:/Users/tn/AppData/Local/Temp/pytest-of-tn/pytest-268/test_pdf_photo_report_requires1/input/Photos/site.PDF')], **{'input_dir': WindowsPath('C:/Users/tn/AppData/Local/Temp/pytest-of-tn/pytest-268/test_pdf_photo_report_requires1/inpu...ta/Local/Temp/pytest-of-tn/pytest-268/test_pdf_photo_report_requires1/output'), 'preset': 'standard', 'dry_run': False})
+E    +    where <function pdf_report_matches_inputs at 0x000001EC315CE5C0> = shrink_all.pdf_report_matches_inputs
+=========================== short test summary info ===========================
+FAILED test_lossless_jpeg_report.py::test_lossless_report_reduction_boundary_and_request_match[False-300000-16383-False]
+FAILED test_lossless_jpeg_report.py::test_lossless_report_reduction_boundary_and_request_match[False-1000000-19999-False]
+FAILED test_lossless_jpeg_report.py::test_lossless_report_reduction_boundary_and_request_match[True-300000-16383-False]
+FAILED test_lossless_jpeg_report.py::test_lossless_report_reduction_boundary_and_request_match[True-1000000-19999-False]
+FAILED test_photo_preview.py::test_preview_parser_rejects_invalid_combinations[args1]
+FAILED test_shrink_all.py::test_pdf_photo_report_requires_selected_profile_and_its_savings_gate[65535]
+FAILED test_shrink_all.py::test_pdf_photo_report_requires_selected_profile_and_its_savings_gate[65536]
+7 failed, 223 passed in 7.04s

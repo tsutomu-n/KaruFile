@@ -94,6 +94,7 @@ IMAGE_EXACT_COPY_ACTIONS = frozenset(
 )
 PDF_REPORT_REQUIRED_COLUMNS = frozenset(
     {
+        "requested_policy", "classification", "permission_basis", "preservation_reason", "processing_schema",
         "lossless_jpeg_requested",
         "photo_dpi",
         "source_path",
@@ -111,6 +112,7 @@ PDF_REPORT_REQUIRED_COLUMNS = frozenset(
 )
 PDF_REPORT_STATUSES = frozenset(
     {
+        "PRESERVED_ORIGINAL", "DRY_RUN_PRESERVED",
         "ADOPTED_LOSSLESS",
         "ADOPTED_LOSSY",
         "UNCHANGED",
@@ -125,6 +127,7 @@ PDF_REPORT_STATUSES = frozenset(
 )
 PDF_COPY_STATUSES = frozenset(
     {
+        "PRESERVED_ORIGINAL",
         "UNCHANGED",
         "SKIPPED_SMALL",
         "SKIPPED_ENCRYPTED",
@@ -481,8 +484,6 @@ class _ArgumentParser(argparse.ArgumentParser):
         parsed = super().parse_args(args, namespace)
         if parsed.pdf_photo_dpi is not None and not parsed.pdf_photo_pattern:
             self.error("--pdf-photo-dpi requires --pdf-photo-pattern")
-        if parsed.pdf_preview and not parsed.pdf_photo_pattern:
-            self.error("--pdf-preview requires --pdf-photo-pattern")
         if parsed.pdf_preview_dpi and not parsed.pdf_preview:
             self.error("--pdf-preview-dpi requires --pdf-preview")
         parsed.pdf_preview_dpi = sorted(set(parsed.pdf_preview_dpi), reverse=True)
@@ -493,11 +494,17 @@ class _ArgumentParser(argparse.ArgumentParser):
         return parsed
 
 
-def _pdf_profile(relative: Path, preset: str, photo_patterns: list[str]) -> str:
+def _pdf_profile(relative: Path, preset: str, photo_patterns: list[str],
+                 preserve_patterns=(), text_patterns=(), text_scan_patterns=()) -> str:
     path = relative.as_posix().casefold()
-    if any(fnmatchcase(path, pattern.casefold()) for pattern in photo_patterns):
-        return "photo"
-    return preset
+    if any(fnmatchcase(path, p.casefold()) for p in preserve_patterns):
+        return "preserve"
+    matches = [name for name, patterns in (("photo", photo_patterns), ("text", text_patterns),
+                                           ("text_scan", text_scan_patterns))
+               if any(fnmatchcase(path, p.casefold()) for p in patterns)]
+    if len(matches) > 1:
+        raise ValueError(f"conflicting PDF permissions: {relative}: {', '.join(matches)}")
+    return matches[0] if matches else preset
 
 
 def _is_within(path: Path, parent: Path) -> bool:
@@ -1014,7 +1021,7 @@ def validate_pdf_preview_manifest(
             return None
         expected_rows = {
             str(Path(row["source_path"])).casefold(): row
-            for row in rows if row["profile"] == "photo"
+            for row in rows
         }
         items = data.get("items")
         if not isinstance(items, list) or len(items) != len(expected_rows):
@@ -1161,8 +1168,10 @@ def parse_pdf_report(report_path: Path) -> dict[str, Any]:
                 lossless_jpeg_requested = row.get("lossless_jpeg_requested")
                 if lossless_jpeg_requested not in {"true", "false"}:
                     raise ValueError("PDF report lossless_jpeg_requested must be true or false")
-                if profile not in {"standard", "compact", "photo"}:
+                if profile not in {"standard", "compact", "photo", "preserve", "text", "text_scan"}:
                     raise ValueError(f"unknown PDF report profile: {profile!r}")
+                if row.get("processing_schema") != "5" or row.get("requested_policy") != profile:
+                    raise ValueError("PDF report policy schema mismatch")
                 raw_photo_dpi = row.get("photo_dpi")
                 if profile == "photo":
                     photo_dpi = _pdf_photo_dpi(raw_photo_dpi)
@@ -1192,6 +1201,7 @@ def parse_pdf_report(report_path: Path) -> dict[str, Any]:
                         "status": status,
                         "preset": preset,
                         "profile": profile,
+                        **{name: row[name] for name in ("requested_policy", "classification", "permission_basis", "preservation_reason", "processing_schema")},
                         "photo_dpi": photo_dpi,
                         "lossless_jpeg_requested": lossless_jpeg_requested == "true",
                     }
@@ -1223,6 +1233,9 @@ def pdf_report_matches_inputs(
     photo_patterns: list[str] | None = None,
     lossless_jpeg_requested: bool = False,
     photo_dpi: int = 200,
+    preserve_patterns: list[str] | None = None,
+    text_patterns: list[str] | None = None,
+    text_scan_patterns: list[str] | None = None,
 ) -> bool:
     """Verify PDF report rows against current source and output bytes."""
 
@@ -1262,8 +1275,24 @@ def pdf_report_matches_inputs(
                 return False
             if row.get("lossless_jpeg_requested") is not lossless_jpeg_requested:
                 return False
-            if row["profile"] != _pdf_profile(relative, preset, photo_patterns or []):
+            if row["profile"] != _pdf_profile(relative, preset, photo_patterns or [],
+                                              preserve_patterns or [], text_patterns or [], text_scan_patterns or []):
                 return False
+            if str(row.get("processing_schema")) != "5" or row.get("requested_policy") != row["profile"]:
+                return False
+            classification = row.get("classification")
+            basis = "automatic_text_only" if row["profile"] in {"standard", "compact"} else f"explicit_{row['profile']}"
+            if row["status"] != "ERROR":
+                if row.get("permission_basis") != basis:
+                    return False
+                protected = row["status"] in {"PRESERVED_ORIGINAL", "DRY_RUN_PRESERVED"}
+                if protected != bool(row.get("preservation_reason")) or protected != (classification == "protected"):
+                    return False
+                if row["profile"] == "preserve" and (not protected or row.get("preservation_reason") != "explicit_preserve"):
+                    return False
+                expected_class = {"standard": "text", "compact": "text", "text": "text_table", "text_scan": "text_scan", "photo": "photo"}
+                if not protected and classification != expected_class.get(row["profile"]):
+                    return False
             expected_dpi = photo_dpi if row["profile"] == "photo" else None
             if row.get("photo_dpi") != expected_dpi or (
                 expected_dpi is not None and type(row.get("photo_dpi")) is not int
@@ -1283,7 +1312,7 @@ def pdf_report_matches_inputs(
             saved_bytes = row["saved_bytes"]
             saved_percent = row["saved_percent"]
             if dry_run:
-                if status not in {"DRY_RUN_LOSSLESS", "DRY_RUN_LOSSY", "ERROR"}:
+                if status not in {"DRY_RUN_LOSSLESS", "DRY_RUN_LOSSY", "DRY_RUN_PRESERVED", "SKIPPED_SMALL", "ERROR"}:
                     return False
                 if (
                     output_size is not None
@@ -1293,7 +1322,7 @@ def pdf_report_matches_inputs(
                 ):
                     return False
                 continue
-            if status in {"DRY_RUN_LOSSLESS", "DRY_RUN_LOSSY"}:
+            if status in {"DRY_RUN_LOSSLESS", "DRY_RUN_LOSSY", "DRY_RUN_PRESERVED"}:
                 return False
             if output_size is None:
                 if (
@@ -1338,11 +1367,13 @@ def pdf_report_matches_inputs(
                 if output_size != source_size or output_sha256 != source_sha256:
                     return False
             elif status == "ADOPTED_LOSSLESS":
-                if output_size <= 0 or saved_bytes < 16 * 1024 or saved_percent < 0.02:
+                text_result = classification in {"text", "text_table", "text_scan"}
+                if output_size <= 0 or saved_bytes <= 0 or (not text_result and (saved_bytes < 16 * 1024 or saved_percent < 0.02)):
                     return False
             elif status == "ADOPTED_LOSSY":
                 min_saved_bytes = (64 if row["profile"] == "photo" else 256) * 1024
-                if output_size <= 0 or saved_bytes < min_saved_bytes or saved_percent < 0.05:
+                text_result = classification in {"text", "text_table", "text_scan"}
+                if output_size <= 0 or saved_bytes <= 0 or (not text_result and (saved_bytes < min_saved_bytes or saved_percent < 0.05)):
                     return False
             else:
                 return False
@@ -2144,6 +2175,11 @@ def build_parser() -> argparse.ArgumentParser:
         default="standard",
         help="圧縮プリセット（デフォルト standard）",
     )
+    for name, explanation in (("preserve", "原本保護（すべての許可より優先）"),
+                              ("text", "文章と単純な罫線表を許可"),
+                              ("text-scan", "文章スキャンの300 DPIグレーJPEG候補を許可")):
+        parser.add_argument(f"--pdf-{name}-pattern", action="append", type=_pdf_photo_pattern,
+                            default=[], metavar="PATTERN", help=f"{explanation}。入力相対glob、反復可")
     parser.add_argument(
         "--pdf-photo-pattern",
         action="append",
@@ -2161,7 +2197,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--pdf-preview", action="store_true",
-        help="写真PDFの原本と完成出力を比較する静的HTMLを追加（--pdf-photo-pattern必須）",
+        help="PDFの原本と実際の出力を比較する静的HTMLを追加（保護理由も表示）",
     )
     parser.add_argument(
         "--pdf-preview-dpi", type=_pdf_photo_dpi, action="append", default=[], metavar="DPI",
@@ -2199,6 +2235,9 @@ def main(argv: list[str] | None = None) -> int:
             output_dir = (input_dir.parent / f"{input_dir.name}_軽量化").resolve()
         validate_directories(input_dir, output_dir)
         pdf_files = collect_files(input_dir, PDF_EXTENSIONS)
+        for path in pdf_files:
+            _pdf_profile(path.relative_to(input_dir), args.preset, args.pdf_photo_pattern,
+                         args.pdf_preserve_pattern, args.pdf_text_pattern, args.pdf_text_scan_pattern)
         image_files = collect_files(input_dir, IMAGE_EXTENSIONS)
         video_files = (
             collect_files(input_dir, VIDEO_EXTENSIONS)
@@ -2288,6 +2327,8 @@ def main(argv: list[str] | None = None) -> int:
             "--preset", args.preset,
         ]
         pdf_args.extend(f"--photo-pattern={pattern}" for pattern in args.pdf_photo_pattern)
+        for name in ("preserve", "text", "text-scan"):
+            pdf_args.extend(f"--{name}-pattern={pattern}" for pattern in getattr(args, f"pdf_{name.replace('-', '_')}_pattern"))
         if args.pdf_photo_pattern:
             pdf_args.extend(["--photo-dpi", str(args.pdf_photo_dpi)])
         if args.pdf_preview:
@@ -2315,6 +2356,9 @@ def main(argv: list[str] | None = None) -> int:
                 preset=args.preset,
                 dry_run=args.dry_run,
                 photo_patterns=args.pdf_photo_pattern,
+                preserve_patterns=args.pdf_preserve_pattern,
+                text_patterns=args.pdf_text_pattern,
+                text_scan_patterns=args.pdf_text_scan_pattern,
                 lossless_jpeg_requested=args.pdf_lossless_jpeg,
                 photo_dpi=args.pdf_photo_dpi,
             ):

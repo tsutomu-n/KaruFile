@@ -130,8 +130,9 @@ def test_worker_processes_files(tmp_path: Path, sample_pdfs: dict[str, Path]) ->
 
     statuses = {result.status for result in results}
     assert statuses
-    # 少なくとも小ファイルはスキップされる
-    assert ProcessStatus.SKIPPED_SMALL in statuses
+    # 未許可画像は保護、小容量文字PDFは候補比較へ進む。
+    assert ProcessStatus.PRESERVED_ORIGINAL in statuses
+    assert ProcessStatus.SKIPPED_SMALL not in statuses
     # 出力ミラーが存在する
     for result in results:
         assert result.output_path.exists()

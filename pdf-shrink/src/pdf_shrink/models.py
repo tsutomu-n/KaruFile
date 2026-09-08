@@ -12,6 +12,8 @@ class OptimizationMode(StrEnum):
 
 
 class ProcessStatus(StrEnum):
+    PRESERVED_ORIGINAL = "PRESERVED_ORIGINAL"
+    DRY_RUN_PRESERVED = "DRY_RUN_PRESERVED"
     ADOPTED_LOSSLESS = "ADOPTED_LOSSLESS"
     ADOPTED_LOSSY = "ADOPTED_LOSSY"
     UNCHANGED = "UNCHANGED"
@@ -95,3 +97,8 @@ class ProcessResult:
     candidate_details: tuple[CandidateResult, ...] = ()
     lossless_jpeg_requested: bool = False
     photo_dpi: int | None = None
+    requested_policy: str = ""
+    classification: str = ""
+    permission_basis: str = ""
+    preservation_reason: str = ""
+    processing_schema: int = 5

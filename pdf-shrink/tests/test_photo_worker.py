@@ -13,6 +13,10 @@ def _case(tmp_path, monkeypatch, *, photo=True):
     source_dir.mkdir()
     path = source_dir / "photo.pdf"
     path.write_bytes(b"S" * 500_000)
+    # This unit isolates legacy candidate arbitration; policy is tested using
+    # real PDFs in test_protection_text, independently of synthetic byte sizes.
+    from pdf_shrink.policy import Decision
+    monkeypatch.setattr(worker.policy, "classify", lambda *a: Decision("photo", "explicit_photo"))
     cfg = config.default_config(
         input_dir=source_dir, output_dir=tmp_path / "output",
         photo_patterns=("photo.pdf",) if photo else (),

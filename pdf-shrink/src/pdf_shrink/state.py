@@ -51,6 +51,11 @@ TERMINAL_STATUSES = frozenset(status.value for status in ProcessStatus)
 # Adding nullable sizes preserves the distinction between no candidate and a
 # candidate that saved zero bytes.  Legacy rows have no recorded diagnostics.
 DIAGNOSTIC_COLUMNS = {
+    "requested_policy": "TEXT NOT NULL DEFAULT ''",
+    "classification": "TEXT NOT NULL DEFAULT ''",
+    "permission_basis": "TEXT NOT NULL DEFAULT ''",
+    "preservation_reason": "TEXT NOT NULL DEFAULT ''",
+    "processing_schema": "INTEGER NOT NULL DEFAULT 0",
     "profile": "TEXT NOT NULL DEFAULT ''",
     "decision_reason": "TEXT NOT NULL DEFAULT ''",
     "candidate_size": "INTEGER",
@@ -91,6 +96,11 @@ class Record:
     candidate_details: tuple[CandidateResult, ...] = ()
     lossless_jpeg_requested: bool = False
     photo_dpi: int | None = None
+    requested_policy: str = ""
+    classification: str = ""
+    permission_basis: str = ""
+    preservation_reason: str = ""
+    processing_schema: int = 0
 
 
 def init_db(db_path: Path) -> sqlite3.Connection:
@@ -148,6 +158,11 @@ def _record_from_row(row: sqlite3.Row) -> Record:
         images_changed=row["images_changed"],
         lossless_jpeg_requested=bool(row["lossless_jpeg_requested"]),
         photo_dpi=row["photo_dpi"],
+        requested_policy=row["requested_policy"],
+        classification=row["classification"],
+        permission_basis=row["permission_basis"],
+        preservation_reason=row["preservation_reason"],
+        processing_schema=row["processing_schema"],
         candidate_details=tuple(
             CandidateResult(**candidate)
             for candidate in json.loads(row["candidate_details"])
@@ -295,6 +310,11 @@ def save_result(
             int(result.lossless_jpeg_requested),
             result.photo_dpi,
         ),
+    )
+    conn.execute(
+        "UPDATE files SET requested_policy=?, classification=?, permission_basis=?, preservation_reason=?, processing_schema=? WHERE source_path=?",
+        (result.requested_policy, result.classification, result.permission_basis,
+         result.preservation_reason, result.processing_schema, str(source.path)),
     )
     if commit:
         conn.commit()

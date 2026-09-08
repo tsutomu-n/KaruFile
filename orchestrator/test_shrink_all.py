@@ -81,6 +81,7 @@ def _image_manifest_row(
 
 
 PDF_REPORT_FIELDS = (
+    "requested_policy", "classification", "permission_basis", "preservation_reason", "processing_schema",
     "lossless_jpeg_requested",
     "photo_dpi",
     "source_path",
@@ -108,6 +109,11 @@ def _write_pdf_report(path: Path, rows: list[dict[str, object]]) -> None:
         writer = csv.DictWriter(stream, fieldnames=PDF_REPORT_FIELDS)
         writer.writeheader()
         writer.writerows({
+            "processing_schema": 5,
+            "requested_policy": row.get("profile", row.get("preset")),
+            "classification": {"standard": "text", "compact": "text", "photo": "photo", "text": "text_table", "text_scan": "text_scan", "preserve": "protected"}.get(row.get("profile", row.get("preset")), "text"),
+            "permission_basis": "automatic_text_only" if row.get("profile", row.get("preset")) in {"standard", "compact"} else "explicit_" + str(row.get("profile")),
+            "preservation_reason": "",
             "profile": row.get("preset"),
             "lossless_jpeg_requested": "false",
             "photo_dpi": 200 if row.get("profile") == "photo" else "",
@@ -1210,7 +1216,7 @@ def test_pdf_photo_report_requires_selected_profile_and_its_savings_gate(
     )
     assert shrink_all.pdf_report_matches_inputs(
         parsed, [source], **match_options,
-    ) is (saved_bytes >= 256 * 1024)
+    ) is (saved_bytes > 0)
 
 
 @pytest.mark.parametrize("selected", [False, True])
