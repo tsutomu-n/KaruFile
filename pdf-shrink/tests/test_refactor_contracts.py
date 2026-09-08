@@ -160,7 +160,7 @@ def _replace_source_with_same_size_and_mtime(path: Path, data: bytes) -> None:
     os.utime(path, ns=(original.st_atime_ns, original.st_mtime_ns))
 
 
-def test_standard_config_hash_is_stable_after_axis_safe_fix() -> None:
+def test_standard_config_hash_invalidates_pre_diagnostics_results() -> None:
     cfg = config.RunConfig(
         input_dir=Path("input"),
         output_dir=Path("output"),
@@ -169,6 +169,10 @@ def test_standard_config_hash_is_stable_after_axis_safe_fix() -> None:
     current_hash = config.config_hash(cfg)
 
     assert current_hash == (
+        "df632f5df126ef58a09a3cd824a5144a6fe5d9e60d6eb66f02dd5261d8b36c4c"
+    )
+    assert current_hash != (
+        # Before candidate diagnostics: regenerate once to record profile/reasons.
         "4ee17a418155fedd520dc8bb8ac98e7000a22bec6de665869076497a9bd5339f"
     )
     assert current_hash != (

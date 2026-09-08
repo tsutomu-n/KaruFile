@@ -54,11 +54,26 @@ The root CLI's `standard` preset does not discover or copy videos. The standalon
 - Standard image recipe: long side `1280`, short side `960`, quality `72`; compact image recipe:
   long side `1024`, short side `768`, quality `60`. Both use JPEG `4:2:0`, white alpha,
   EXIF Orientation applied, no upscale or crop.
-- PDF placed images: use a fixed `300` DPI candidate target from each placement transform axis in every preset,
+- PDF placed images: standard/compact use a fixed `300` DPI candidate target from each placement transform axis,
   never upscale, keep vector text, and retain the original when candidate validation rejects it.
   Do not use JPEG xres/yres. 1-bit and soft-mask images are left unchanged.
 - PDF JPEG candidate quality is `92` for standard and `80` for compact. Compact also permits
   same-dimension JPEG recompression; it does not lower the fixed DPI target.
+- Explicit photo selection uses root `--pdf-photo-pattern` / PDF `--photo-pattern`, repeatable input-relative
+  globs. Match case-insensitively, normalize separators, allow `*` across directories, reject empty/absolute/`..`
+  patterns, and reject photo selection with PDF `--safe`. Do not infer photo content or OCR need from DPI.
+- Selected PDFs use `photo` profile: only simple 8-bit DeviceRGB/DeviceGray DCT JPEGs, quality `80`, about
+  `200` DPI. Preserve non-JPEG, 1-bit, masks, complex color/Decode transforms, and ambiguous image-reference
+  groups. Photo placement inspection failures are `ERROR`. Use the minimum placement
+  DPI per shared-xref axis and ceil pixel dimensions; keep axes at or below 200 DPI unchanged and do not
+  recompress when neither dimension shrinks. Never upscale or rebuild PDF through HTML.
+- Photo candidates add bounded 300 DPI changed-placement validation; this does not guarantee readability
+  or OCR accuracy. Photo lossy adoption requires `64 KiB` and `5%`; other lossy candidates require `256 KiB`
+  and `5%`, lossless candidates `64 KiB` and `2%`. The below-256-KiB PDF skip remains in every profile.
+- For lossy processing, also create a lossless candidate from the original; select the smallest validated
+  candidate meeting its reduction gates, preferring lossless on a size tie. Real tool, structure, and I/O
+  failures remain `ERROR`, including when recovery copying succeeds. Retain primary-candidate
+  diagnostics and full `candidate_details` in state/CSV; root verifies each required report `profile`.
 - Compact video: only supported simple SDR/CFR streams are encoded without upscale to at most
   `1280x720`, at most `30 fps`, using SVT-AV1. Unsupported/complex videos are copied unchanged.
 - Video candidates must pass stream/duration checks, full decode, VMAF, and size-reduction gates.

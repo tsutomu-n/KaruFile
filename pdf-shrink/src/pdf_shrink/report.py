@@ -11,7 +11,8 @@ from collections.abc import Callable, Iterable
 from pathlib import Path
 from typing import Iterator
 
-from .state import Record
+from .models import ProcessStatus
+from .state import Record, candidate_details_json
 from .utils import human_size, sha256_file
 
 
@@ -30,7 +31,23 @@ REPORT_COLUMNS = [
     "page_count",
     "scan_page_ratio",
     "error_message",
+    "profile",
+    "decision_reason",
+    "candidate_size",
+    "candidate_saved_bytes",
+    "candidate_saved_percent",
+    "images_changed",
+    "candidate_details",
 ]
+
+UNCHANGED_REASON_LABELS = {
+    "no_eligible_images": "再圧縮・縮小の対象画像なし",
+    "no_image_savings": "画像候補が採用されず、画像の書き換えなし",
+    "candidate_not_smaller": "候補が原本より小さくならなかった",
+    "reduction_below_threshold": "候補の削減量が採用基準未満",
+    "quality_rejected": "候補が画質・内容の検証に不合格",
+    "not_recorded": "過去の処理で理由を記録していない",
+}
 
 
 def _is_within(path: Path, parent: Path) -> bool:
@@ -191,6 +208,13 @@ def staged_csv(
                     "page_count": r.page_count,
                     "scan_page_ratio": r.scan_page_ratio,
                     "error_message": r.error_message,
+                    "profile": r.profile,
+                    "decision_reason": r.decision_reason,
+                    "candidate_size": r.candidate_size,
+                    "candidate_saved_bytes": r.candidate_saved_bytes,
+                    "candidate_saved_percent": r.candidate_saved_percent,
+                    "images_changed": r.images_changed,
+                    "candidate_details": candidate_details_json(r.candidate_details),
                 })
         yield temp_path
     finally:
@@ -362,6 +386,7 @@ def print_summary(records: list[Record], elapsed_seconds: float = 0.0) -> None:
     total_out = 0
     total_saved = 0
     status_counts: dict[str, int] = {}
+    unchanged_reasons: dict[str, int] = {}
 
     for r in records:
         size = r.source_size or 0
@@ -371,6 +396,9 @@ def print_summary(records: list[Record], elapsed_seconds: float = 0.0) -> None:
         total_out += out_size
         total_saved += saved
         status_counts[r.status] = status_counts.get(r.status, 0) + 1
+        if r.status == ProcessStatus.UNCHANGED:
+            reason = r.decision_reason or "not_recorded"
+            unchanged_reasons[reason] = unchanged_reasons.get(reason, 0) + 1
 
     throughput = (total_in / elapsed_seconds / (1024 * 1024)) if elapsed_seconds > 0 else 0.0
     files_per_sec = (len(records) / elapsed_seconds) if elapsed_seconds > 0 else 0.0
@@ -390,4 +418,9 @@ def print_summary(records: list[Record], elapsed_seconds: float = 0.0) -> None:
     print("Status counts:")
     for status, count in sorted(status_counts.items()):
         print(f"  {status:<24} : {count:>4}")
+    if unchanged_reasons:
+        print("UNCHANGED reasons:")
+        for reason, count in sorted(unchanged_reasons.items()):
+            label = UNCHANGED_REASON_LABELS.get(reason, reason)
+            print(f"  {reason} ({label}) : {count}")
     print("=" * 50)

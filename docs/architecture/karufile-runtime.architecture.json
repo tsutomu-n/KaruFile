@@ -7,7 +7,7 @@
     "quality_profile": "showcase",
     "repository": {
       "url": "https://github.com/tsutomu-n/KaruFile",
-      "revision": "e9cbe0b73fdf1af5d818c2dacc09c2ae79b09a3e"
+      "revision": "7069b0a0b740ab47d6f83e28aefbb3dabe7cae0a"
     },
     "legend": {
       "mode": "auto",
@@ -64,7 +64,7 @@
       "id": "pdf",
       "type": "backend",
       "label": "pdf-shrink",
-      "sublabel": "縮小target 300 DPI・候補検証",
+      "sublabel": "通常300 DPI・写真指定約200 DPI",
       "pos": [650, 65],
       "size": [190, 76],
       "sources": [
@@ -304,11 +304,11 @@
     },
     {
       "dot": "amber",
-      "title": "compact契約",
+      "title": "圧縮設定",
       "items": [
-        "PDF画像は全presetで縮小target 300 DPI・拡大なし",
-        "静止画は1024x768・quality 60",
-        "動画は720p・30fps上限・AV1、複雑形式は原本copy"
+        "PDFは通常300 DPI、写真指定だけ約200 DPI・詳細検証",
+        "compact画像は1024x768、動画は720p・30fps・AV1",
+        "写真指定は作業ツリー実装。ソースリンクは変更前commit"
       ]
     }
   ]

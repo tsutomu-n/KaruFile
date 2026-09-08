@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import csv
 import hashlib
+import io
 import os
 import subprocess
 import sys
@@ -90,6 +91,13 @@ PDF_REPORT_FIELDS = (
     "saved_percent",
     "status",
     "preset",
+    "profile",
+    "decision_reason",
+    "candidate_size",
+    "candidate_saved_bytes",
+    "candidate_saved_percent",
+    "images_changed",
+    "candidate_details",
 )
 
 
@@ -97,7 +105,7 @@ def _write_pdf_report(path: Path, rows: list[dict[str, object]]) -> None:
     with path.open("w", newline="", encoding="utf-8") as stream:
         writer = csv.DictWriter(stream, fieldnames=PDF_REPORT_FIELDS)
         writer.writeheader()
-        writer.writerows(rows)
+        writer.writerows({"profile": row.get("preset"), **row} for row in rows)
 
 
 VIDEO_REPORT_FIELDNAMES = (
@@ -237,6 +245,25 @@ def test_run_command_streams_but_returns_only_bounded_tail(capsys) -> None:
     assert len(capsys.readouterr().out) > 3 * 1024 * 1024
 
 
+def test_run_command_uses_utf8_with_a_legacy_parent_console(monkeypatch) -> None:
+    encoded = io.BytesIO()
+    legacy_stdout = io.TextIOWrapper(encoded, encoding="cp932")
+    with monkeypatch.context() as patch:
+        patch.setenv("PYTHONIOENCODING", "cp932")
+        patch.setattr(shrink_all.sys, "stdout", legacy_stdout)
+        shrink_all._configure_console_output()
+        exit_code, lines, _elapsed = shrink_all.run_command(
+            "unicode-output",
+            shrink_all.PDF_SHRINK_DIR,
+            ["python", "-c", "print('\\u21d2\\U0001f9ea')"],
+        )
+    legacy_stdout.flush()
+
+    assert exit_code == 0
+    assert lines == ["\u21d2\U0001f9ea"]
+    assert encoded.getvalue().decode("cp932").strip() == "\u21d2\\U0001f9ea"
+
+
 def test_run_command_times_out_and_terminates_child_tree(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -372,6 +399,27 @@ def test_build_parser_requires_input():
     assert args.image_workers == 4
     assert args.video_workers == 1
     assert args.preset == "standard"
+    assert args.pdf_photo_pattern == []
+
+
+def test_build_parser_normalizes_repeated_photo_patterns():
+    args = build_parser().parse_args(
+        [
+            "-i", "input",
+            "--pdf-photo-pattern", r"./Photos\*.PDF",
+            "--pdf-photo-pattern=-photo.pdf",
+        ]
+    )
+
+    assert args.pdf_photo_pattern == ["Photos/*.PDF", "-photo.pdf"]
+
+
+@pytest.mark.parametrize("pattern", ["", " ", ".", "/a.pdf", r"C:\a.pdf", "C:a.pdf", "../a.pdf", "a/../b.pdf"])
+def test_build_parser_rejects_nonrelative_photo_patterns(pattern: str):
+    with pytest.raises(SystemExit) as exc_info:
+        build_parser().parse_args(["-i", "input", f"--pdf-photo-pattern={pattern}"])
+
+    assert exc_info.value.code == 2
 
 
 @pytest.mark.parametrize("option", ["--pdf-workers", "--image-workers", "--video-workers"])
@@ -1045,6 +1093,9 @@ def test_parse_pdf_report_rejects_missing_required_columns(tmp_path: Path):
         ("saved_percent", 0.1),
         ("status", "ADOPTED_LOSSLESS"),
         ("preset", "compact"),
+        ("profile", "photo"),
+        ("profile", ""),
+        ("profile", "unknown"),
     ],
 )
 def test_pdf_report_matcher_rejects_forged_row(
@@ -1095,6 +1146,125 @@ def test_pdf_report_matcher_rejects_forged_row(
         preset="standard",
         dry_run=False,
     )
+
+
+@pytest.mark.parametrize("saved_bytes", [64 * 1024 - 1, 64 * 1024, 256 * 1024])
+def test_pdf_photo_report_requires_selected_profile_and_its_savings_gate(
+    tmp_path: Path, saved_bytes: int,
+) -> None:
+    input_dir = tmp_path / "input"
+    output_dir = tmp_path / "output"
+    (input_dir / "Photos").mkdir(parents=True)
+    (output_dir / "Photos").mkdir(parents=True)
+    source = input_dir / "Photos" / "site.PDF"
+    output = output_dir / source.relative_to(input_dir)
+    source.write_bytes(b"%PDF-1.7\n" + b"a" * (1024 * 1024 - 9))
+    output.write_bytes(source.read_bytes()[:-saved_bytes])
+    row = {
+        "source_path": str(source.resolve()),
+        "source_size": source.stat().st_size,
+        "source_sha256": hashlib.sha256(source.read_bytes()).hexdigest(),
+        "output_path": str(output.resolve()),
+        "output_size": output.stat().st_size,
+        "output_sha256": hashlib.sha256(output.read_bytes()).hexdigest(),
+        "saved_bytes": saved_bytes,
+        "saved_percent": saved_bytes / source.stat().st_size,
+        "status": "ADOPTED_LOSSY",
+        "preset": "standard",
+        "profile": "photo",
+        "decision_reason": "ADOPTED",
+        "candidate_size": output.stat().st_size,
+        "candidate_saved_bytes": saved_bytes,
+        "candidate_saved_percent": saved_bytes / source.stat().st_size,
+        "images_changed": 1,
+        "candidate_details": '[{"kind":"photo","reason":"ADOPTED"}]',
+    }
+    report = tmp_path / "report.csv"
+    _write_pdf_report(report, [row])
+    parsed = parse_pdf_report(report)
+    match_options = dict(
+        input_dir=input_dir, output_dir=output_dir, preset="standard", dry_run=False,
+    )
+
+    # A top-level wildcard includes subdirectories and matching ignores case.
+    assert shrink_all.pdf_report_matches_inputs(
+        parsed, [source], photo_patterns=["*SITE.pdf"], **match_options,
+    ) is (saved_bytes >= 64 * 1024)
+    assert not shrink_all.pdf_report_matches_inputs(parsed, [source], **match_options)
+
+    row["profile"] = "standard"
+    _write_pdf_report(report, [row])
+    parsed = parse_pdf_report(report)
+    assert not shrink_all.pdf_report_matches_inputs(
+        parsed, [source], photo_patterns=["*SITE.pdf"], **match_options,
+    )
+    assert shrink_all.pdf_report_matches_inputs(
+        parsed, [source], **match_options,
+    ) is (saved_bytes >= 256 * 1024)
+
+
+@pytest.mark.parametrize("selected", [False, True])
+def test_main_sends_photo_patterns_only_to_pdf_and_matches_each_profile(
+    tmp_path: Path, monkeypatch, selected: bool,
+) -> None:
+    input_dir = tmp_path / "input"
+    output_dir = tmp_path / "output"
+    (input_dir / "Photos").mkdir(parents=True)
+    sources = [input_dir / "Photos" / "Site.PDF", input_dir / "diagram.pdf"]
+    for source in sources:
+        source.write_bytes(b"%PDF-1.7\ncontent")
+    calls = []
+
+    def fake_run(name, _project_dir, args):
+        calls.append(name)
+        patterns = [arg for arg in args if arg.startswith("--photo-pattern=")]
+        if name == "pdf-shrink":
+            assert patterns == (["--photo-pattern=photos/*.pdf", "--photo-pattern=-extra.pdf"] if selected else [])
+            rows = []
+            for index, source in enumerate(sources):
+                output = output_dir / source.relative_to(input_dir)
+                output.parent.mkdir(parents=True, exist_ok=True)
+                output.write_bytes(source.read_bytes())
+                digest = hashlib.sha256(source.read_bytes()).hexdigest()
+                rows.append({
+                    "source_path": str(source.resolve()),
+                    "source_size": source.stat().st_size,
+                    "source_sha256": digest,
+                    "output_path": str(output.resolve()),
+                    "output_size": output.stat().st_size,
+                    "output_sha256": digest,
+                    "saved_bytes": 0,
+                    "saved_percent": 0,
+                    "status": "UNCHANGED",
+                    "preset": "standard",
+                    "profile": "photo" if selected and index == 0 else "standard",
+                })
+            _write_pdf_report(output_dir.parent / "report.csv", rows)
+        else:
+            assert name == "media-shrink"
+            assert patterns == []
+            assert args[args.index("--preset") + 1] == "standard"
+            Path(f"{output_dir}.image-errors.csv").write_text("source,planned_output,error\n", encoding="utf-8")
+            _write_image_manifest(Path(f"{output_dir}.image-manifest.csv"))
+        return 0, [], 0.01
+
+    monkeypatch.setattr(shrink_all, "run_command", fake_run)
+    cli_args = ["-i", str(input_dir), "-o", str(output_dir)]
+    if selected:
+        cli_args.extend(["--pdf-photo-pattern", r"photos\*.pdf", "--pdf-photo-pattern=-extra.pdf"])
+
+    assert shrink_all.main(cli_args) == 0
+    assert calls == ["pdf-shrink", "media-shrink"]
+
+
+def test_parse_pdf_report_rejects_legacy_report_without_profile(tmp_path: Path) -> None:
+    report = tmp_path / "report.csv"
+    report.write_text(
+        ",".join(field for field in PDF_REPORT_FIELDS if field != "profile") + "\n",
+        encoding="utf-8",
+    )
+
+    assert parse_pdf_report(report) == {}
 
 
 def test_pdf_report_matcher_accepts_only_empty_dry_run_output(
@@ -1678,3 +1848,4 @@ def test_root_entry_help_succeeds():
 
     assert completed.returncode == 0
     assert "karufile" in completed.stdout.lower()
+    assert "--pdf-photo-pattern" in completed.stdout

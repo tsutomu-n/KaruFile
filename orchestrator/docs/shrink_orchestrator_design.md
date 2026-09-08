@@ -10,6 +10,7 @@
 
 - 入力、出力、予定出力、状態DB、レポートの保存先を事前検査する。
 - `pdf-shrink`、`media-shrink-tool`、compact時の `video-shrink` の順にsubprocessで実行する。
+- `--pdf-photo-pattern`をPDF子CLIの`--photo-pattern`へ渡し、レポートのprofileを相対入力パスと照合する。
 - 現在実行の原子的レポートを入力・出力の実ファイルへ照合し、統合サマリーと終了コードを返す。
 
 PDF・画像・動画の変換、候補検証、状態管理、出力公開は複製しません。
@@ -42,6 +43,9 @@ karufile.py
 ## 結果の照合
 
 - PDFレポートは、必須列、status、数値、行数、重複のない入力パス集合を検査する。
+  `profile`は必須で、各入力が写真選択パターンに一致すれば`photo`、それ以外はpresetの値に
+  一致する必要がある。photoの非可逆採用は64 KiBかつ5%以上、他は256 KiBかつ5%以上の削減を
+  実出力に照合する。一次候補の診断値は完成出力の集計に使用しない。
 - 画像manifestは入力との1:1対応、予定出力、preset/recipe、source/outputの安定したsizeとSHA-256、
   action別shape、寸法上限、画像エラーCSVとの対応を検査する。統合集計はmanifestのexact totalsを
   使い、子プロセスのstdoutサマリーは使用しない。
@@ -57,10 +61,15 @@ karufile.py
 
 - PDF、画像、compact動画は同じ出力フォルダーへ入力内の相対構造を維持して保存する。
 - PDFの処理、状態DB、詳細レポートは `pdf-shrink` が所有する。
+  写真用の候補生成、300 DPIの細部比較、可逆候補への切り替えもPDF側が担当する。
 - 画像の処理、再利用判定、画像エラーCSV、normal/dry-run画像manifestは `media-shrink-tool` が所有する。
 - 動画のprobe、変換、検証、state、reportは `video-shrink` が所有する。
 - orchestratorは共通DB、worker pool、structured IPCを追加しない。
 - standardでは動画を探索・呼び出さない。重複削除、知覚ハッシュ、元ファイル削除は呼び出さない。
+
+写真パターンは入力相対pathを対象に大文字小文字を無視して照合し、区切り`\`を`/`へ正規化する。
+`*`は`/`にも一致する。空、絶対パス、`..`を含むパターンは引数不正にする。複数指定はOR条件で、
+画像・動画のpresetを変えない。内容の自動分類やDPIによるOCR要否判定は行わない。
 
 ## 実行環境とdry-run
 

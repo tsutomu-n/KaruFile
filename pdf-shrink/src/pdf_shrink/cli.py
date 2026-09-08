@@ -37,6 +37,10 @@ def build_parser() -> argparse.ArgumentParser:
         help="圧縮プリセット（デフォルトstandard）",
     )
     run_parser.add_argument(
+        "--photo-pattern", action="append", default=[], metavar="PATTERN",
+        help="写真中心PDFを相対globで明示選択し約200 DPI・JPEG品質80の閲覧用候補を作る（反復可）",
+    )
+    run_parser.add_argument(
         "--dry-run",
         action="store_true",
         help="出力PDFを作らず、判定結果だけを記録する",

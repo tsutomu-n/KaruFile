@@ -11,6 +11,8 @@ from .inspect_pdf import (
     _effective_image_dpis,
     _is_dct_jpeg,
     _page_image_infos,
+    _photo_candidate_dimensions,
+    _photo_xref_min_effective_dpis,
     _should_rewrite_image,
 )
 from .qpdf import qpdf_optimize
@@ -32,12 +34,12 @@ def optimize_lossy(
     source: Path,
     candidate: Path,
     options: LossyOptions,
-) -> None:
+) -> int:
     """配置画像をプリセットに従って縮小または再圧縮した候補を生成する。"""
     ensure_dir(candidate.parent)
     doc = fitz.open(source)
     try:
-        _rewrite_pdf_images(doc, options)
+        changed_images = _rewrite_pdf_images(doc, options)
         doc.save(
             candidate,
             garbage=4,
@@ -45,6 +47,7 @@ def optimize_lossy(
             use_objstms=1,
             raise_on_repair=True,
         )
+        return changed_images
     finally:
         doc.close()
 
@@ -53,15 +56,31 @@ def _rewrite_pdf_images(doc: fitz.Document, options: LossyOptions) -> int:
     if options.dpi_target <= 0:
         return 0
 
-    max_dpis_by_xref = _xref_max_effective_dpis(doc)
+    dpis_by_xref = (
+        _photo_xref_min_effective_dpis(doc) if options.photo_mode
+        else _xref_max_effective_dpis(doc)
+    )
     replaced: set[int] = set()
     for page in doc:
         images = {int(img[0]): img for img in page.get_images(full=True)}
         for xref, img in images.items():
             if xref in replaced or xref <= 0:
                 continue
-            dpi_x, dpi_y = max_dpis_by_xref.get(xref, (0.0, 0.0))
+            dpi_x, dpi_y = dpis_by_xref.get(xref, (0.0, 0.0))
             if dpi_x <= 0 or dpi_y <= 0:
+                continue
+            if options.photo_mode:
+                dimensions = _photo_candidate_dimensions(
+                    doc, img, (dpi_x, dpi_y), options,
+                )
+                if dimensions is None:
+                    continue
+                new_width, new_height = dimensions
+                jpeg, channels = _jpeg_bytes_for_xref(
+                    doc, xref, new_width, new_height, options.quality,
+                )
+                _put_jpeg_in_xref(doc, xref, jpeg, new_width, new_height, channels)
+                replaced.add(xref)
                 continue
             should_downsample = (
                 dpi_x > options.dpi_target or dpi_y > options.dpi_target
@@ -108,7 +127,7 @@ def _rewrite_pdf_images(doc: fitz.Document, options: LossyOptions) -> int:
             replaced.add(xref)
     if replaced:
         logger.info(
-            "Re-encoded %d PDF image(s) with a maximum of %s DPI",
+            "Re-encoded %d PDF image(s) with a %s DPI candidate target",
             len(replaced),
             options.dpi_target,
         )

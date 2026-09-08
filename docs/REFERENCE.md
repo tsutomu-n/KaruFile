@@ -14,6 +14,7 @@
 --image-workers N        画像の並列処理数。既定値は4
 --video-workers N        動画の並列処理数。既定値は1
 --preset NAME            standardまたはcompact。既定値はstandard
+--pdf-photo-pattern PATTERN  一致するPDFだけphoto profileを適用。反復可
 --ffmpeg-path PATH       compact動画用ffmpeg。省略時はPATH
 --ffprobe-path PATH      compact動画用ffprobe。省略時はPATH
 -n, --dry-run            完成出力を作らず判定を確認
@@ -214,6 +215,9 @@ PDF dry-runではqpdfを使用しません。
 
 ### 圧縮対象の判定
 
+次の300 DPIの処理値は、写真用パターンで選択していないstandard/compactの契約です。
+256 KiB未満と安全性による除外はphotoを含む全profileで共通です。
+
 - 256 KiB未満のPDFは圧縮せず、通常実行では原本をコピーします。
 - 暗号化、電子署名、フォーム、添付ファイル、修復済みPDFなどは圧縮しません。
   添付ファイルまたは電子署名の有無を検査できない場合も、安全側で
@@ -238,8 +242,40 @@ PDF dry-runではqpdfを使用しません。
   あれば非可逆候補を作ります。
 - standardで超過画像が無い場合はqpdfの可逆候補を作ります。
 
-各軸300 DPIは非可逆候補を作るときの固定目標です。候補が表示検証または削減条件を満たさない
-場合は原本を採用するため、最終出力に入力由来の300 DPI超画像が残ることがあります。
+各軸300 DPIはstandard/compactで非可逆候補を作るときの固定目標です。非可逆候補を作る場合は、
+元PDFからqpdf可逆候補も作って比較します。最終的に可逆候補または原本を採用すると、
+入力由来の300 DPI超画像が残ることがあります。
+
+### 写真用profileの明示選択
+
+統合CLIの`--pdf-photo-pattern PATTERN`、PDF個別CLIの`--photo-pattern PATTERN`は反復指定でき、
+1つ以上のパターンに一致するPDFにだけ`photo`を適用します。`preset`は`standard`または`compact`
+のままです。一致しないPDF、単独画像・動画のpresetは変わりません。
+
+- 入力フォルダーからの相対パスを対象とし、大文字小文字を区別しません。
+- `\`は`/`へ正規化し、重複する区切りと`.`を除きます。`*`は区切り`/`にも一致します。
+  例: `*.pdf`はサブフォルダーを含む全PDF、`写真/*.pdf`は写真フォルダー以下に一致します。
+- 空、絶対パス、drive付きパス、`..`要素を含むパターンは拒否します。
+- PDF個別CLIの`--safe`とは併用できません。
+- 画像内容の自動分類、OCR実行、DPIからのOCR要否判定は行いません。
+
+photoの画像候補条件:
+
+- 8bit、`/Filter /DCTDecode`、`/ColorSpace /DeviceRGB`または`/DeviceGray`のJPEGのみです。
+- 非JPEG、1bit、`Mask`・`SMask`・`Decode`・`DecodeParms`を持つ画像、`ImageMask true`、
+  複雑な色空間、xrefのないinline画像は書き換えません。
+- 同じ画素内容が複数xrefに対応し、画像参照の同定が曖昧な群も保持します。
+- 同じxrefの全配置で、画像のX/Y軸ごとに最小の実効DPIを使います。JPEGのxres/yresは使いません。
+- 200 DPIを超える軸の寸法は`ceil(元pixel寸法 × 200 / 最小実効DPI)`へ縮小します。
+  丸めで200 DPI未満にしないため、目標は約200 DPIです。元から200 DPI以下の軸は寸法を維持し、
+  拡大しません。どちらの寸法も縮まないJPEGは同寸法再圧縮をしません。
+- 候補JPEG qualityは80です。片軸だけを縮小する場合もJPEG全体を再エンコードします。
+- 元PDF内の対象画像を置換し、ベクター文字・線を維持します。PDF→HTML→PDFは使いません。
+
+明示選択したPDFでも、その中のJPEGが写真であるとは判定しません。図面や黒板文字などの細部を
+含む場合は、利用者が出力を原本と比較する必要があります。
+photoで配置の検査処理に失敗した場合は`ERROR`にします。通常presetの既存の保守的な
+`SKIPPED_COMPLEX`判定とは区別します。
 
 ### 候補の検証
 
@@ -249,15 +285,25 @@ PDF dry-runではqpdfを使用しません。
 - standardは72 DPIグレースケール表示の平均絶対差が5%以下
 - compactは72 DPI RGB表示のチャンネル平均絶対差が5%以下、かつ最大32×32 pixelの
   局所タイルごとのチャンネル平均絶対差が20%以下
+- photoはページgeometryも照合し、compactと同じ72 DPI RGB比較に加え、変更画像の各配置領域を
+  300 DPI RGBで比較します。256×256 pixel単位で描画し、その中の最大32×32 pixelの局所平均差は
+  20%以下、変更領域全体の平均差は5%以下です。
+- photoの細部検査は変更配置10,000箇所、累計80,000,000 pixel、120秒を上限とします。
+  上限超過の候補は採用しません。OCR精度や人間の可読性を保証する検査ではありません。
 
 ### 採用条件
 
 | 候補 | 最小削減量 | 最小削減率 |
 |---|---:|---:|
 | 可逆 | 64 KiB | 2% |
-| 非可逆 | 256 KiB | 5% |
+| 非可逆（standard/compact） | 256 KiB | 5% |
+| 非可逆（photo） | 64 KiB | 5% |
 
-候補を採用しない場合は原本を出力へコピーします。出力は同じディレクトリの一時ファイルへ
+最小削減量と最小削減率の両方を満たす必要があります。非可逆候補を作る場合は、元PDFから
+可逆候補も作ります。各候補を独立に検証し、採用条件を満たす最小サイズを選び、同サイズなら
+可逆候補を優先します。条件を満たす候補がなければ原本を出力へコピーします。
+ツール実行、構造検査、I/Oの失敗は`ERROR`であり、回復コピー成功でも成功へ変えません。
+出力は同じディレクトリの一時ファイルへ
 書いて検証してから `os.replace()` で公開します。
 
 ### 状態DBと再処理
@@ -266,9 +312,11 @@ PDF dry-runではqpdfを使用しません。
 新しい内容を誤って処理済みと記録せず、次回に再処理します。ただし、処理中の入力自体は
 ロックしません。出力SHA-256を持たない旧recordは一度再処理します。
 
-出力先、presetで選ばれた画像処理値、tool versionは設定hashに含みます。standardとcompactを
-切り替えた入力は再処理します。JPEG `/Decode` の色変換と非等方配置の軸別DPI判定を修正した
-versionではalgorithm識別子を変更したため、旧stateにあるPDFも初回に再処理します。
+出力先、presetで選ばれた画像処理値、写真選択パターンとphoto recipe、tool versionは設定hashに
+含みます。standard/compactまたは写真選択を切り替えると再処理します。候補診断と可逆候補への
+切り替えを導入した版は`processing_schema=2`をhashに含むため、以前のstateも一度再処理します。
+SQLiteは診断列を追加して移行し、既存行は削除しません。旧行の未記録候補サイズは`NULL`、
+profileと理由は空文字、候補履歴は空配列として扱います。
 
 ### PDFレポートのstatus
 
@@ -276,7 +324,7 @@ versionではalgorithm識別子を変更したため、旧stateにあるPDFも�
 |---|---|
 | `ADOPTED_LOSSLESS` | 可逆圧縮候補を採用 |
 | `ADOPTED_LOSSY` | 非可逆圧縮候補を採用 |
-| `UNCHANGED` | 候補の削減量が不足したため原本を採用 |
+| `UNCHANGED` | 候補の画質・削減条件により原本を採用。理由は`decision_reason` |
 | `SKIPPED_SMALL` | 256 KiB未満のため原本を採用 |
 | `SKIPPED_ENCRYPTED` | 暗号化PDFのため原本を採用 |
 | `SKIPPED_SIGNED` | 電子署名を含むため原本を採用 |
@@ -288,8 +336,52 @@ versionではalgorithm識別子を変更したため、旧stateにあるPDFも�
 PDFレポートの列:
 
 ```text
-source_path,source_size,source_sha256,output_path,output_size,output_sha256,saved_bytes,saved_percent,preset,mode,status,page_count,scan_page_ratio,error_message
+source_path,source_size,source_sha256,output_path,output_size,output_sha256,saved_bytes,saved_percent,preset,mode,status,page_count,scan_page_ratio,error_message,profile,decision_reason,candidate_size,candidate_saved_bytes,candidate_saved_percent,images_changed,candidate_details
 ```
+
+### PDFレポートの診断列
+
+| 列 | 意味 |
+|---|---|
+| `preset` | 起動時に指定した`standard`または`compact` |
+| `profile` | ファイルに適用した`standard`・`compact`・`photo`。統合CLIは相対パスと指定パターンから検証 |
+| `decision_reason` | 最終的な採否理由 |
+| `candidate_size` | 一次候補のbyte数。生成していない場合は空欄 |
+| `candidate_saved_bytes` | 入力byte数−一次候補byte数。増大した候補では負数 |
+| `candidate_saved_percent` | 一次候補の削減割合。0.05が5%。未生成の場合は空欄 |
+| `images_changed` | 一次候補で書き換えた画像xref数。配置箇所数ではない |
+| `candidate_details` | 試した候補の順序付きJSON配列。一次候補が先頭 |
+
+非可逆候補を試した場合はそれが一次候補です。後から可逆候補を採用しても、`candidate_*`は
+非可逆候補の記録のままです。完成出力の`output_size`・`saved_bytes`・`saved_percent`と混同しないで
+ください。`saved_percent`も0.05が5%です。dry-runでは候補サイズを計算しません。
+
+`candidate_details`の各要素は`kind`（非可逆は`standard`・`compact`・`photo`、可逆は`lossless`）、
+`size`（byte数または`null`）、
+`images_changed`、`reason`、`validation_reason`、`selected`を持ちます。採用した候補だけ
+`selected=true`で、原本採用時は全て`false`です。検証の具体的な棄却理由は`validation_reason`へ
+保存します。未試行の場合は`[]`です。
+
+主な`decision_reason`:
+
+| 値 | 意味 |
+|---|---|
+| `adopted_lossless` / `adopted_lossy` | 一次候補を採用 |
+| `fallback_lossless` | 非可逆候補を採用せず、後続の可逆候補を採用 |
+| `no_image_savings` | 生成した画像候補が採用されず、画像の書き換えなし |
+| `candidate_not_smaller` | 候補が原本より小さくならなかった |
+| `reduction_below_threshold` | 候補の削減量が採用基準未満 |
+| `quality_rejected` | 候補を画質検証等で棄却 |
+| `source_too_small` | 入力が256 KiB未満 |
+| `dry_run_lossless` / `dry_run_lossy` | dry-runの処理予定 |
+| `processing_error` | ツール・検証処理・I/O等の失敗 |
+
+各候補の`reason=eligible`は検証と削減条件を満たしたことを表し、実際に選ばれたかは
+`selected`で判別します。`fallback_lossless`は非可逆候補が不合格のときだけでなく、
+両方が合格して可逆候補がサイズ比較で選ばれた場合も使います。
+
+安全上の除外では`encrypted`、`signed`などの検査理由を記録します。最終理由だけで複数候補の
+棄却経緯を説明しきれない場合は`candidate_details`を確認してください。
 
 ### PDF個別CLI
 
@@ -303,10 +395,12 @@ source_path,source_size,source_sha256,output_path,output_size,output_sha256,save
 --retry-errors        前回ERRORを再処理
 --qpdf-path PATH      qpdf.exeを明示
 --preset NAME         standardまたはcompact。既定値standard
+--photo-pattern PATTERN  一致するPDFをphoto profileにする入力相対パターン。反復可
 -v, --verbose         詳細ログ
 ```
 
 Nが奇数の場合、`--limit` は固定seedのランダム側を1件多く選びます。
+`--safe`は`--preset compact`および`--photo-pattern`と併用できません。
 
 ## 画像個別CLI
 
@@ -412,7 +506,8 @@ KaruFileの対象外:
    - バージョンと展開先は固定・検査しますが、SHA-256または署名は検証しません。
 2. PDF表示検証の局所差分
    - standardは72 DPIグレースケールのページ全体平均差を使います。compactは72 DPI RGBの
-     全体差と最大32×32 pixelの局所差を検査しますが、それより細かい劣化を見逃す可能性があります。
+     全体差と最大32×32 pixelの局所差を検査します。photoでは変更配置を300 DPIでも比較しますが、
+     細部の可読性やOCR精度を保証しません。検査量上限を超えた非可逆候補は採用しません。
 3. 入力ファイルの同時更新
    - 起動前と終了時に全対象のidentity・SHA-256を照合して変更を失敗として検出しますが、
      処理中の入力をロックせず、別プロセスによる変更そのものは防止しません。

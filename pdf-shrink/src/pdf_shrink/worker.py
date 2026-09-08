@@ -4,12 +4,14 @@ from __future__ import annotations
 import os
 import tempfile
 import traceback
+from dataclasses import replace
 from pathlib import Path
 
 from . import discovery, output, transform, validate
-from .config import ReductionOptions, RunConfig
+from .config import ReductionOptions, RunConfig, config_for_path, profile_for_path
 from .inspect_pdf import inspect_file
 from .models import (
+    CandidateResult,
     InspectionResult,
     OptimizationMode,
     ProcessResult,
@@ -79,16 +81,91 @@ def _result(
     )
 
 
+def _evaluate_candidate(
+    source: SourceSnapshot,
+    cfg: RunConfig,
+    path: Path,
+    mode: OptimizationMode,
+    profile: str,
+    qpdf_exe: Path,
+) -> CandidateResult:
+    """Keep rejection evidence separate from failures of tools or structure."""
+    kind = profile if mode is OptimizationMode.LOSSY else "lossless"
+    detail = CandidateResult(kind=kind)
+    try:
+        changed = 0
+        if mode is OptimizationMode.LOSSY:
+            changed = transform.optimize_lossy(source.path, path, cfg.lossy)
+        else:
+            transform.optimize_lossless(source.path, path, qpdf_exe, cfg.qpdf)
+        detail = replace(detail, size=path.stat().st_size, images_changed=changed or 0)
+        if mode is OptimizationMode.LOSSY and changed == 0:
+            return replace(detail, reason="no_image_savings")
+        kwargs = {"enhanced": cfg.lossy.recompress_existing_jpeg or cfg.lossy.photo_mode}
+        if cfg.lossy.photo_mode:
+            kwargs["detail"] = True
+        valid, reason = validate.validate(source.path, path, qpdf_exe, **kwargs)
+        if not valid:
+            quality_rejection = reason.startswith((
+                "render_diff_too_large", "render_local_diff_too_large",
+                "render_detail_diff_too_large", "render_detail_local_diff_too_large",
+                "render_detail_pixel_limit", "render_detail_time_limit",
+                "render_detail_region_limit",
+            ))
+            return replace(
+                detail,
+                reason="quality_rejected" if quality_rejection else "processing_error",
+                validation_reason=reason,
+            )
+        if _meets_reduction(source.size, detail.size, mode, cfg.reduction):
+            return replace(detail, reason="eligible")
+        return replace(
+            detail,
+            reason="candidate_not_smaller" if detail.size >= source.size else "reduction_below_threshold",
+        )
+    except Exception as exc:
+        return replace(detail, reason="processing_error", validation_reason=str(exc))
+
+
 def process_one_file(
     source: SourceSnapshot,
     cfg: RunConfig,
     temp_root: Path,
     qpdf_exe: Path | None,
 ) -> ProcessResult:
+    profile = profile_for_path(cfg, source.relative_path)
+    cfg = config_for_path(cfg, source.relative_path)
     output_path = source.output_path(cfg.output_dir)
     inspection: InspectionResult | None = None
-    temp_path: Path | None = None
+    temp_paths: list[Path] = []
+    candidates: list[CandidateResult] = []
     recovery_needed = True
+
+    def finish(
+        status: ProcessStatus,
+        *,
+        output_size: int | None,
+        reason: str,
+        saved_bytes: int = 0,
+        error_message: str | None = None,
+        selected_mode: OptimizationMode | None = None,
+    ) -> ProcessResult:
+        primary = candidates[0] if candidates else None
+        size = primary.size if primary else None
+        saved = source.size - size if size is not None else None
+        result = _result(
+            output_path, status, inspection=inspection, output_size=output_size,
+            saved_bytes=saved_bytes,
+            saved_percent=saved_bytes / source.size if source.size else 0,
+            error_message=error_message,
+        )
+        return replace(
+            result, mode=selected_mode or result.mode, profile=profile,
+            decision_reason=reason, candidate_size=size, candidate_saved_bytes=saved,
+            candidate_saved_percent=saved / source.size if saved is not None and source.size else None,
+            images_changed=primary.images_changed if primary else 0,
+            candidate_details=tuple(candidates),
+        )
 
     try:
         discovery.assert_source_unchanged(source, cfg.input_dir)
@@ -103,10 +180,10 @@ def process_one_file(
                 )
             else:
                 discovery.assert_source_unchanged(source, cfg.input_dir)
-            return _result(
-                output_path,
+            return finish(
                 ProcessStatus.SKIPPED_SMALL,
                 output_size=None if cfg.dry_run else output_path.stat().st_size,
+                reason="source_too_small",
             )
 
         inspection = inspect_file(
@@ -127,12 +204,12 @@ def process_one_file(
                     output_root=cfg.output_dir,
                 )
             error = reason if "inspect_error" in reason or "open_failed" in reason else None
-            return _result(
-                output_path,
-                _map_skip_reason(reason),
-                inspection=inspection,
+            inspection_failed = profile == "photo" and reason.startswith("inspect_error:")
+            return finish(
+                ProcessStatus.ERROR if inspection_failed else _map_skip_reason(reason),
                 output_size=None if cfg.dry_run else output_path.stat().st_size,
                 error_message=error,
+                reason="processing_error" if inspection_failed else reason,
             )
 
         if cfg.dry_run:
@@ -141,46 +218,41 @@ def process_one_file(
                 if inspection.mode is OptimizationMode.LOSSY
                 else ProcessStatus.DRY_RUN_LOSSLESS
             )
-            return _result(
-                output_path,
+            return finish(
                 status,
-                inspection=inspection,
                 output_size=None,
+                reason=str(status).lower(),
             )
 
         temp_dir = ensure_dir(temp_root / source.relative_path.parent)
-        descriptor, temp_name = tempfile.mkstemp(
-            prefix=f"{source.path.stem}_",
-            suffix=".pdf",
-            dir=temp_dir,
-        )
-        os.close(descriptor)
-        temp_path = Path(temp_name)
-
-        if inspection.mode is OptimizationMode.LOSSY:
-            transform.optimize_lossy(source.path, temp_path, cfg.lossy)
-        else:
-            if qpdf_exe is None:
-                raise RuntimeError("qpdf is required for lossless optimization")
-            transform.optimize_lossless(source.path, temp_path, qpdf_exe, cfg.qpdf)
-
         if qpdf_exe is None:
             raise RuntimeError("qpdf is required for candidate validation")
-        valid, reason = validate.validate(
-            source.path,
-            temp_path,
-            qpdf_exe,
-            enhanced=cfg.lossy.recompress_existing_jpeg,
-        )
-        if not valid:
-            raise RuntimeError(f"validation_failed: {reason}")
+        modes = [inspection.mode or OptimizationMode.LOSSLESS]
+        if inspection.mode is OptimizationMode.LOSSY:
+            modes.append(OptimizationMode.LOSSLESS)
+        for mode in modes:
+            descriptor, temp_name = tempfile.mkstemp(
+                prefix=f"{source.path.stem}_", suffix=".pdf", dir=temp_dir,
+            )
+            os.close(descriptor)
+            path = Path(temp_name)
+            temp_paths.append(path)
+            candidate = _evaluate_candidate(source, cfg, path, mode, profile, qpdf_exe)
+            candidates.append(candidate)
+            discovery.assert_source_unchanged(source, cfg.input_dir)
+            if candidate.reason == "processing_error":
+                raise RuntimeError(f"{candidate.kind} candidate failed: {candidate.validation_reason}")
 
-        candidate_size = temp_path.stat().st_size
-        candidate_sha256 = sha256_file(temp_path)
-        if _meets_reduction(source.size, candidate_size, inspection.mode, cfg.reduction):
+        eligible = [index for index, c in enumerate(candidates) if c.reason == "eligible"]
+        if eligible:
+            chosen = min(eligible, key=lambda i: (candidates[i].size, modes[i] is OptimizationMode.LOSSY))
+            candidate = candidates[chosen]
+            candidate_size = candidate.size
+            assert candidate_size is not None
+            candidate_sha256 = sha256_file(temp_paths[chosen])
             output.adopt_candidate(
                 source,
-                temp_path,
+                temp_paths[chosen],
                 output_path,
                 candidate_sha256,
                 input_root=cfg.input_dir,
@@ -188,17 +260,17 @@ def process_one_file(
             )
             status = (
                 ProcessStatus.ADOPTED_LOSSY
-                if inspection.mode is OptimizationMode.LOSSY
+                if modes[chosen] is OptimizationMode.LOSSY
                 else ProcessStatus.ADOPTED_LOSSLESS
             )
+            candidates[chosen] = replace(candidate, selected=True)
             saved_bytes = source.size - candidate_size
-            return _result(
-                output_path,
+            return finish(
                 status,
-                inspection=inspection,
                 output_size=candidate_size,
                 saved_bytes=saved_bytes,
-                saved_percent=saved_bytes / source.size,
+                reason="fallback_lossless" if chosen else str(status).lower(),
+                selected_mode=modes[chosen],
             )
 
         recovery_needed = False
@@ -208,11 +280,10 @@ def process_one_file(
             input_root=cfg.input_dir,
             output_root=cfg.output_dir,
         )
-        return _result(
-            output_path,
+        return finish(
             ProcessStatus.UNCHANGED,
-            inspection=inspection,
             output_size=output_path.stat().st_size,
+            reason=candidates[0].reason,
         )
 
     except Exception as exc:
@@ -239,13 +310,12 @@ def process_one_file(
                     source.path,
                     copy_error,
                 )
-        return _result(
-            output_path,
+        return finish(
             ProcessStatus.ERROR,
-            inspection=inspection,
             output_size=recovered_size,
             error_message=error_message,
+            reason="processing_error",
         )
     finally:
-        if temp_path is not None:
-            temp_path.unlink(missing_ok=True)
+        for path in temp_paths:
+            path.unlink(missing_ok=True)

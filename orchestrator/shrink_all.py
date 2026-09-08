@@ -19,6 +19,7 @@ import argparse
 from collections import deque
 import codecs
 import csv
+from fnmatch import fnmatchcase
 import hashlib
 import logging
 import math
@@ -31,7 +32,7 @@ import subprocess
 import sys
 import threading
 import time
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 from typing import Any
 
 # KaruFile/orchestrator/shrink_all.py から見て parent.parent が KaruFile リポジトリのルート。
@@ -102,6 +103,7 @@ PDF_REPORT_REQUIRED_COLUMNS = frozenset(
         "saved_percent",
         "status",
         "preset",
+        "profile",
     }
 )
 PDF_REPORT_STATUSES = frozenset(
@@ -188,6 +190,14 @@ def setup_logging(verbose: bool) -> None:
     )
 
 
+def _configure_console_output() -> None:
+    """Keep the terminal encoding while making unrepresentable log text printable."""
+    for stream in (sys.stdout, sys.stderr):
+        reconfigure = getattr(stream, "reconfigure", None)
+        if reconfigure is not None:
+            reconfigure(errors="backslashreplace")
+
+
 def human_size(num: int) -> str:
     for unit in ("B", "KB", "MB", "GB", "TB"):
         if abs(num) < 1024.0:
@@ -215,6 +225,8 @@ def run_command(
     start = time.perf_counter()
     env = os.environ.copy()
     env.pop("VIRTUAL_ENV", None)
+    # The pipe reader below decodes UTF-8 even on Windows legacy code pages.
+    env["PYTHONIOENCODING"] = "utf-8"
     popen_options: dict[str, Any] = {}
     if os.name == "nt":
         popen_options["creationflags"] = subprocess.CREATE_NEW_PROCESS_GROUP
@@ -433,6 +445,30 @@ def _positive_int(value: str) -> int:
     if parsed < 1:
         raise argparse.ArgumentTypeError("must be at least 1")
     return parsed
+
+
+def _pdf_photo_pattern(value: str) -> str:
+    """Normalize input-relative globs using the PDF CLI's portable path rules."""
+    normalized = value.replace("\\", "/")
+    parts = normalized.split("/")
+    if (
+        not normalized.strip()
+        or normalized.startswith("/")
+        or PureWindowsPath(normalized).drive
+        or ".." in parts
+    ):
+        raise argparse.ArgumentTypeError("must be a nonempty input-relative pattern without '..'")
+    normalized = "/".join(part for part in parts if part not in {"", "."})
+    if not normalized:
+        raise argparse.ArgumentTypeError("must name an input-relative PDF pattern")
+    return normalized
+
+
+def _pdf_profile(relative: Path, preset: str, photo_patterns: list[str]) -> str:
+    path = relative.as_posix().casefold()
+    if any(fnmatchcase(path, pattern.casefold()) for pattern in photo_patterns):
+        return "photo"
+    return preset
 
 
 def _is_within(path: Path, parent: Path) -> bool:
@@ -933,6 +969,9 @@ def parse_pdf_report(report_path: Path) -> dict[str, Any]:
                 preset = row.get("preset") or ""
                 if preset not in {"standard", "compact"}:
                     raise ValueError(f"unknown PDF report preset: {preset!r}")
+                profile = row.get("profile") or ""
+                if profile not in {"standard", "compact", "photo"}:
+                    raise ValueError(f"unknown PDF report profile: {profile!r}")
                 source_sha256 = (row.get("source_sha256") or "").lower()
                 output_sha256 = (row.get("output_sha256") or "").lower()
                 if not re.fullmatch(r"[0-9a-f]{64}", source_sha256):
@@ -954,6 +993,7 @@ def parse_pdf_report(report_path: Path) -> dict[str, Any]:
                         "saved_percent": saved_percent,
                         "status": status,
                         "preset": preset,
+                        "profile": profile,
                     }
                 )
     except Exception as exc:
@@ -980,6 +1020,7 @@ def pdf_report_matches_inputs(
     output_dir: Path,
     preset: str,
     dry_run: bool,
+    photo_patterns: list[str] | None = None,
 ) -> bool:
     """Verify PDF report rows against current source and output bytes."""
 
@@ -1016,6 +1057,8 @@ def pdf_report_matches_inputs(
             ):
                 return False
             if row["preset"] != preset:
+                return False
+            if row["profile"] != _pdf_profile(relative, preset, photo_patterns or []):
                 return False
 
             source_size, source_sha256 = _stable_file_size_and_sha256(source)
@@ -1089,7 +1132,8 @@ def pdf_report_matches_inputs(
                 if output_size <= 0 or saved_bytes < 64 * 1024 or saved_percent < 0.02:
                     return False
             elif status == "ADOPTED_LOSSY":
-                if output_size <= 0 or saved_bytes < 256 * 1024 or saved_percent < 0.05:
+                min_saved_bytes = (64 if row["profile"] == "photo" else 256) * 1024
+                if output_size <= 0 or saved_bytes < min_saved_bytes or saved_percent < 0.05:
                     return False
             else:
                 return False
@@ -1892,6 +1936,17 @@ def build_parser() -> argparse.ArgumentParser:
         help="圧縮プリセット（デフォルト standard）",
     )
     parser.add_argument(
+        "--pdf-photo-pattern",
+        action="append",
+        type=_pdf_photo_pattern,
+        default=[],
+        metavar="PATTERN",
+        help=(
+            "指定した写真中心PDFに閲覧用200 DPI・JPEG品質80候補を許可（画質劣化あり）。"
+            "入力相対パスのglob、大小文字を区別せず、*は/も含む。反復可"
+        ),
+    )
+    parser.add_argument(
         "--ffmpeg-path",
         help="compact動画で使うffmpeg実行ファイル（未指定時はPATH）",
     )
@@ -1908,6 +1963,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: list[str] | None = None) -> int:
+    _configure_console_output()
     args = build_parser().parse_args(argv)
 
     setup_logging(args.verbose)
@@ -2001,6 +2057,7 @@ def main(argv: list[str] | None = None) -> int:
             "--workers", str(args.pdf_workers),
             "--preset", args.preset,
         ]
+        pdf_args.extend(f"--photo-pattern={pattern}" for pattern in args.pdf_photo_pattern)
         if args.dry_run:
             pdf_args.append("--dry-run")
         if args.verbose:
@@ -2017,6 +2074,7 @@ def main(argv: list[str] | None = None) -> int:
                 output_dir=output_dir,
                 preset=args.preset,
                 dry_run=args.dry_run,
+                photo_patterns=args.pdf_photo_pattern,
             ):
                 pdf_result = parsed_pdf
                 if parsed_pdf.get("errors", 0) > 0:

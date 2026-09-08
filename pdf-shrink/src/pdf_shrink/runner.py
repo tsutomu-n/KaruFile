@@ -13,7 +13,7 @@ from typing import Any
 import pymupdf as fitz
 
 from . import discovery, output, qpdf, report, state, worker
-from .config import RunConfig, config_hash
+from .config import RunConfig, config_hash, profile_for_path
 from .models import ProcessResult, ProcessStatus, SourceSnapshot
 from .utils import ensure_dir, human_size, logger, sha256_file
 
@@ -279,6 +279,8 @@ def _worker_crash_result(
         saved_bytes=0,
         saved_percent=0.0,
         error_message=error_message,
+        profile=profile_for_path(cfg, source.relative_path),
+        decision_reason="processing_error",
     )
 
 
@@ -313,12 +315,17 @@ def _execute(
                 logger.error("Worker crashed for %s: %s", source.path, exc)
                 result = _worker_crash_result(source, cfg, exc)
             logger.info(
-                "Finished %s in %.2fs (status=%s, saved=%s, mode=%s)",
+                "Finished %s in %.2fs (status=%s, saved=%s, mode=%s, "
+                "profile=%s, reason=%s, candidate_size=%s, images_changed=%d)",
                 source.path,
                 task_elapsed,
                 result.status,
                 human_size(result.saved_bytes),
                 result.mode or "-",
+                result.profile or "-",
+                result.decision_reason or "-",
+                human_size(result.candidate_size) if result.candidate_size is not None else "-",
+                result.images_changed,
             )
             yield source, result
 

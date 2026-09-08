@@ -1,6 +1,6 @@
 # PDF圧縮方針の調査と実データ診断
 
-この文書はliving documentである。今回は調査・設計提案を対象とし、実行コードと既存出力は変更しない。
+この文書はliving documentである。前半は調査時点の記録。2026-09-08に利用者から実装指示を受け、末尾の実装チェックポイントを実行中。
 
 ## Goal
 
@@ -204,3 +204,71 @@ PyMuPDF 1.28.2と現行 `_jpeg_bytes_for_xref` を使用。元画像から各候
 調査・設計提案は完了。実行コード・元PDF・既存の完成出力は変更していない。
 追加した追跡用ファイルは本調査記録のみ。代表ページと画像候補の診断から、写真2冊の200 DPI候補を次の限定Pilotに推奨する。
 全ページの完成PDF検証、実OCR精度、使用目的に対する画質受入、新プリセットの実装は未実施。
+
+## 実装段階（2026-09-08、利用者承認済み）
+
+### Goal / Scope
+
+判定・候補の記録、明示選択した写真PDFの閲覧用200 DPI候補、細部検証と可逆fallbackを実装し、CLIから実資料で検証する。
+既存standard/compactと画像・動画のpresetは維持する。OCR導入・意味による写真の自動判別・HTML経由再構成は対象外。
+入力と既存完成出力は保持し、実資料検証は別の検証出力を使う。commit/pushはしない。
+
+### Decisions
+
+- 開始時点はclean、HEAD `7069b0a`。前回調査以降の利用者commitを基準とする。
+- root `--pdf-photo-pattern PATTERN`、PDF単体 `--photo-pattern PATTERN` を反復指定し、一致した相対パスだけprofile=photoへ切り替える。
+- globはslash正規化・大文字小文字を区別せずfnmatch、`*`は`/`も含む。空・絶対・親参照を拒否。
+- photoはJPEGの寸法縮小だけ、quality80、200未満を拡大・再圧縮しない。文字、パス、1bit、非JPEG、マスク付き画像を保持する。
+- photoでは共有xrefの全配置の軸別最小DPIから寸法をceil計算し、200 DPI未満へ落とさない。既存presetの300 DPI最大値方式は維持。
+- photoの採用下限は64 KiBかつ5%。既存standard/compactの閾値と256 KiB未満skipは維持。
+- 非可逆候補の品質棄却・削減不足では可逆候補も比較する。構造・I/O・toolエラーを成功へ隠さない。
+- reportのprofile列を必須としてrootで実行条件と照合する。候補記録を加え、config schemaを更新して古いstateを再処理する。
+- PDF→HTML→PDFは今回は採用しない。PyMuPDF HTML抽出で現地写真/採取写真の先頭ページはimg3個のみ、元の47/68個のpathと右側注記を保持しないことを確認。SVG対応変換もあるが、今回の画像圧縮目的に往復変換を加える利点は確認できない。
+
+### CP-004: 結果・state・report
+
+- Status: In progress
+- Objective: 候補値と棄却理由を再実行後も確認できる。
+- Dependencies: CP-001〜003。
+- Files or components: models/state/report/runner、関連テスト。
+- Actions: typed candidate、additive SQLite migration、CSV診断列、理由summary。
+- Completion criteria: 旧DB移行と候補の保存・再読込・CSVが成功し、実行profileを誤再利用しない。
+- Validation: migration/CSV/再利用テスト。
+- Failure conditions: 旧記録消失、候補と完成出力の混同。
+- Recovery: 原本保持、additive migration、未完了をstate再利用しない。
+
+### CP-005: 写真候補と検証
+
+- Status: In progress
+- Objective: 写真画像のみを縮小し、細部差を検査する。
+- Dependencies: CP-004の型契約。
+- Files or components: config/inspect/transform/validate/worker、関連テスト。
+- Actions: opt-in recipe、共有画像保護、300 DPI領域tile比較、可逆fallback。
+- Completion criteria: 284→約200、119維持、マスク/1bit/パス保持、候補棄却とtool errorの区別が確認できる。
+- Validation: 代表fixture、既存PDF suite。
+- Failure conditions: 対象外劣化、無制限render allocation、破損を成功扱い。
+- Recovery: 原本または検証済み可逆候補を採用、実障害はERROR。
+
+### CP-006: root CLIと契約文書
+
+- Status: In progress
+- Objective: rootから選択対象にだけ写真設定を適用し、結果を正確に集計できる。
+- Dependencies: CP-004、005。
+- Files or components: orchestrator、PDF CLI、MANUAL/REFERENCE/README/AGENTS。
+- Actions: pattern配管、profile照合、実行例と制約更新。
+- Completion criteria: 指定対象以外は従来のprofile、stale profileは拒否、helpと文書が一致。
+- Validation: orchestrator suite、CLI help、文書照合。
+- Failure conditions: 画像動画の動作変化、未実装CLIの文書化。
+- Recovery: 既定値を維持しprofile設定をopt-inへ限定。
+
+### CP-007: 統合検証・実資料確認
+
+- Status: Not started
+- Objective: 要求されたCLI動作と残る画質限界を確認して引き渡す。
+- Dependencies: CP-004〜006。
+- Files or components: 全suite、検証用出力、実資料5 PDF。
+- Actions: 全suite/compile/help/diff、写真2冊の別出力Pilot、原本hashと代表箇所確認。
+- Completion criteria: 必須検査成功、候補と実出力値・棄却理由を確認、未確認のOCR精度を明示。
+- Validation: test counts、CSV、hash、目視記録。
+- Failure conditions: 原本変化、テスト不合格、未検証を保証。
+- Recovery: 原本・既存出力は維持し、問題を修正して影響範囲だけ再検証。

@@ -37,6 +37,7 @@ uv run --project pdf-shrink pdf-shrink run `
 | `--output PATH` | 出力フォルダー。省略時は `<input>_軽量化` |
 | `--workers N` | 並列プロセス数。既定値は2、最小値は1 |
 | `--preset standard|compact` | 圧縮プリセット。既定値は `standard` |
+| `--photo-pattern PATTERN` | 一致するPDFだけphoto profileにする入力相対パターン。反復可 |
 | `--dry-run` | 出力PDFを作らず、判定結果を記録 |
 | `--safe` | 非可逆画像縮小を無効化し、qpdfの可逆候補だけを作成 |
 | `--limit N` | サイズ上位 `floor(N/2)` 件と、残りから固定seedで選ぶ `N-floor(N/2)` 件のPilot実行。Nが奇数ならランダム側が1件多い |
@@ -45,8 +46,18 @@ uv run --project pdf-shrink pdf-shrink run `
 | `-v`, `--verbose` | 詳細ログ |
 
 入力と出力に、同じフォルダーや互いに親子となるフォルダーは指定できません。
-`--safe` と `--preset compact` は非可逆処理の有無が矛盾するため同時指定できず、
+`--safe`は`--preset compact`および`--photo-pattern`と同時指定できず、
 終了コード `2` になります。
+
+写真PDFの閲覧用候補を明示的に選ぶ場合:
+
+```powershell
+uv run --project pdf-shrink pdf-shrink run --input "C:\作業\PDF" --output "C:\作業\閲覧用\PDF_軽量化" --photo-pattern "写真/*.pdf" --dry-run
+```
+
+パターンは入力相対パスに大文字小文字を無視して照合します。`\`は`/`へ正規化し、`*`は
+ディレクトリ区切りにも一致します。空、絶対パス、drive付き、`..`要素を含む指定は拒否します。
+一致しないPDFは元のpresetに従います。内容の自動分類や、DPIによるOCR要否判定は行いません。
 
 ## 出力、状態、レポート
 
@@ -66,10 +77,9 @@ dry-runでも状態DBと `report.dry-run.csv` を更新する場合がありま�
 状態DBには入力と完成出力のSHA-256を保存します。処理中に入力または出力が変わった場合は、
 新しい内容を誤って処理済みと記録せず、次回に再処理します。ただし、処理中の入力自体は
 ロックしません。
-プリセットで選ばれた実際の画像処理値は再開判定用の設定ハッシュに含まれるため、
-`standard` と `compact` を切り替えた入力は再処理されます。
-JPEGの `/Decode` 色変換と非等方配置の軸別DPI判定を修正し、出力SHA-256を必須にした
-このversionでは、設定ハッシュまたは旧record検出により既存stateのPDFを初回に再処理します。
+プリセットの画像処理値、写真選択パターンとphoto recipeは再開判定用の設定ハッシュに含みます。
+候補診断と可逆候補への切り替えを導入した版は`processing_schema=2`を含むため、以前のstateも
+一度再処理します。状態DBは診断列の追加で移行し、既存行は削除しません。
 
 ## 圧縮対象の判定
 
@@ -84,7 +94,7 @@ JPEGの `/Decode` 色変換と非等方配置の軸別DPI判定を修正し、�
   回転・skew・非等方配置と、同じ画像の複数配置を考慮します。
 - 可視文字数はtexttraceを優先し、非表示または透明なspanだけを除外します。
   白色だけでは不可視扱いしません。
-- どちらのプリセットも、縮小候補を作るときの固定目標は各軸300 DPIです。
+- 写真用profileを適用しない場合、どちらのプリセットも縮小候補の固定目標は各軸300 DPIです。
 - `standard` は、配置サイズから見た画像実効DPIが300を超える画像を300 DPI、
   JPEG quality 92へ縮小した非可逆候補を作ります。
 - `compact` は、300 DPI超の画像を300 DPI、JPEG quality 80へ縮小します。
@@ -95,13 +105,21 @@ JPEGの `/Decode` 色変換と非等方配置の軸別DPI判定を修正し、�
 - 拡大しません。1bit画像とsoft mask付き画像は縮小も再圧縮もしません。
   ベクター文字は残します。
 - xrefを持たないinline画像はいずれかの軸が300 DPIを超える場合に安全に縮小できないため、
-  非safe実行では `SKIPPED_COMPLEX` として原本を採用します。`--safe` の可逆処理は妨げません。
+  standard/compactの非safe実行では `SKIPPED_COMPLEX` として原本を採用します。
+  `--safe` の可逆処理は妨げません。photoではinline画像をそのまま残します。
 - 可視テキストが多くても、300DPI超の画像があれば非可逆候補を作ります。
 - `--safe` では常にqpdfの可逆候補だけを作ります。
 
-非可逆候補が表示検証または削減条件を満たさない場合は原本を採用するため、その出力には
-入力由来の300 DPI超画像が残ることがあります。300 DPIは検証前候補の固定目標であり、
-画質gateを無効化する強制上限ではありません。
+photoでは単純な8bit DeviceRGB/DeviceGrayのDCT JPEGだけを約200 DPI・quality 80へ縮小します。
+非JPEG、1bit、Mask/SMask、Decode/DecodeParms、複雑な色空間、画像参照の同定が曖昧な群は
+書き換えません。photoで配置の検査処理が失敗した場合は`ERROR`にします。同じxrefの
+全配置から軸ごとの最小DPIを求め、200 DPI超の軸を`ceil(元pixel寸法 × 200 / 最小DPI)`へ縮小し、
+200 DPI以下の軸は寸法を維持します。どちらも縮まなければ再圧縮せず、拡大もしません。
+ベクター文字・線を維持し、PDF→HTML→PDFによる再構成は行いません。
+
+非可逆候補を作る場合は、元PDFから可逆候補も作って比較します。
+可逆候補または原本を採用した出力には、入力由来の高DPI画像が残ることがあります。
+300 DPI・200 DPIは検証前候補の目標であり、画質gateを無効化する強制上限ではありません。
 
 ## 候補の検証と採用
 
@@ -113,15 +131,22 @@ JPEGの `/Decode` 色変換と非等方配置の軸別DPI判定を修正し、�
 - `standard`: 72 DPIグレースケール表示の平均絶対差が5%以下
 - `compact`: 72 DPI RGB表示のチャンネル平均絶対差が5%以下で、かつ最大32×32 pixelに
   分けた局所タイルごとのチャンネル平均絶対差が20%以下
+- `photo`: compactと同じ72 DPI比較とページgeometry照合に加え、変更画像の各配置領域を
+  300 DPI RGBで比較。256×256 pixel単位の描画、最大32×32 pixel局所差20%以下、全体差5%以下
+- photoの細部検査は変更配置10,000箇所、累計80,000,000 pixel、120秒が上限。超過候補は不採用
 
 採用条件:
 
 | 候補 | 最小削減量 | 最小削減率 |
 |---|---:|---:|
 | 可逆 | 64 KiB | 2% |
-| 非可逆 | 256 KiB | 5% |
+| 非可逆（standard/compact） | 256 KiB | 5% |
+| 非可逆（photo） | 64 KiB | 5% |
 
-候補を採用しない場合は原本を出力へコピーします。出力は同じディレクトリの一時ファイルへ
+最小削減量と率の両方を満たす候補だけを採用します。非可逆候補を作る場合は元PDFから可逆候補も
+作り、検証と採用条件を満たす最小サイズを選びます。同サイズなら可逆候補を優先し、採用候補が
+なければ原本を出力へコピーします。ツール、構造検査、
+I/Oの失敗は回復コピーが成功しても`ERROR`です。出力は同じディレクトリの一時ファイルへ
 書いて検証してから `os.replace()` で公開します。シンボリックリンク、ジャンクション、ハードリンクによって
 入力または別の保存先へ書く可能性がある場合は拒否します。
 
@@ -131,7 +156,7 @@ JPEGの `/Decode` 色変換と非等方配置の軸別DPI判定を修正し、�
 |---|---|
 | `ADOPTED_LOSSLESS` | 可逆圧縮候補を採用 |
 | `ADOPTED_LOSSY` | 非可逆圧縮候補を採用 |
-| `UNCHANGED` | 候補の削減量が不足したため原本を採用 |
+| `UNCHANGED` | 候補の画質・削減条件により原本を採用。理由は`decision_reason` |
 | `SKIPPED_SMALL` | 256 KiB未満のため原本を採用 |
 | `SKIPPED_ENCRYPTED` | 暗号化PDFのため原本を採用 |
 | `SKIPPED_SIGNED` | 電子署名を含むため原本を採用 |
@@ -146,8 +171,19 @@ JPEGの `/Decode` 色変換と非等方配置の軸別DPI判定を修正し、�
 レポート列:
 
 ```text
-source_path,source_size,source_sha256,output_path,output_size,output_sha256,saved_bytes,saved_percent,preset,mode,status,page_count,scan_page_ratio,error_message
+source_path,source_size,source_sha256,output_path,output_size,output_sha256,saved_bytes,saved_percent,preset,mode,status,page_count,scan_page_ratio,error_message,profile,decision_reason,candidate_size,candidate_saved_bytes,candidate_saved_percent,images_changed,candidate_details
 ```
+
+`profile`はファイルに適用した`standard`・`compact`・`photo`です。`preset`は起動時の値を維持します。
+`candidate_*`と`images_changed`は一次候補の診断値です。非可逆候補を試した場合はそれを一次とし、
+可逆候補を後から採用しても記録を置き換えません。`candidate_saved_percent`と`saved_percent`は
+0.05が5%の割合です。候補未生成のサイズは空欄であり、0 byteとは異なります。
+
+`candidate_details`は`kind`、`size`、`images_changed`、`reason`、`validation_reason`、`selected`を
+持つJSON配列です。`kind`は非可逆候補でprofile名、可逆候補で`lossless`を記録します。
+採用候補だけ`selected=true`で、原本採用時は全て`false`です。最終理由と
+一次候補だけで判断せず、後続候補の経緯も確認できます。各理由の意味は
+[PDFレポートの診断列](../docs/REFERENCE.md#pdfレポートの診断列)を参照してください。
 
 ## モジュール境界
 
@@ -155,8 +191,8 @@ source_path,source_size,source_sha256,output_path,output_size,output_sha256,save
 |---|---|
 | `cli.py` | 引数解析、ログ設定、終了コードへの受け渡し |
 | `runner.py` | 一括処理、ProcessPool、状態保存、レポート対象の決定 |
-| `models.py` | 入力スナップショット、検査結果、処理結果、status |
-| `config.py` | 型付き設定と再開条件ハッシュ |
+| `models.py` | 入力スナップショット、検査結果、候補履歴、処理結果、status |
+| `config.py` | 型付き設定、ファイル別profile選択、再開条件ハッシュ |
 | `discovery.py` | 入力検証、PDF探索、Pilot選択、SHA-256取得 |
 | `worker.py` | 1ファイルの検査、候補生成、検証、採否判断 |
 | `inspect_pdf.py` | 安全性検査とスキャン主体判定 |
@@ -189,8 +225,9 @@ qpdfを実行する統合テストがあり、初回はqpdfを取得する場合
 
 2. 表示検証の解像度
 
-   `compact` では全体平均に加えて局所タイル差分も検査しますが、表示検証は
-   72 DPI RGBです。それより小さい細部の欠落を見逃す可能性は残ります。
+   `compact`は72 DPI RGBの全体・局所差、`photo`は変更配置を300 DPIでも比較します。
+   写真中の小さい文字の可読性やOCR精度を保証しません。photoで選んだPDF内のJPEGが
+   写真かどうかも自動分類しないため、利用者による原本との比較が必要です。
 
 3. 入力ファイルの同時更新
 

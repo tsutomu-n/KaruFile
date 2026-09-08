@@ -131,6 +131,91 @@ def _should_rewrite_image(img: tuple, options: LossyOptions) -> bool:
     return True
 
 
+def _photo_xref_min_effective_dpis(
+    doc: fitz.Document,
+) -> dict[int, tuple[float, float]]:
+    """Preserve the lowest-resolution placement of every shared image axis."""
+    # PyMuPDF infers placement xrefs from pixel digests, with the last resource
+    # winning when multiple xrefs decode to the same pixels. Include unpainted
+    # resources: a duplicate there can hide a larger placement of a shared xref.
+    # Build this map once per document scan and exclude every ambiguous group.
+    seen_xrefs: set[int] = set()
+    xref_by_digest: dict[bytes, int] = {}
+    ambiguous_xrefs: set[int] = set()
+    for page in doc:
+        for image in page.get_images(full=True):
+            xref = int(image[0])
+            if xref <= 0 or xref in seen_xrefs:
+                continue
+            seen_xrefs.add(xref)
+            pixmap = fitz.Pixmap(doc, xref)
+            digest = pixmap.digest
+            del pixmap
+            previous = xref_by_digest.setdefault(digest, xref)
+            if previous != xref:
+                ambiguous_xrefs.update((previous, xref))
+
+    minimums: dict[int, tuple[float, float]] = {}
+    for page in doc:
+        # Missing a placement could downsample a shared image too far. Unlike
+        # the legacy best-effort scan metrics, fail if placements cannot be read.
+        for info in page.get_image_info(xrefs=True):
+            xref = int(info.get("xref") or 0)
+            if xref <= 0 or xref in ambiguous_xrefs:
+                continue
+            dpi_x, dpi_y = _effective_image_dpis(info)
+            previous_x, previous_y = minimums.get(xref, (dpi_x, dpi_y))
+            minimums[xref] = (min(previous_x, dpi_x), min(previous_y, dpi_y))
+    return minimums
+
+
+def _photo_candidate_dimensions(
+    doc: fitz.Document,
+    img: tuple,
+    dpis: tuple[float, float],
+    options: LossyOptions,
+) -> tuple[int, int] | None:
+    """Return safe photo dimensions, without claiming to classify image content.
+
+    The caller explicitly selected a photo PDF. Only ordinary 8-bit RGB/gray
+    JPEGs are eligible; masks and nontrivial decoding/color transforms are
+    excluded. Low-DPI axes retain their dimensions, including images shared
+    with a larger placement. A resize of the other axis still re-encodes JPEG.
+    """
+    if not _should_rewrite_image(img, options) or int(img[4] or 0) != 8:
+        return None
+    xref = int(img[0] or 0)
+    if xref <= 0 or not _is_dct_jpeg(img):
+        return None
+    if doc.xref_get_key(xref, "Filter") != ("name", "/DCTDecode"):
+        return None
+    if doc.xref_get_key(xref, "ColorSpace") not in {
+        ("name", "/DeviceRGB"), ("name", "/DeviceGray"),
+    }:
+        return None
+    if any(
+        doc.xref_get_key(xref, key)[0] != "null"
+        for key in ("Mask", "SMask", "Decode", "DecodeParms")
+    ):
+        return None
+    if doc.xref_get_key(xref, "ImageMask") not in {
+        ("null", "null"), ("bool", "false"),
+    }:
+        return None
+    if any(not math.isfinite(dpi) or dpi <= 0 for dpi in dpis):
+        return None
+    width, height = int(img[2]), int(img[3])
+    # Round up so an axis above 200 DPI does not fall below 200 merely because
+    # the target pixel count is fractional. Existing <=200 DPI axes stay put.
+    dimensions = tuple(
+        dimension if dpi <= options.dpi_target else max(
+            1, min(dimension, math.ceil(dimension * options.dpi_target / dpi))
+        )
+        for dimension, dpi in zip((width, height), dpis)
+    )
+    return dimensions if dimensions != (width, height) else None
+
+
 def _has_recompressible_jpeg(page: fitz.Page, options: LossyOptions) -> bool:
     if not options.recompress_existing_jpeg:
         return False
@@ -290,12 +375,14 @@ def inspect_file(
                 return rejected(f"page_load_failed: {exc}")
 
         options = lossy_options or LossyOptions()
+        photo_dpis = _photo_xref_min_effective_dpis(doc) if options.photo_mode else {}
 
         # スキャン判定（レポート用）と、配置画像によるlossy要否
         scan_pages = 0
         max_effective_dpi = 0.0
         has_recompressible_jpeg = False
         has_oversampled_inline_image = False
+        has_photo_candidate = False
         for i in range(page_count):
             page = doc.load_page(i)
             img_ratio, largest_dpi = _page_largest_image_metrics(page)
@@ -308,6 +395,13 @@ def inspect_file(
                 has_oversampled_inline_image
                 or _page_has_oversampled_inline_image(page, options)
             )
+            if options.photo_mode and not has_photo_candidate:
+                has_photo_candidate = any(
+                    _photo_candidate_dimensions(
+                        doc, img, photo_dpis.get(int(img[0]), (0.0, 0.0)), options,
+                    ) is not None
+                    for img in page.get_images(full=True)
+                )
             text_len = _page_visible_text_len(page)
             if (
                 img_ratio >= scan.page_image_ratio
@@ -321,12 +415,17 @@ def inspect_file(
         # PyMuPDF cannot replace inline images (xref=0) through the xref-based
         # transform.  Do not claim a lossy 300-DPI result while leaving an
         # oversampled inline placement untouched.  Safe mode remains lossless.
-        if not safe and has_oversampled_inline_image:
+        if not safe and not options.photo_mode and has_oversampled_inline_image:
             return rejected("unsupported_oversampled_inline_image")
 
         # safe モードでは非可逆を無効
         if safe:
             mode = OptimizationMode.LOSSLESS
+        elif options.photo_mode:
+            mode = (
+                OptimizationMode.LOSSY if has_photo_candidate
+                else OptimizationMode.LOSSLESS
+            )
         elif max_effective_dpi > options.dpi_target:
             mode = OptimizationMode.LOSSY
         elif has_recompressible_jpeg:

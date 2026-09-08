@@ -64,6 +64,18 @@ class InspectionResult:
 
 
 @dataclass(frozen=True)
+class CandidateResult:
+    """候補生成・検証・採用の履歴。未生成の候補はsizeを持たない。"""
+
+    kind: str
+    size: int | None = None
+    images_changed: int = 0
+    reason: str = ""
+    validation_reason: str = ""
+    selected: bool = False
+
+
+@dataclass(frozen=True)
 class ProcessResult:
     output_path: Path
     status: ProcessStatus
@@ -74,3 +86,10 @@ class ProcessResult:
     saved_bytes: int
     saved_percent: float
     error_message: str | None
+    profile: str = ""
+    decision_reason: str = ""
+    candidate_size: int | None = None
+    candidate_saved_bytes: int | None = None
+    candidate_saved_percent: float | None = None
+    images_changed: int = 0
+    candidate_details: tuple[CandidateResult, ...] = ()

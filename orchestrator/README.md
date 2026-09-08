@@ -24,10 +24,15 @@ uv run --script karufile.py `
 | `--image-workers` | 画像の並列数。既定値は4、最小値は1 |
 | `--video-workers` | 動画の並列数。既定値は1、最小値は1 |
 | `--preset` | `standard` または `compact`。既定値は `standard` |
+| `--pdf-photo-pattern PATTERN` | 一致するPDFだけphoto profileにする入力相対パターン。反復可 |
 | `--ffmpeg-path` | compact動画用ffmpeg。省略時はPATH |
 | `--ffprobe-path` | compact動画用ffprobe。省略時はPATH |
 | `-n`, `--dry-run` | 完成出力を作らず判定を確認 |
 | `-v`, `--verbose` | 詳細ログ |
+
+`--pdf-photo-pattern`は大文字小文字を区別せず、`/`と`\`を正規化します。`*`は区切りにも
+一致します。空、絶対パス、`..`を含むパターンは拒否します。一致するPDFだけに約200 DPIの
+写真用候補を許可し、他のPDFと画像・動画は`--preset`に従います。写真の自動分類は行いません。
 
 ## 実行契約
 
@@ -70,6 +75,11 @@ uv run --script karufile.py `
 dry-runは完成したPDF・画像・動画を作りません。PDF状態と各report等は更新される場合があります。
 video dry-runはstate workspace・空DBを初期化する場合がありますが、通常実行の成功recordを
 読み書きしません。
+
+PDFレポートの`profile`は必須で、各相対入力パスに対しパターンとpresetから期待する
+`standard`・`compact`・`photo`へ一致することを検証します。`ADOPTED_LOSSY`の削減量は
+photoで64 KiB以上、他は256 KiB以上、削減率はどちらも5%以上です。集計には実出力のサイズを
+使い、棄却された候補の診断サイズは使いません。
 
 画像の統合集計は子プロセスのstdoutではなく、現在実行で原子的に更新された画像manifestを
 使います。入力・予定出力path、preset/recipe、size/SHA-256、action、寸法上限、画像エラーCSV

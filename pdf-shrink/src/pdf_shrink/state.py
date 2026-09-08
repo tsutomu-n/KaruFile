@@ -2,13 +2,14 @@
 from __future__ import annotations
 
 import datetime
+import json
 import sqlite3
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Iterable
 
 from . import discovery
-from .models import ProcessResult, ProcessStatus, SourceSnapshot
+from .models import CandidateResult, ProcessResult, ProcessStatus, SourceSnapshot
 from .utils import sha256_file
 
 SCHEMA = """
@@ -29,7 +30,14 @@ CREATE TABLE IF NOT EXISTS files (
     error_message     TEXT,
     pymupdf_version   TEXT,
     qpdf_version      TEXT,
-    processed_at      TEXT
+    processed_at      TEXT,
+    profile           TEXT NOT NULL DEFAULT '',
+    decision_reason   TEXT NOT NULL DEFAULT '',
+    candidate_size    INTEGER,
+    candidate_saved_bytes INTEGER,
+    candidate_saved_percent REAL,
+    images_changed    INTEGER NOT NULL DEFAULT 0,
+    candidate_details TEXT NOT NULL DEFAULT '[]'
 );
 
 CREATE INDEX IF NOT EXISTS idx_status ON files(status);
@@ -37,6 +45,18 @@ CREATE INDEX IF NOT EXISTS idx_sha256 ON files(source_sha256);
 """
 
 TERMINAL_STATUSES = frozenset(status.value for status in ProcessStatus)
+
+# Adding nullable sizes preserves the distinction between no candidate and a
+# candidate that saved zero bytes.  Legacy rows have no recorded diagnostics.
+DIAGNOSTIC_COLUMNS = {
+    "profile": "TEXT NOT NULL DEFAULT ''",
+    "decision_reason": "TEXT NOT NULL DEFAULT ''",
+    "candidate_size": "INTEGER",
+    "candidate_saved_bytes": "INTEGER",
+    "candidate_saved_percent": "REAL",
+    "images_changed": "INTEGER NOT NULL DEFAULT 0",
+    "candidate_details": "TEXT NOT NULL DEFAULT '[]'",
+}
 
 
 @dataclass(frozen=True)
@@ -58,6 +78,13 @@ class Record:
     pymupdf_version: str | None
     qpdf_version: str | None
     processed_at: str | None
+    profile: str = ""
+    decision_reason: str = ""
+    candidate_size: int | None = None
+    candidate_saved_bytes: int | None = None
+    candidate_saved_percent: float | None = None
+    images_changed: int = 0
+    candidate_details: tuple[CandidateResult, ...] = ()
 
 
 def init_db(db_path: Path) -> sqlite3.Connection:
@@ -72,8 +99,20 @@ def init_db(db_path: Path) -> sqlite3.Connection:
         # every legacy terminal row run once, after which save_result stores a
         # digest that can be checked on subsequent runs.
         conn.execute("ALTER TABLE files ADD COLUMN output_sha256 TEXT")
+    for name, declaration in DIAGNOSTIC_COLUMNS.items():
+        if name not in columns:
+            conn.execute(f"ALTER TABLE files ADD COLUMN {name} {declaration}")
     conn.commit()
     return conn
+
+
+def candidate_details_json(details: tuple[CandidateResult, ...]) -> str:
+    """Use the same JSON representation in state and CSV diagnostics."""
+    return json.dumps(
+        [asdict(candidate) for candidate in details],
+        ensure_ascii=False,
+        separators=(",", ":"),
+    )
 
 
 def _record_from_row(row: sqlite3.Row) -> Record:
@@ -95,6 +134,16 @@ def _record_from_row(row: sqlite3.Row) -> Record:
         pymupdf_version=row["pymupdf_version"],
         qpdf_version=row["qpdf_version"],
         processed_at=row["processed_at"],
+        profile=row["profile"],
+        decision_reason=row["decision_reason"],
+        candidate_size=row["candidate_size"],
+        candidate_saved_bytes=row["candidate_saved_bytes"],
+        candidate_saved_percent=row["candidate_saved_percent"],
+        images_changed=row["images_changed"],
+        candidate_details=tuple(
+            CandidateResult(**candidate)
+            for candidate in json.loads(row["candidate_details"])
+        ),
     )
 
 
@@ -178,8 +227,10 @@ def save_result(
             source_path, source_sha256, source_size, source_mtime_ns, config_hash,
             mode, status, output_size, output_sha256, saved_bytes, saved_percent,
             error_message,
-            pymupdf_version, qpdf_version, page_count, scan_page_ratio, processed_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            pymupdf_version, qpdf_version, page_count, scan_page_ratio, processed_at,
+            profile, decision_reason, candidate_size, candidate_saved_bytes,
+            candidate_saved_percent, images_changed, candidate_details
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(source_path) DO UPDATE SET
             source_sha256 = excluded.source_sha256,
             source_size = excluded.source_size,
@@ -196,7 +247,14 @@ def save_result(
             qpdf_version = excluded.qpdf_version,
             page_count = excluded.page_count,
             scan_page_ratio = excluded.scan_page_ratio,
-            processed_at = excluded.processed_at
+            processed_at = excluded.processed_at,
+            profile = excluded.profile,
+            decision_reason = excluded.decision_reason,
+            candidate_size = excluded.candidate_size,
+            candidate_saved_bytes = excluded.candidate_saved_bytes,
+            candidate_saved_percent = excluded.candidate_saved_percent,
+            images_changed = excluded.images_changed,
+            candidate_details = excluded.candidate_details
         """,
         (
             str(source.path),
@@ -216,6 +274,13 @@ def save_result(
             result.page_count,
             result.scan_page_ratio,
             processed_at,
+            result.profile,
+            result.decision_reason,
+            result.candidate_size,
+            result.candidate_saved_bytes,
+            result.candidate_saved_percent,
+            result.images_changed,
+            candidate_details_json(result.candidate_details),
         ),
     )
     if commit:
