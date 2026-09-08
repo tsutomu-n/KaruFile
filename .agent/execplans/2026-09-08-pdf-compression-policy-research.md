@@ -1,6 +1,6 @@
 # PDF圧縮方針の調査と実データ診断
 
-この文書はliving documentである。前半は調査時点の記録。2026-09-08に利用者から実装指示を受け、末尾の実装チェックポイントを実行中。
+この文書はliving documentである。前半は調査時点の記録。2026-09-08に利用者から実装指示を受け、末尾の実装チェックポイントと実資料検証まで完了した。
 
 ## Goal
 
@@ -156,7 +156,7 @@ PyMuPDF 1.28.2と現行 `_jpeg_bytes_for_xref` を使用。元画像から各候
    - Flate再圧縮とobject streams、およびJPEG再圧縮を説明。qpdf自体は画像を再サンプリングしない。
    - 解釈: 現行の可逆最適化だけで写真の大幅縮小を狙うのは難しい。
 
-## 推奨する実装順序（未実装）
+## 推奨する実装順序（調査時点では未実装）
 
 ### 1. 判定と候補の見える化
 
@@ -199,7 +199,7 @@ PyMuPDF 1.28.2と現行 `_jpeg_bytes_for_xref` を使用。元画像から各候
 - 2026-09-08: 独立監査で関連既存テスト41件成功（test_lossy_placed_dpi.pyとtest_pdf_shrink.py計30件、refactor契約のOCR/scan/DPI/preset関連11件）。
 - 2026-09-08: `git diff --check` exit 0。既存ファイルのLF/CRLF警告はあるがwhitespace errorなし。
 
-## Outcomes / Remaining Issues
+## Outcomes / Remaining Issues（調査段階）
 
 調査・設計提案は完了。実行コード・元PDF・既存の完成出力は変更していない。
 追加した追跡用ファイルは本調査記録のみ。代表ページと画像候補の診断から、写真2冊の200 DPI候補を次の限定Pilotに推奨する。
@@ -218,7 +218,7 @@ PyMuPDF 1.28.2と現行 `_jpeg_bytes_for_xref` を使用。元画像から各候
 - 開始時点はclean、HEAD `7069b0a`。前回調査以降の利用者commitを基準とする。
 - root `--pdf-photo-pattern PATTERN`、PDF単体 `--photo-pattern PATTERN` を反復指定し、一致した相対パスだけprofile=photoへ切り替える。
 - globはslash正規化・大文字小文字を区別せずfnmatch、`*`は`/`も含む。空・絶対・親参照を拒否。
-- photoはJPEGの寸法縮小だけ、quality80、200未満を拡大・再圧縮しない。文字、パス、1bit、非JPEG、マスク付き画像を保持する。
+- photoはJPEGの寸法縮小だけ、quality80。200 DPI以下の軸は寸法を維持し、両軸とも縮小余地がない画像は再圧縮しない。一方の軸だけを縮小する場合もJPEG全体は再符号化される。文字、パス、1bit、非JPEG、マスク付き画像を保持する。
 - photoでは共有xrefの全配置の軸別最小DPIから寸法をceil計算し、200 DPI未満へ落とさない。既存presetの300 DPI最大値方式は維持。
 - photoの採用下限は64 KiBかつ5%。既存standard/compactの閾値と256 KiB未満skipは維持。
 - 非可逆候補の品質棄却・削減不足では可逆候補も比較する。構造・I/O・toolエラーを成功へ隠さない。
@@ -227,7 +227,7 @@ PyMuPDF 1.28.2と現行 `_jpeg_bytes_for_xref` を使用。元画像から各候
 
 ### CP-004: 結果・state・report
 
-- Status: In progress
+- Status: Complete
 - Objective: 候補値と棄却理由を再実行後も確認できる。
 - Dependencies: CP-001〜003。
 - Files or components: models/state/report/runner、関連テスト。
@@ -239,7 +239,7 @@ PyMuPDF 1.28.2と現行 `_jpeg_bytes_for_xref` を使用。元画像から各候
 
 ### CP-005: 写真候補と検証
 
-- Status: In progress
+- Status: Complete
 - Objective: 写真画像のみを縮小し、細部差を検査する。
 - Dependencies: CP-004の型契約。
 - Files or components: config/inspect/transform/validate/worker、関連テスト。
@@ -251,7 +251,7 @@ PyMuPDF 1.28.2と現行 `_jpeg_bytes_for_xref` を使用。元画像から各候
 
 ### CP-006: root CLIと契約文書
 
-- Status: In progress
+- Status: Complete
 - Objective: rootから選択対象にだけ写真設定を適用し、結果を正確に集計できる。
 - Dependencies: CP-004、005。
 - Files or components: orchestrator、PDF CLI、MANUAL/REFERENCE/README/AGENTS。
@@ -263,7 +263,7 @@ PyMuPDF 1.28.2と現行 `_jpeg_bytes_for_xref` を使用。元画像から各候
 
 ### CP-007: 統合検証・実資料確認
 
-- Status: Not started
+- Status: Complete
 - Objective: 要求されたCLI動作と残る画質限界を確認して引き渡す。
 - Dependencies: CP-004〜006。
 - Files or components: 全suite、検証用出力、実資料5 PDF。
@@ -272,3 +272,144 @@ PyMuPDF 1.28.2と現行 `_jpeg_bytes_for_xref` を使用。元画像から各候
 - Validation: test counts、CSV、hash、目視記録。
 - Failure conditions: 原本変化、テスト不合格、未検証を保証。
 - Recovery: 原本・既存出力は維持し、問題を修正して影響範囲だけ再検証。
+
+### Implementation Progress / Discoveries
+
+- [x] CP-004: candidateの型、SQLite追加移行、CSV診断、状態再利用を実装・検証。
+- [x] CP-005: 明示photo、約200 DPI候補、300 DPI細部検査、原本から生成した可逆候補との比較を実装・検証。
+- [x] CP-006: root CLI、profile照合、help、各契約文書と構成図を更新・検証。
+- [x] CP-007: 必須テスト・compile・help・実資料Pilot・再実行・代表箇所目視を完了。
+- 独立監査で、同じ画素digestを持つ複数xref（未描画resourceを含む）があると、PyMuPDFの配置xref照合が曖昧になることを再現した。photoでは全resourceを照合して曖昧な画像群を除外し、低DPI配置を誤って縮小する経路を回帰テストで保護した。
+- 最初の全PDFテストで旧config hashの固定値期待が失敗した。診断・候補選択変更のため`processing_schema=2`で旧結果を意図的に無効化する契約に合わせ、期待値と理由を更新。検査自体を無効化していない。
+- 非可逆候補の後は、品質合格でも原本由来の可逆候補を比較する。合格した最小候補を採用し、同サイズなら可逆を優先する。
+- 仕上げ時にHEADが`640165bd82cbb6160e49e642ccfc11a0d38cc144`へ進み実装がcommit済みであることを確認した。この作業ではcommit/pushを実行していない。以降は検証記録だけを追記した。
+
+### Implementation Validation Evidence
+
+2026-09-08、リポジトリルートから実行。合計438 tests passed。
+
+| 検査 | 結果 |
+|---|---|
+| `uv run --project pdf-shrink python -m pytest -q pdf-shrink/tests` | 131 passed |
+| `uv run --project media-shrink-tool --extra dev python -m pytest -q media-shrink-tool/tests` | 64 passed |
+| `uv run --project video-shrink python -m pytest -q video-shrink/tests` | 104 passed |
+| `orchestrator`内で`uv run --with pytest python -m pytest -q` | 139 passed |
+| AGENTS.md指定の4つの`compileall` | 全てexit 0 |
+| root CLIとPDF CLIの`--help` | exit 0、写真パターン指定を確認 |
+| `git diff --check` | exit 0 |
+
+`archify`でJSON検証・HTML再生成・visual-checkを実施。showcase 9/9、errors/warnings 0。
+1440×900、1600×1000、1920×1080、2048×1320でoverflowなし。
+最小・最大viewportのlight/dark計4 PNGは担当agentと主agentが目視し、切れ・重なり・読めないラベルなし。
+自動visual-check JSONの`visualReview: pending`はツール出力のまま維持し、この段落を目視完了記録とする。
+JSON SHA-256は`c8c215ca9cc570d2cf6cef77639dd1179ec726aa4fd977ad90587378ab2e9a46`、
+HTMLは`8c3d74c75dac346994fcd5b9f82472477606242af4716f69e70d6451726980d8`。
+生成時のsource基準は`7069b0a0b740ab47d6f83e28aefbb3dabe7cae0a`であり、写真機能は当時の作業ツリー実装、ソースリンクは変更前commitと図中に明記した。旧`karufile-runtime.html`は変更していない。
+
+### Real-data Pilot
+
+入力: `C:\Users\tn\Downloads\西牧分遣所アスベスト調査報告書`。
+既存通常出力とそのreport/stateを保持するため、新規の別parentへ出力した。
+
+```powershell
+uv run --script karufile.py -i 'C:\Users\tn\Downloads\西牧分遣所アスベスト調査報告書' -o 'C:\Users\tn\Downloads\KaruFile_写真検証_20260908\西牧分遣所アスベスト調査報告書_軽量化' --pdf-photo-pattern '2.*.pdf' --pdf-photo-pattern '5.*.pdf'
+```
+
+- 初回exit 0、16.22秒。写真2件採用、3件原本採用。5件合計8,542,212 → 7,092,052 bytes、1,450,160 bytes（16.98%）削減。
+- 同じコマンドの再実行exit 0、0.77秒。処理対象0・再利用5。CSVのprofile・候補診断も保持。
+- 別parent `C:\Users\tn\Downloads\KaruFile_写真検証_20260908\dry-run\files` への同じ写真指定付き`--dry-run`もexit 0、2.19秒。写真2件だけ`photo / DRY_RUN_LOSSY`、残る3件は`standard / DRY_RUN_LOSSLESS`。完成PDFと`files`ディレクトリは作成されず、全行output_size空。入力5件および既存通常Pilot配下12ファイルの実行前後SHA-256が全て一致。新規作成は別parent内のstate DBとdry-runレポート類のみ。
+- report: `C:\Users\tn\Downloads\KaruFile_写真検証_20260908\report.csv`。
+
+| PDF | profile / 結果 | 原本bytes | 出力bytes | 非採用時の候補bytes / 採用時の削減率 |
+|---|---|---:|---:|---:|
+| 1.現地調査報告書 | standard / UNCHANGED | 340,536 | 340,536 | 279,191（削減61,345 bytesで64 KiB未達） |
+| 2.現地写真 | photo / ADOPTED_LOSSY | 3,556,324 | 2,674,925 | 24.78% |
+| 3.試料採取箇所 | standard / UNCHANGED | 588,304 | 588,304 | 570,958（削減17,346 bytesで64 KiB未達） |
+| 4.分析報告書 | standard / UNCHANGED | 1,517,266 | 1,517,266 | 1,477,813（削減39,453 bytesで64 KiB未達） |
+| 5.採取写真 | photo / ADOPTED_LOSSY | 2,539,782 | 1,971,021 | 22.39% |
+
+写真2冊はそれぞれ28/20画像が変更され、出力の配置DPIは約200.000〜200.210。
+5件全てで入力SHA-256とreportのsource hash、出力SHA-256とreportのoutput hashを照合して一致。
+全ページの抽出テキストと`get_drawings()`の比較も原本と一致した。これはOCR精度の検証ではない。
+完成PDFの写真2冊の先頭ページと採取写真の黒板領域を描画して目視し、右側注記・罫線と確認した黒板文字を確認した。
+診断PNG（`2-output-page1.png`、`5-output-page1.png`、`board-output.png`）は検証parent内に残した。
+
+### Implementation Outcomes / Remaining Limits
+
+- 実装・統合検証・限定実資料Pilotは完了。入力と既存完成出力を変更・削除していない。
+- HTML往復は不採用。今回確認したPyMuPDF HTML抽出ではpath注記が欠け、公式資料もフォント・配置の制約を説明する。SVG対応を含む全ての変換器が失敗すると一般化はしない。
+  参照: [PyMuPDF HTML品質の制約](https://pymupdf.readthedocs.io/en/latest/app1.html#controlling-quality-of-html-output)、[pdf2htmlEX](https://github.com/pdf2htmlEX/pdf2htmlEX)。
+- 写真対象は利用者によるファイルパターンの明示選択。図面、分析写真、画像内文字を意味で自動判別しない。300 DPI以下をOCR不要とは判断しない。
+- 200 DPI q80は今回の閲覧用候補であり、普遍的な最適値や全ての細字の可読性を保証しない。OCRは未実施。提出・印刷などの用途別受入は原本との比較が必要。
+- 300 DPI細部検査には80,000,000 pixels、120秒、10,000配置の予算上限がある。時間上限は描画呼出し間で確認し、単独のMuPDF呼出しを強制停止するものではない。予算超過は候補棄却として扱う。
+
+## 追加調査: HTML以外の方式（2026-09-08）
+
+利用者の「ではやめる。べつの方法を検討してほしい」はHTML案の取り下げと別方式の調査依頼として扱う。
+製品コード、既存PDF、設定、依存関係は変更しない。調査記録だけを追記する。
+
+### CP-008: 解像度変更以外の候補比較
+
+- Status: Complete
+- Objective: 既存200 DPI方式とは別の改善を、適用範囲・削減根拠・可読性リスクで比較できる。
+- Dependencies: CP-007の候補診断と現行コードを再確認する。
+- Files or components: qpdf/config/worker/root、Pilot CSV、GitHub Stars catalog、一次資料。
+- Actions: 可逆候補採用条件、JPEG係数の可逆最適化、領域別/MRC、別PDFエンジンを比較する。
+- Completion criteria: 実測済みと未測定を区別し、最小の次の検証案を提案する。
+- Validation: 現行コード行、CSV数値、現在の公式資料、git diff --check。
+- Failure conditions: 未測定の削減率保証、画素変換を可逆と誤称、未承認の製品変更。
+- Recovery: 読取り調査に限定し、実装や出力を変更せず未確認点を明示する。
+
+### CP-008 Findings / Decision
+
+新しい圧縮方式として最初に試すのは、JPEGのDCT係数を変更しない可逆符号化最適化。
+低コストで別途改善できるのは、検証済み可逆候補の採用閾値。大幅削減の仮説は、保護領域を明示した画像内ROI圧縮。
+今回はどの方式も製品へ実装・導入していない。
+
+1. **JPEG可逆最適化（次の試験候補）**
+   - 現行はJPEGを画素へ展開してJPEG再符号化する。候補として`jpegtran`のentropy最適化／progressive再構成を追加すれば、量子化係数と画像寸法を変更しない経路を分離できる。
+   - MozJPEG公式READMEとmanpageはこの可逆処理を説明している。`cjpeg`での再量子化や品質変更とは異なる。
+   - 最初の実験では原JPEG、baseline最適化、progressive最適化を独立比較。色関連markerを含むmetadataとPDF画像辞書を保持し、算術符号化・グレースケール化・切抜き・回転は使わない。小さくなる保証はない。
+   - DCT係数保持に加え、同一decoderでの画素比較、全ページ描画、画像色空間、既存文字・パス、qpdf検証、Reader/Edgeでの表示・印刷を確認する。一般的なJPEG対応と全PDF閲覧環境の互換性を同一視しない。
+   - `jpegtran`/`cjpeg`は現在PATHに見つからなかった。実ファイルでの追加削減率と実行時間は未測定、依存追加なし。
+   - 根拠: [MozJPEG README](https://github.com/mozilla/mozjpeg/blob/master/README.md)、[jpegtran manpage](https://github.com/mozilla/mozjpeg/blob/master/jpegtran.1)。[LICENSE](https://github.com/mozilla/mozjpeg/blob/master/LICENSE.md)はIJG/BSD系の適用範囲と通知条件を区別する。[BUILDING](https://github.com/mozilla/mozjpeg/blob/master/BUILDING.md)も確認したがWindows配布物の選定・再配布承認は未実施。
+
+2. **可逆候補の採用閾値（新コーデックではない、小さな改善）**
+   - 現行`ReductionOptions`とroot照合は64 KiBかつ2%。Pilot CSVを現在読み直し、1・3・4はそれぞれ61,345 / 17,346 / 39,453 bytes、18.0142 / 2.9485 / 2.6003%の可逆候補があり、64 KiB条件だけで棄却されている。
+   - 例えば16 KiBかつ2%なら3候補とも採用条件を満たす。追加118,144 bytes（115.375 KiB、全入力の1.3831%）。既存200 DPI出力に追加した場合の合計削減率は算術上18.3595%だが、新しい完成出力は生成していない。
+   - 「現地調査報告書が18%減る」と「全5冊が18%減る」を混同しない。単独の閾値変更だけで全体の大幅削減にはならない。
+   - 実装する場合はconfigだけでなくrootの採用結果照合、state/config hash、テスト、仕様を同時更新する。画質検証基準は緩めない。
+
+3. **画像内の領域別圧縮（ROI、次段階の仮説）**
+   - 黒板・細字等の利用者が指定した領域を元の復号画素で別画像として保持し、それ以外の許可領域だけ強く圧縮する。既存のページ文字・パスは変更せず、OCR結果から文字を描き直さない。
+   - 全ページを文字/背景へ再分離するMRCとは区別する。既に文字・線・写真が分離しているPDFをラスタライズして再構成する案は優先しない。
+   - 保護漏れ、座標変換、境界の色差/継ぎ目、マスクと共有画像、保護画像追加による容量増を確認する必要がある。初期は明示矩形だけ、分析・顕微鏡写真や意味不明の細部を自動で圧縮許可しない。
+   - この資料でのサイズ・品質は未測定。手間に見合う追加削減がなければ採用しない。
+   - [ABBYYのMRC説明](https://support.abbyy.com/hc/en-us/articles/360016544840-How-highly-compressed-MRC-PDF-export-works-in-FineReader-Engine-12)は層別圧縮の参考。説明中の背景除去や文字テンプレート化はその実装の処理であり、MRC一般の必須条件とは扱わない。
+
+### その他の比較候補と優先度
+
+- **JPEG2000/JPX**: 寸法を保った画像だけのcodec比較は可能。可逆モードでも元JPEGより小さくなる保証はなく、非可逆なら細部・色は変わり得る。PDF 1.5以降の機能と閲覧・印刷互換性を検証する必要がある。JPEG可逆最適化より後の試験候補。[Adobe仕様](https://opensource.adobe.com/dc-acrobat-sdk-docs/library/pdfcreation/PDF_Create_UsingSettings.html)
+- **Ghostscript pdfwrite**: 原則ベクター出力だが、元のPDF内部構造を維持するものではない。描画以外の情報の保持と色変換等を別検証する必要があり、今回の最小案にはしない。新規JPX圧縮には非対応で、既存JPXのpass-throughとは異なる。既存Windows PATHにgs10.05.1があることだけ確認し変換は行っていない。[公式](https://ghostscript.readthedocs.io/en/latest/VectorDevices.html)
+- **Flate/Zopfli**: 現行qpdfは既にFlate level9・再圧縮・object stream生成を使用。Zopfliには時間増と小さな追加圧縮のtradeoffがあり、JPEG本体を最適化する代替ではない。ローカルqpdf12.3.2の`--zopfli`はexit1、`zopfli support is not enabled`。新build導入は見送る。[qpdf公式](https://qpdf.readthedocs.io/en/stable/cli.html#zopfli-compression-algorithm)
+- **JBIG2**: MRCと非可逆JBIG2は同義ではない。OCRmyPDF現行公式は文字置換リスクにより非可逆JBIG2を削除し、可逆方式を説明している。数値を扱う本資料で文字テンプレート置換を提案しない。[公式](https://ocrmypdf.readthedocs.io/en/latest/jbig2.html)
+
+### OSS catalog確認
+
+`github-stars-oss doctor --smoke` PASS。4,052件、snapshot2026-08-19、約20日前。
+PDF圧縮/JPEG可逆/層別圧縮の概念語で検索後、1回だけcodec名とqpdf等で絞り直した。
+低レベルJPEG候補は検索で発見できなかったため、主agentの判断でStar外のMozJPEG公式も比較した。
+カタログ内で見つからないことをStarの不在証明にしない。
+3件をenrichしrepo_id一致・非archived・README/実LICENSE/manifestを確認、直接導入なし。
+
+| repository / repo_id | usage_mode / 判断 | 根拠・適合性 | ライセンス・未確認/リスク |
+|---|---|---|---|
+| libjxl/libjxl / 340219494 | reference_implementation / reference_only | [README](https://github.com/libjxl/libjxl/blob/main/README.md)は既存JPEGの可逆JXL化とJPEG復元を説明、CMake実装 | [BSD-3-Clause](https://github.com/libjxl/libjxl/blob/main/LICENSE)と[PATENTS](https://github.com/libjxl/libjxl/blob/main/PATENTS)確認。通常PDFへのJXL埋込互換性は未確認。元JPEGに復元して戻すだけでは縮小効果が残らない |
+| Stirling-Tools/Stirling-PDF / 594155488 | reference_implementation / reference_only | [圧縮仕様](https://docs.stirlingpdf.com/Functionality/Compress/)のrecipe参考、Java/Spring Bootの追加アプリ導入はしない | [root LICENSE](https://github.com/Stirling-Tools/Stirling-PDF/blob/main/LICENSE)に例外、[engine LICENSE](https://github.com/Stirling-Tools/Stirling-PDF/blob/main/engine/LICENSE)は独自条件。実資料効果・利用条件適合は未検証、一律MIT扱いしない |
+| gotenberg/gotenberg / 126493684 | standalone_tool / reject | [README](https://github.com/gotenberg/gotenberg/blob/main/README.md)はGo/Docker変換API。既存PDF圧縮改善を裏付ける証拠不足 | [本体MIT](https://github.com/gotenberg/gotenberg/blob/main/LICENSE)、外部engineは別途確認が必要。追加サービス運用に見合う削減未確認 |
+
+### CP-008 Validation / Outcome
+
+- 現行コードとPilot CSVを再読込し数値再計算。独立agentが入力5件と出力5件の現在SHA-256をCSVと照合し全て一致。
+- 製品コード・依存関係・PDF出力は変更なし。JPEG/JPX/MRC/Ghostscriptの追加実行結果はない。過去438テスト成功を今回の新方式の検証成功とは扱わない。
+- 調査記録の`git diff --check`成功。次の最小行動は写真2冊のJPEG可逆最適化を原本から独立試験し、元画像と一致かつ実際に小さい候補だけを評価すること。実装依頼はまだ受けていない。
