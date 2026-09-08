@@ -6,13 +6,13 @@ import stat
 import time
 import traceback
 from concurrent.futures import ProcessPoolExecutor, as_completed
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any
 
 import pymupdf as fitz
 
-from . import discovery, output, qpdf, report, state, worker
+from . import discovery, lossless_jpeg, output, qpdf, report, state, worker
 from .config import RunConfig, config_hash, profile_for_path
 from .models import ProcessResult, ProcessStatus, SourceSnapshot
 from .utils import ensure_dir, human_size, logger, sha256_file
@@ -48,6 +48,10 @@ def _pymupdf_version() -> str:
 def _prepare_tools(cfg: RunConfig) -> tuple[RunConfig, Path | None]:
     if cfg.dry_run:
         return cfg.with_tool_versions(pymupdf=_pymupdf_version(), qpdf=""), None
+
+    if cfg.lossless_jpeg:
+        path, version, digest = lossless_jpeg.prepare_tool(cfg.jpegtran_path)
+        cfg = replace(cfg, jpegtran_path=path, jpegtran_version=version, jpegtran_sha256=digest)
 
     executable = qpdf.ensure_qpdf(cfg.qpdf_path)
     version = qpdf.qpdf_version(executable)
@@ -281,6 +285,7 @@ def _worker_crash_result(
         error_message=error_message,
         profile=profile_for_path(cfg, source.relative_path),
         decision_reason="processing_error",
+        lossless_jpeg_requested=cfg.lossless_jpeg,
     )
 
 
@@ -371,7 +376,7 @@ def run(cfg: RunConfig) -> int:
     try:
         cfg, qpdf_exe = _prepare_tools(cfg)
     except Exception as exc:
-        logger.error("Failed to locate qpdf: %s", exc)
+        logger.error("Failed to prepare PDF tools: %s", exc)
         return 1
 
     processing_hash = config_hash(cfg)

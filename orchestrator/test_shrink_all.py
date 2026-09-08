@@ -81,6 +81,7 @@ def _image_manifest_row(
 
 
 PDF_REPORT_FIELDS = (
+    "lossless_jpeg_requested",
     "source_path",
     "source_size",
     "source_sha256",
@@ -105,7 +106,7 @@ def _write_pdf_report(path: Path, rows: list[dict[str, object]]) -> None:
     with path.open("w", newline="", encoding="utf-8") as stream:
         writer = csv.DictWriter(stream, fieldnames=PDF_REPORT_FIELDS)
         writer.writeheader()
-        writer.writerows({"profile": row.get("preset"), **row} for row in rows)
+        writer.writerows({"profile": row.get("preset"), "lossless_jpeg_requested": "false", **row} for row in rows)
 
 
 VIDEO_REPORT_FIELDNAMES = (
@@ -1096,6 +1097,9 @@ def test_parse_pdf_report_rejects_missing_required_columns(tmp_path: Path):
         ("profile", "photo"),
         ("profile", ""),
         ("profile", "unknown"),
+        ("lossless_jpeg_requested", "true"),
+        ("lossless_jpeg_requested", "True"),
+        ("lossless_jpeg_requested", ""),
     ],
 )
 def test_pdf_report_matcher_rejects_forged_row(

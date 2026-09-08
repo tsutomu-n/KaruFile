@@ -98,7 +98,7 @@ def normalize_photo_patterns(values: Any) -> tuple[str, ...]:
 @dataclass(frozen=True)
 class ReductionOptions:
     skip_below_bytes: int = 256 * 1024
-    lossless_min_bytes: int = 64 * 1024
+    lossless_min_bytes: int = 16 * 1024
     lossless_min_percent: float = 0.02
     lossy_min_bytes: int = 256 * 1024
     lossy_min_percent: float = 0.05
@@ -131,6 +131,10 @@ class RunConfig:
     pymupdf_version: str = ""
     qpdf_version: str = ""
     photo_patterns: tuple[str, ...] = ()
+    lossless_jpeg: bool = False
+    jpegtran_path: Path | None = None
+    jpegtran_version: str = ""
+    jpegtran_sha256: str = ""
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "photo_patterns", normalize_photo_patterns(self.photo_patterns))
@@ -203,6 +207,8 @@ def build_config(args: Any) -> RunConfig:
         qpdf_path=Path(qpdf_arg).expanduser().resolve() if qpdf_arg else None,
         lossy=lossy_options_for_preset(preset),
         photo_patterns=tuple(getattr(args, "photo_pattern", None) or ()),
+        lossless_jpeg=bool(getattr(args, "lossless_jpeg", False)),
+        jpegtran_path=Path(args.jpegtran_path).expanduser().resolve() if getattr(args, "jpegtran_path", None) else None,
     )
 
 
@@ -223,6 +229,8 @@ def config_for_path(cfg: RunConfig, relative_path: Path) -> RunConfig:
 
 def config_hash(cfg: RunConfig) -> str:
     """処理結果または記録される判定結果に影響する条件をハッシュ化する。"""
+    from .lossless_jpeg import RECIPE
+
     lossy = asdict(cfg.lossy)
     if not cfg.lossy.recompress_existing_jpeg:
         # standardで無効な追加項目は、既存stateとのhash互換性を保つ。
@@ -230,7 +238,11 @@ def config_hash(cfg: RunConfig) -> str:
         lossy.pop("jpeg_recompress_min_percent")
     relevant = {
         # Diagnostics and multi-candidate selection must not reuse legacy results.
-        "processing_schema": 2,
+        "processing_schema": 3,
+        "lossless_jpeg": cfg.lossless_jpeg,
+        "jpeg_recipe": RECIPE,
+        "jpegtran_version": cfg.jpegtran_version if cfg.lossless_jpeg else "",
+        "jpegtran_sha256": cfg.jpegtran_sha256 if cfg.lossless_jpeg else "",
         "photo_patterns": cfg.photo_patterns,
         "photo_recipe": asdict(photo_lossy_options()) if cfg.photo_patterns else None,
         # DBの主キーは入力パスだけなので、出力先も再開条件へ含める。

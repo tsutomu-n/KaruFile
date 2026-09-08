@@ -168,7 +168,8 @@ def test_standard_config_hash_invalidates_pre_diagnostics_results() -> None:
 
     current_hash = config.config_hash(cfg)
 
-    assert current_hash == (
+    assert current_hash != (
+        # Before 16 KiB adoption and optional JPEG candidates: re-evaluate once.
         "df632f5df126ef58a09a3cd824a5144a6fe5d9e60d6eb66f02dd5261d8b36c4c"
     )
     assert current_hash != (

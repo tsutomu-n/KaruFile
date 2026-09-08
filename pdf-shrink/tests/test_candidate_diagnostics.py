@@ -53,14 +53,17 @@ def test_diagnostics_migration_preserves_legacy_rows_and_is_repeatable(tmp_path:
             assert record.candidate_saved_percent is None
             assert record.images_changed == 0
             assert record.candidate_details == ()
+            assert record.lossless_jpeg_requested is False
         finally:
             conn.close()
 
 
 @pytest.mark.parametrize("candidate_size", [None, 100, 120])
+@pytest.mark.parametrize("requested", [False, True])
 def test_candidate_diagnostics_survive_state_and_csv_without_replacing_output_metrics(
     tmp_path: Path,
     candidate_size: int | None,
+    requested: bool,
 ) -> None:
     input_dir = tmp_path / "input"
     output_dir = tmp_path / "output"
@@ -95,6 +98,7 @@ def test_candidate_diagnostics_survive_state_and_csv_without_replacing_output_me
         candidate_saved_percent=float(candidate_saved) if candidate_saved is not None else None,
         images_changed=2,
         candidate_details=details,
+        lossless_jpeg_requested=requested,
     )
     database = tmp_path / "state.sqlite3"
     conn = state.init_db(database)
@@ -111,6 +115,7 @@ def test_candidate_diagnostics_survive_state_and_csv_without_replacing_output_me
         record = state.get_record(conn, str(source.path))
         assert record is not None
         assert record.profile == "photo"
+        assert record.lossless_jpeg_requested is requested
         assert record.decision_reason == "quality_rejected"
         assert record.candidate_size == candidate_size
         assert record.candidate_saved_bytes == candidate_saved
@@ -132,6 +137,7 @@ def test_candidate_diagnostics_survive_state_and_csv_without_replacing_output_me
         assert row["preset"] == "standard"
         assert row["status"] == "UNCHANGED"
         assert row["profile"] == "photo"
+        assert row["lossless_jpeg_requested"] == ("true" if requested else "false")
         assert row["decision_reason"] == "quality_rejected"
         assert row["candidate_size"] == (str(candidate_size) if candidate_size is not None else "")
         assert row["candidate_saved_bytes"] == (str(candidate_saved) if candidate_saved is not None else "")

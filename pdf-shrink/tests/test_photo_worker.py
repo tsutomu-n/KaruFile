@@ -90,16 +90,17 @@ def test_visual_rejection_falls_back_without_hiding_candidate_reason(tmp_path, m
     assert result.output_size == 400_000
 
 
-def test_small_document_standard_keeps_original_when_lossy_gain_is_below_absolute_gate(tmp_path, monkeypatch):
+def test_small_document_standard_adopts_20k_lossless_gain_but_rejects_lossy_gain(tmp_path, monkeypatch):
     source, cfg = _case(tmp_path, monkeypatch, photo=False)
     monkeypatch.setattr(worker.transform, "optimize_lossless", lambda src, dst, *a:
         dst.write_bytes(b"L" * 480_000))
     result = worker.process_one_file(source, cfg, tmp_path / "temp", Path("qpdf"))
-    assert result.status is ProcessStatus.UNCHANGED
-    assert result.decision_reason == "reduction_below_threshold"
+    assert result.status is ProcessStatus.ADOPTED_LOSSLESS
+    assert result.decision_reason == "fallback_lossless"
+    assert result.candidate_details[0].reason == "reduction_below_threshold"
     assert result.candidate_saved_percent == .3
-    assert result.saved_bytes == 0
-    assert result.output_path.read_bytes() == source.path.read_bytes()
+    assert result.saved_bytes == 20_000
+    assert result.output_path.read_bytes() == b"L" * 480_000
 
 
 @pytest.mark.parametrize("failure", ["text_mismatch", "qpdf_check_error (rc=2)", "render_detail_compare_error: failed"])

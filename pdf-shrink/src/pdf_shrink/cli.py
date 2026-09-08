@@ -45,7 +45,9 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="出力PDFを作らず、判定結果だけを記録する",
     )
-    run_parser.add_argument("--safe", action="store_true", help="非可逆画像縮小を無効化しqpdf可逆のみ")
+    run_parser.add_argument("--safe", action="store_true", help="非可逆処理を無効化し可逆候補のみ")
+    run_parser.add_argument("--lossless-jpeg", action="store_true", help="jpegtran 3.2.0でJPEG可逆候補を追加（既定OFF、手動準備）")
+    run_parser.add_argument("--jpegtran-path", help="jpegtran実行ファイル。指定だけでは有効化しない")
     run_parser.add_argument(
         "--limit",
         type=int,

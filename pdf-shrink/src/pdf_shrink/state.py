@@ -37,7 +37,8 @@ CREATE TABLE IF NOT EXISTS files (
     candidate_saved_bytes INTEGER,
     candidate_saved_percent REAL,
     images_changed    INTEGER NOT NULL DEFAULT 0,
-    candidate_details TEXT NOT NULL DEFAULT '[]'
+    candidate_details TEXT NOT NULL DEFAULT '[]',
+    lossless_jpeg_requested INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE INDEX IF NOT EXISTS idx_status ON files(status);
@@ -56,6 +57,7 @@ DIAGNOSTIC_COLUMNS = {
     "candidate_saved_percent": "REAL",
     "images_changed": "INTEGER NOT NULL DEFAULT 0",
     "candidate_details": "TEXT NOT NULL DEFAULT '[]'",
+    "lossless_jpeg_requested": "INTEGER NOT NULL DEFAULT 0",
 }
 
 
@@ -85,6 +87,7 @@ class Record:
     candidate_saved_percent: float | None = None
     images_changed: int = 0
     candidate_details: tuple[CandidateResult, ...] = ()
+    lossless_jpeg_requested: bool = False
 
 
 def init_db(db_path: Path) -> sqlite3.Connection:
@@ -140,6 +143,7 @@ def _record_from_row(row: sqlite3.Row) -> Record:
         candidate_saved_bytes=row["candidate_saved_bytes"],
         candidate_saved_percent=row["candidate_saved_percent"],
         images_changed=row["images_changed"],
+        lossless_jpeg_requested=bool(row["lossless_jpeg_requested"]),
         candidate_details=tuple(
             CandidateResult(**candidate)
             for candidate in json.loads(row["candidate_details"])
@@ -229,8 +233,8 @@ def save_result(
             error_message,
             pymupdf_version, qpdf_version, page_count, scan_page_ratio, processed_at,
             profile, decision_reason, candidate_size, candidate_saved_bytes,
-            candidate_saved_percent, images_changed, candidate_details
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            candidate_saved_percent, images_changed, candidate_details, lossless_jpeg_requested
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(source_path) DO UPDATE SET
             source_sha256 = excluded.source_sha256,
             source_size = excluded.source_size,
@@ -254,7 +258,8 @@ def save_result(
             candidate_saved_bytes = excluded.candidate_saved_bytes,
             candidate_saved_percent = excluded.candidate_saved_percent,
             images_changed = excluded.images_changed,
-            candidate_details = excluded.candidate_details
+            candidate_details = excluded.candidate_details,
+            lossless_jpeg_requested = excluded.lossless_jpeg_requested
         """,
         (
             str(source.path),
@@ -281,6 +286,7 @@ def save_result(
             result.candidate_saved_percent,
             result.images_changed,
             candidate_details_json(result.candidate_details),
+            int(result.lossless_jpeg_requested),
         ),
     )
     if commit:

@@ -1,5 +1,53 @@
 # PDF圧縮方針の調査と実データ診断
 
+## 2026-09-08 追加実装: JPEG可逆比較と16 KiB採用下限
+
+利用者の追加実装計画を受領。CP-001〜008は履歴として保持する。今回開始時の作業ツリーはclean。
+原本・既存出力を保持し、別parentへ候補と検証証拠を保存する。commit/pushは行わない。
+既存200 DPI photo、非可逆採用条件、256 KiB未満除外、品質基準は変更しない。
+
+### CP-009: 独立JPEG比較
+
+- Status: In progress
+- Objective: 写真2冊でjpegtranの追加利益と完全一致を測定する。
+- Dependencies: 公式libjpeg-turbo 3.2.0 Windows x64配布物のhash・署名確認。
+- Files or components: 独立検証スクリプト、新規検証parent、現地写真・採取写真。
+- Actions: 原本からqpdf単独、baseline、progressiveを独立生成。`-copy all -optimize`、progressiveのみ`-progressive`。寸法・成分・量子化表・原寸画素一致かつstream縮小時のみ画像辞書を保持して置換。
+- Completion criteria: qpdf検査、ページ形状・文字・パス・全ページRGB完全一致、代表ページEdge表示を記録。写真の少なくとも1冊でqpdf単独より16 KiBかつ2%以上小さい検証済み候補がある場合のみ組込みへ進む。
+- Validation: tool version/SHA-256、候補別bytes・時間・検査結果、原本/既存出力の前後hash。
+- Failure conditions: 画素差、構造/ツールエラー、原本変化。利益不足は不合格として正常に分岐。
+- Recovery: 原本/既存出力へ書き込まない。利益不足ならJPEG製品機能は追加しない。
+
+### CP-010: 合格時だけ明示CLIへ組込み
+
+- Status: Pending CP-009
+- Objective: 既定OFFの追加可逆候補を安全に利用できる。
+- Dependencies: CP-009組込み条件合格。
+- Files or components: PDF config/cli/worker/transform/validate/state/report、root CLI、tests、architecture。
+- Actions: root `--pdf-lossless-jpeg`/`--pdf-jpegtran-path`、PDF `--lossless-jpeg`/`--jpegtran-path`。手動準備のみ。明示path→PATH、3.2.0事前検査。dry-runは実行しない。単一DCT・8-bit DeviceRGB/Gray、mask/特殊Decode/inline等除外。xref単位streamのみ交換。20 MP/32 MiB、128M/100 scans/30秒、文書300秒協調予算。baseline/progressive独立検証、最小合格候補、tieはqpdf→baseline→progressive→lossy。ツール異常はERRORと復旧copy、画素差/予算超過は候補棄却。
+- Completion criteria: 指定とreport照合、失敗経路、候補履歴、safe/dry-runが試験成功。
+- Validation: 合成試験、version/hash変更による再処理、DB追加移行、旧CSV拒否。
+- Failure conditions: 完全一致を緩和、既存非可逆候補を無効化、エラー隠蔽。
+- Recovery: 未完成機能は公開しない。追加方式へ拡張しない。
+
+### CP-011: 閾値・状態・文書・最終検証
+
+- Status: Not started
+- Objective: 可逆採用を16 KiBかつ2%以上へ統一し、以前棄却された3冊の採用を確認する。
+- Dependencies: 閾値変更はCP-009の利益判定に独立。JPEG関連項目はCP-010実装時のみ。
+- Files or components: PDF ReductionOptions/config hash、root照合、tests、manual/reference/README、当計画。
+- Actions: 閾値とprocessing schema更新。JPEG追加時はrequested全CSV true/false・state追加移行・recipe/version/hashを設定hashへ反映、candidate列一次候補契約維持、ADOPTED_LOSSLESS使用。境界値/再実行/dry-run試験と実資料5冊別出力。
+- Completion criteria: 全指定suite/compileall/help/diff成功。入力/既存出力hash不変、3冊可逆採用、候補・削減・時間を記録。
+- Validation: 実行コマンドと実結果を末尾に追記。JPEG外部ツールを製品追加時のみArchify再生成と目視。
+- Failure conditions: 必須検証失敗、未実測を成功扱い。
+- Recovery: 原本・既存出力を保持し、今回変更だけ修正。未解決を記録。
+
+### 今回の判断・証拠
+
+- 公式release API掲載SHA-256とダウンロードしたVC x64配布物が一致: `662761d8ba8dae04aec74023ebaeceb856c2b56b9b59cfd180759d26300dda42`。
+- Windows Authenticode: Valid / Signature verified、署名者SignPath Foundation、thumbprint `1C539760AE21976C7ACFF383930DCA4221BC0460`。
+- 検証用配布物はOS一時領域へ取得。製品の自動取得処理は追加しない。CP-010の実装可否は未確定。
+
 この文書はliving documentである。前半は調査時点の記録。2026-09-08に利用者から実装指示を受け、末尾の実装チェックポイントと実資料検証まで完了した。
 
 ## Goal

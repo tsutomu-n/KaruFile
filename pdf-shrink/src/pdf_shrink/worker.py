@@ -3,11 +3,12 @@ from __future__ import annotations
 
 import os
 import tempfile
+import time
 import traceback
 from dataclasses import replace
 from pathlib import Path
 
-from . import discovery, output, transform, validate
+from . import discovery, lossless_jpeg, output, transform, validate
 from .config import ReductionOptions, RunConfig, config_for_path, profile_for_path
 from .inspect_pdf import inspect_file
 from .models import (
@@ -88,13 +89,23 @@ def _evaluate_candidate(
     mode: OptimizationMode,
     profile: str,
     qpdf_exe: Path,
+    *,
+    jpeg_kind: str | None = None,
+    deadline: float = float("inf"),
 ) -> CandidateResult:
     """Keep rejection evidence separate from failures of tools or structure."""
-    kind = profile if mode is OptimizationMode.LOSSY else "lossless"
+    kind = jpeg_kind or (profile if mode is OptimizationMode.LOSSY else "lossless")
     detail = CandidateResult(kind=kind)
     try:
         changed = 0
-        if mode is OptimizationMode.LOSSY:
+        if jpeg_kind:
+            changed = lossless_jpeg.optimize(
+                source.path, path, cfg, qpdf_exe,
+                progressive=jpeg_kind == "jpeg_lossless_progressive", deadline=deadline,
+            )
+            if not changed:
+                return replace(detail, reason="no_image_savings")
+        elif mode is OptimizationMode.LOSSY:
             changed = transform.optimize_lossy(source.path, path, cfg.lossy)
         else:
             transform.optimize_lossless(source.path, path, qpdf_exe, cfg.qpdf)
@@ -104,7 +115,14 @@ def _evaluate_candidate(
         kwargs = {"enhanced": cfg.lossy.recompress_existing_jpeg or cfg.lossy.photo_mode}
         if cfg.lossy.photo_mode:
             kwargs["detail"] = True
-        valid, reason = validate.validate(source.path, path, qpdf_exe, **kwargs)
+        if jpeg_kind:
+            rc = validate.qpdf_check(qpdf_exe, path)
+            if rc:
+                raise RuntimeError(f"qpdf check failed (rc={rc})")
+            lossless_jpeg.validate_exact(source.path, path, deadline)
+            valid, reason = True, ""
+        else:
+            valid, reason = validate.validate(source.path, path, qpdf_exe, **kwargs)
         if not valid:
             quality_rejection = reason.startswith((
                 "render_diff_too_large", "render_local_diff_too_large",
@@ -123,6 +141,8 @@ def _evaluate_candidate(
             detail,
             reason="candidate_not_smaller" if detail.size >= source.size else "reduction_below_threshold",
         )
+    except lossless_jpeg.CandidateRejected as exc:
+        return replace(detail, reason="quality_rejected", validation_reason=str(exc))
     except Exception as exc:
         return replace(detail, reason="processing_error", validation_reason=str(exc))
 
@@ -165,6 +185,7 @@ def process_one_file(
             candidate_saved_percent=saved / source.size if saved is not None and source.size else None,
             images_changed=primary.images_changed if primary else 0,
             candidate_details=tuple(candidates),
+            lossless_jpeg_requested=cfg.lossless_jpeg,
         )
 
     try:
@@ -230,14 +251,27 @@ def process_one_file(
         modes = [inspection.mode or OptimizationMode.LOSSLESS]
         if inspection.mode is OptimizationMode.LOSSY:
             modes.append(OptimizationMode.LOSSLESS)
-        for mode in modes:
+        kinds: list[str | None] = [None] * len(modes)
+        if cfg.lossless_jpeg:
+            modes.extend([OptimizationMode.LOSSLESS] * 2)
+            kinds.extend(["jpeg_lossless_baseline", "jpeg_lossless_progressive"])
+        jpeg_deadline = None
+        for mode, jpeg_kind in zip(modes, kinds):
             descriptor, temp_name = tempfile.mkstemp(
                 prefix=f"{source.path.stem}_", suffix=".pdf", dir=temp_dir,
             )
             os.close(descriptor)
             path = Path(temp_name)
             temp_paths.append(path)
-            candidate = _evaluate_candidate(source, cfg, path, mode, profile, qpdf_exe)
+            if jpeg_kind:
+                if jpeg_deadline is None:
+                    jpeg_deadline = time.monotonic() + lossless_jpeg.RECIPE["document_seconds"]
+                candidate = _evaluate_candidate(
+                    source, cfg, path, mode, profile, qpdf_exe,
+                    jpeg_kind=jpeg_kind, deadline=jpeg_deadline,
+                )
+            else:
+                candidate = _evaluate_candidate(source, cfg, path, mode, profile, qpdf_exe)
             candidates.append(candidate)
             discovery.assert_source_unchanged(source, cfg.input_dir)
             if candidate.reason == "processing_error":
@@ -245,7 +279,8 @@ def process_one_file(
 
         eligible = [index for index, c in enumerate(candidates) if c.reason == "eligible"]
         if eligible:
-            chosen = min(eligible, key=lambda i: (candidates[i].size, modes[i] is OptimizationMode.LOSSY))
+            priorities = {"lossless": 0, "jpeg_lossless_baseline": 1, "jpeg_lossless_progressive": 2}
+            chosen = min(eligible, key=lambda i: (candidates[i].size, priorities.get(candidates[i].kind, 3)))
             candidate = candidates[chosen]
             candidate_size = candidate.size
             assert candidate_size is not None
@@ -269,7 +304,10 @@ def process_one_file(
                 status,
                 output_size=candidate_size,
                 saved_bytes=saved_bytes,
-                reason="fallback_lossless" if chosen else str(status).lower(),
+                reason=(
+                    f"adopted_{candidate.kind}" if candidate.kind.startswith("jpeg_lossless_")
+                    else "fallback_lossless" if chosen else str(status).lower()
+                ),
                 selected_mode=modes[chosen],
             )
 

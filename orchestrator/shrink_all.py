@@ -93,6 +93,7 @@ IMAGE_EXACT_COPY_ACTIONS = frozenset(
 )
 PDF_REPORT_REQUIRED_COLUMNS = frozenset(
     {
+        "lossless_jpeg_requested",
         "source_path",
         "source_size",
         "source_sha256",
@@ -970,6 +971,9 @@ def parse_pdf_report(report_path: Path) -> dict[str, Any]:
                 if preset not in {"standard", "compact"}:
                     raise ValueError(f"unknown PDF report preset: {preset!r}")
                 profile = row.get("profile") or ""
+                lossless_jpeg_requested = row.get("lossless_jpeg_requested")
+                if lossless_jpeg_requested not in {"true", "false"}:
+                    raise ValueError("PDF report lossless_jpeg_requested must be true or false")
                 if profile not in {"standard", "compact", "photo"}:
                     raise ValueError(f"unknown PDF report profile: {profile!r}")
                 source_sha256 = (row.get("source_sha256") or "").lower()
@@ -994,6 +998,7 @@ def parse_pdf_report(report_path: Path) -> dict[str, Any]:
                         "status": status,
                         "preset": preset,
                         "profile": profile,
+                        "lossless_jpeg_requested": lossless_jpeg_requested == "true",
                     }
                 )
     except Exception as exc:
@@ -1021,6 +1026,7 @@ def pdf_report_matches_inputs(
     preset: str,
     dry_run: bool,
     photo_patterns: list[str] | None = None,
+    lossless_jpeg_requested: bool = False,
 ) -> bool:
     """Verify PDF report rows against current source and output bytes."""
 
@@ -1057,6 +1063,8 @@ def pdf_report_matches_inputs(
             ):
                 return False
             if row["preset"] != preset:
+                return False
+            if row.get("lossless_jpeg_requested") is not lossless_jpeg_requested:
                 return False
             if row["profile"] != _pdf_profile(relative, preset, photo_patterns or []):
                 return False
@@ -1129,7 +1137,7 @@ def pdf_report_matches_inputs(
                 if output_size != source_size or output_sha256 != source_sha256:
                     return False
             elif status == "ADOPTED_LOSSLESS":
-                if output_size <= 0 or saved_bytes < 64 * 1024 or saved_percent < 0.02:
+                if output_size <= 0 or saved_bytes < 16 * 1024 or saved_percent < 0.02:
                     return False
             elif status == "ADOPTED_LOSSY":
                 min_saved_bytes = (64 if row["profile"] == "photo" else 256) * 1024
@@ -1946,6 +1954,8 @@ def build_parser() -> argparse.ArgumentParser:
             "入力相対パスのglob、大小文字を区別せず、*は/も含む。反復可"
         ),
     )
+    parser.add_argument("--pdf-lossless-jpeg", action="store_true", help="jpegtran 3.2.0のJPEG可逆候補を追加（既定OFF、手動準備）")
+    parser.add_argument("--pdf-jpegtran-path", help="PDFで使うjpegtran実行ファイル。指定だけでは有効化しない")
     parser.add_argument(
         "--ffmpeg-path",
         help="compact動画で使うffmpeg実行ファイル（未指定時はPATH）",
@@ -2058,6 +2068,10 @@ def main(argv: list[str] | None = None) -> int:
             "--preset", args.preset,
         ]
         pdf_args.extend(f"--photo-pattern={pattern}" for pattern in args.pdf_photo_pattern)
+        if args.pdf_lossless_jpeg:
+            pdf_args.append("--lossless-jpeg")
+        if args.pdf_jpegtran_path:
+            pdf_args.extend(["--jpegtran-path", args.pdf_jpegtran_path])
         if args.dry_run:
             pdf_args.append("--dry-run")
         if args.verbose:
@@ -2075,6 +2089,7 @@ def main(argv: list[str] | None = None) -> int:
                 preset=args.preset,
                 dry_run=args.dry_run,
                 photo_patterns=args.pdf_photo_pattern,
+                lossless_jpeg_requested=args.pdf_lossless_jpeg,
             ):
                 pdf_result = parsed_pdf
                 if parsed_pdf.get("errors", 0) > 0:
