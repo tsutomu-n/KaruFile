@@ -456,7 +456,7 @@ PDFの`ERROR`・`SKIPPED_*`は描画せず、比較側の`SKIPPED`と理由を�
   実行中の個々の変換・検証・描画を即時停止する保証はありません。上限超過は比較側`ERROR`です。
 - 原本と完成出力のsize・SHA-256・安全な保存先を検査し、比較処理後にも変化がないことを確認します。
   比較資料は入力・完成出力ツリーと分け、link・junction・hardlinkによる危険な保存先を拒否します。
-- 新しい`<output-parent>/pdf-preview/<runid>/`へ`index.html`、ローカルJS、PNGと比較用PDFを格納します。
+- 新しい`<output-parent>/pdf-preview/<runid>/`へJavaScriptを内包する`index.html`、PNGと比較用PDFを格納します。
   原本・実際の完成出力もこの実行フォルダーへコピーし、外部サーバー・CDNは使用しません。
   持ち運びには実行フォルダー全体が必要です。HTML・manifestは検査した一時ファイルから原子的に公開します。
 - 比較資料の失敗は完成PDFのstatusや成功stateを変更せず、終了コード1へ反映します。他PDFは続行します。
@@ -615,7 +615,8 @@ KaruFileの対象外:
    - 起動前と終了時に全対象のidentity・SHA-256を照合して変更を失敗として検出しますが、
      処理中の入力をロックせず、別プロセスによる変更そのものは防止しません。
 4. 実データでの判定閾値
-   - テストは合成データが中心です。今回の実装では実データPilotを実施していません。
+   - テストは合成データが中心です。写真DPI・比較HTMLは実資料5冊で限定検証しています。
+     [検証記録](validation/2026-09-09-photo-preview.md)の結果を別資料の画質・削減率保証へ拡張しません。
 5. 動画の自動判定と知覚品質
    - CFRはffprobeの `r_frame_rate == avg_frame_rate` を使う入口判定で、全timestampの均一性を
      証明しません。既知のHDR/Dolby Vision metadataは拒否しますが、metadata欠落時のSDR性までは

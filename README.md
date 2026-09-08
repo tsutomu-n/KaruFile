@@ -81,5 +81,6 @@ uv run --script karufile.py --preset compact -i "D:\作業\資料" -o "D:\作業
 ## 開発検証
 
 検証コマンドと変更範囲ごとの実行方針は [AGENTS.md](AGENTS.md#validation)を参照してください。
-自動テストは小さな合成データが中心で、代表実データでのPilotは未実施です。
+自動テストは小さな合成データが中心です。写真DPI・比較HTMLの実資料5冊による限定検証は
+[検証記録](docs/validation/2026-09-09-photo-preview.md)を参照してください。
 compactの最終検証は [ExecPlan索引](.agent/execplans/README.md)上で中断・再開待ちです。

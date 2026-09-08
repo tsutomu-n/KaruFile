@@ -63,5 +63,8 @@ visual-checkを実行してから、light/darkの画像を確認します。
 
 ## 履歴資料
 
+写真DPI選択・比較HTMLの[2026-09-09検証記録](validation/2026-09-09-photo-preview.md)は、実資料の結果と
+表示確認の証拠です。数値はその検証時点の結果であり、他資料の削減率や画質を保証しません。
+
 完了済み計画の一覧と扱いは [ExecPlan索引](../.agent/execplans/README.md)を参照してください。
 履歴本文の `Current State`、`Facts`、検証件数は、その計画を実施した時点の記録です。

@@ -656,7 +656,7 @@ PDF圧縮/JPEG可逆/層別圧縮の概念語で検索後、1回だけcodec名�
 - Failure / Recovery: 比較失敗は独立ERROR・終了1として正常PDFを保持し、他ファイルを続行する。リンク/hardlink/入力や出力との衝突を拒否する。原本、既存出力、以前の比較bundleを変更しない。
 
 ### CP-016: 文書・実資料・最終検証
-- Status: In progress（全テスト・実資料・比較HTML確認済み、文書/構成図の最終同期中）
+- Status: Complete（全テスト・実資料・比較HTML・文書・構成図の確認完了）
 - Objective: CLI、文書、構成図、合成/実資料の証拠を一致させる。
 - Actions: MANUAL/REFERENCE/README/AGENTS/構成図を同期。archifyで生成・検証・light/dark目視。全suite、compileall、両CLI help、diff check。実資料5冊を新規別出力で通常/比較/再実行/dry-runし入力と旧出力hash保持を確認する。
 - Completion: 原本/実際出力/複数DPIのHTMLを開き表示と操作を確認。結果、所要時間、採用理由と残る限界を記録する。commit/pushなし。
@@ -691,3 +691,6 @@ PDF圧縮/JPEG可逆/層別圧縮の概念語で検索後、1回だけcodec名�
 - 比較HTML: `normal150\pdf-preview\20260908T224519Z-c9296a09a162\index.html`（上記実資料parent配下）。Chromeで2資料×2範囲×4候補×3倍率(50/100/250%)の48条件を操作し、全条件で画像ロードと左右寸法・上端一致。全65viewの切替ロードも成功。250%拡大の双方向スクロール位置一致を確認。
 - desktopと狭い画面（実測innerWidth502px）を目視確認し、ページ横overflowなし。HTMLは外部script/iframe/通信コードなし。接続ブラウザーにfile URL同一origin制限のconsole errorが1件記録されたが、画像ロード・操作失敗は再現せず、console無エラーとは報告しない。
 - 画質許容は利用者が事前比較で判断した写真2冊の結果であり、全資料/OCR/全PDF viewerへの保証には拡張しない。比較は静的な表示資料で、HTMLから圧縮を再実行しない。
+- MANUAL/REFERENCE/rootとPDF README/orchestrator設計/AGENTSを同期。構成図はarchifyのshowcase 9/9、0 errors/warningsでdeliver。4 viewportでoverflowなし、最小/最大light/darkの4枚を目視確認。receiptのvisualReviewはツール出力のpendingを保持し、この記録を手動確認の証拠とする。HTML SHA-256 `763281cb255c9fce0339e38b01ce83a192fcf30a9be440e13845688ce63fdd80`。
+- [再現結果と実画面](../../docs/validation/2026-09-09-photo-preview.md)を保存。比較HTMLと原本・実際出力を含むbundleはローカル実資料parentへ保持。
+- 07:50:41に履歴上のHEADが別経路で`e477a63`へ進み、今回のruntime/文書/図を含むことを最終確認した。本agent群はcommit/pushコマンドを実行していない。生成時の基準revisionを履歴へ合わせて書き換えず、そのまま保持する。
