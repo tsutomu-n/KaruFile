@@ -1,0 +1,140 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "PDFは、内容によって扱いが違う",
+    "quality_profile": "showcase",
+    "viewBox": [
+      520,
+      284
+    ],
+    "legend": {
+      "mode": "hidden"
+    }
+  },
+  "components": [
+    {
+      "id": "text-pdf",
+      "type": "external",
+      "label": "文字だけのPDF",
+      "sublabel": "例：文章だけの会議資料",
+      "pos": [
+        40,
+        42
+      ],
+      "size": [
+        180,
+        36
+      ]
+    },
+    {
+      "id": "text-result",
+      "type": "backend",
+      "label": "小さくできれば軽量化",
+      "sublabel": "白黒になる場合もある",
+      "pos": [
+        300,
+        42
+      ],
+      "size": [
+        180,
+        36
+      ]
+    },
+    {
+      "id": "illustrated-pdf",
+      "type": "external",
+      "label": "図・写真入りPDF",
+      "sublabel": "未指定のスキャンPDFも含む",
+      "pos": [
+        40,
+        102
+      ],
+      "size": [
+        180,
+        36
+      ]
+    },
+    {
+      "id": "preserved-result",
+      "type": "security",
+      "label": "そのままコピー",
+      "sublabel": "PDF全体を加工しない",
+      "pos": [
+        300,
+        102
+      ],
+      "size": [
+        180,
+        36
+      ]
+    },
+    {
+      "id": "scan-pdf",
+      "type": "external",
+      "label": "指定したスキャンPDF",
+      "sublabel": "文章の資料と人が確認",
+      "pos": [
+        40,
+        204
+      ],
+      "size": [
+        180,
+        36
+      ]
+    },
+    {
+      "id": "scan-result",
+      "type": "backend",
+      "label": "白黒の軽いコピー候補",
+      "sublabel": "条件を満たすものだけ採用",
+      "pos": [
+        300,
+        204
+      ],
+      "size": [
+        180,
+        36
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "id": "automatic-text",
+      "from": "text-pdf",
+      "to": "text-result"
+    },
+    {
+      "id": "keep-illustrated",
+      "from": "illustrated-pdf",
+      "to": "preserved-result"
+    },
+    {
+      "id": "try-selected-scan",
+      "from": "scan-pdf",
+      "to": "scan-result"
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "region",
+      "label": "通常設定",
+      "wraps": [
+        "text-pdf",
+        "text-result",
+        "illustrated-pdf",
+        "preserved-result"
+      ],
+      "pad": 28
+    },
+    {
+      "kind": "region",
+      "label": "内容を確認して、追加指定",
+      "wraps": [
+        "scan-pdf",
+        "scan-result"
+      ],
+      "pad": 28
+    }
+  ]
+}

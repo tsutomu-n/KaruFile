@@ -1,0 +1,176 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "元の資料は残り、別の場所にコピーができる",
+    "quality_profile": "showcase",
+    "viewBox": [
+      520,
+      284
+    ],
+    "legend": {
+      "mode": "hidden"
+    }
+  },
+  "components": [
+    {
+      "id": "meeting-original",
+      "type": "external",
+      "label": "会議資料.pdf",
+      "sublabel": "原本はそのまま残る",
+      "pos": [
+        40,
+        42
+      ],
+      "size": [
+        180,
+        36
+      ]
+    },
+    {
+      "id": "meeting-copy",
+      "type": "backend",
+      "label": "会議資料.pdf",
+      "sublabel": "小さくできれば軽量化",
+      "pos": [
+        300,
+        42
+      ],
+      "size": [
+        180,
+        36
+      ]
+    },
+    {
+      "id": "drawing-original",
+      "type": "external",
+      "label": "配置図.pdf",
+      "sublabel": "原本はそのまま残る",
+      "pos": [
+        40,
+        96
+      ],
+      "size": [
+        180,
+        36
+      ]
+    },
+    {
+      "id": "drawing-copy",
+      "type": "backend",
+      "label": "配置図.pdf",
+      "sublabel": "通常は、そのままコピー",
+      "pos": [
+        300,
+        96
+      ],
+      "size": [
+        180,
+        36
+      ]
+    },
+    {
+      "id": "photo-original",
+      "type": "external",
+      "label": "現場写真.jpg",
+      "sublabel": "原本はそのまま残る",
+      "pos": [
+        40,
+        150
+      ],
+      "size": [
+        180,
+        36
+      ]
+    },
+    {
+      "id": "photo-copy",
+      "type": "backend",
+      "label": "現場写真.jpg",
+      "sublabel": "縮小・圧縮したコピー",
+      "pos": [
+        300,
+        150
+      ],
+      "size": [
+        180,
+        36
+      ]
+    },
+    {
+      "id": "office-original",
+      "type": "external",
+      "label": "案内.docx・集計.xlsx",
+      "sublabel": "原本はそのまま残る",
+      "pos": [
+        40,
+        204
+      ],
+      "size": [
+        180,
+        36
+      ]
+    },
+    {
+      "id": "office-excluded",
+      "type": "security",
+      "label": "出力されません",
+      "sublabel": "処理・コピーの対象外",
+      "pos": [
+        300,
+        204
+      ],
+      "size": [
+        180,
+        36
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "id": "meeting-result",
+      "from": "meeting-original",
+      "to": "meeting-copy"
+    },
+    {
+      "id": "drawing-result",
+      "from": "drawing-original",
+      "to": "drawing-copy"
+    },
+    {
+      "id": "photo-result",
+      "from": "photo-original",
+      "to": "photo-copy"
+    },
+    {
+      "id": "office-exclusion",
+      "from": "office-original",
+      "to": "office-excluded",
+      "variant": "dashed"
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "region",
+      "label": "📁 元：会議資料",
+      "wraps": [
+        "meeting-original",
+        "drawing-original",
+        "photo-original",
+        "office-original"
+      ],
+      "pad": 28
+    },
+    {
+      "kind": "region",
+      "label": "📁 別：会議資料_軽量化",
+      "wraps": [
+        "meeting-copy",
+        "drawing-copy",
+        "photo-copy",
+        "office-excluded"
+      ],
+      "pad": 28
+    }
+  ]
+}

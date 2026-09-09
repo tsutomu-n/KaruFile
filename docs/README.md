@@ -21,12 +21,14 @@ ExecPlanは当時の判断と検証を残す履歴であり、現行仕様の正
 | 文書 | 用途 | 更新する契機 |
 |---|---|---|
 | [利用者マニュアル](../MANUAL.md) | 利用者向けの基本手順、安全条件、結果確認 | CLI、保存先、終了コード、対応形式の変更 |
+| [KaruFileで何ができるの？](KARUFILE_GUIDE.html) | 事務の仕事の例と図で、用途・原本の扱い・結果確認を説明する入門ガイド | 利用者に見える処理対象・既定動作・注意事項の変更 |
 | [ルートREADME](../README.md) | リポジトリの入口と最短手順 | 正本や主要入口の変更 |
 | [技術リファレンス](REFERENCE.md) | 数値、status、保存先、再利用条件、個別CLI | 製品契約または固定値の変更 |
 | [PDF処理の流れと判断基準](PDF_PROCESSING.md) | PDFの保護判定から候補生成・検証・出力・比較までの説明 | PDFの処理順序、判定、候補、採用条件の変更 |
 | [AGENTS.md](../AGENTS.md) | AI・保守者向けの短い作業契約 | 責務境界、正本、検証入口の変更 |
 | [pdf-shrink README](../pdf-shrink/README.md) | PDF個別CLIと内部契約 | PDF処理、status、レポート、依存関係の変更 |
 | [media-shrink-tool README](../media-shrink-tool/README.md) | 画像個別CLIと内部契約 | 画像recipe、再利用、警告、エラーCSVの変更 |
+| [画像圧縮の内部仕様](image-processing.html) | media-shrink-toolの画像処理ロジックを実装に基づき詳述 | 画像変換、再利用、レポート、安全検査の変更 |
 | [video-shrink README](../video-shrink/README.md) | 動画個別CLIと内部契約 | 動画適格性、品質gate、状態、レポート、FFmpeg境界の変更 |
 | [orchestrator README](../orchestrator/README.md) | 統合CLIと保存先 | 実行順序、集計、環境変数の変更 |
 | [orchestrator設計](../orchestrator/docs/shrink_orchestrator_design.md) | 内部責務、安全性検査、結果照合 | `orchestrator/shrink_all.py` の境界変更 |
@@ -35,8 +37,11 @@ ExecPlanは当時の判断と検証を残す履歴であり、現行仕様の正
 | [Architecture JSON](architecture/karufile-runtime.architecture.json) | Archify図の編集可能な正本 | 実行時コンポーネントやデータ経路の変更 |
 | [Architecture HTML](architecture/karufile-runtime.compact.html) | 対話型の閲覧用生成物 | Architecture JSONを変更して再生成したとき |
 
-生成HTMLは直接編集しません。Architecture JSONを更新し、Archifyのvalidate、deliver、
+Archify生成HTMLは直接編集しません。Architecture JSONを更新し、Archifyのvalidate、deliver、
 visual-checkを実行してから、light/darkの画像を確認します。
+
+入門ガイドの本文・埋込図の再生成手順と表示確認の証拠は [guide/README.md](guide/README.md)にあります。
+ガイドは概要説明であり、操作と安全情報の正本は引き続き `MANUAL.md` です。
 
 ## 2026-08-16 コード基準監査
 

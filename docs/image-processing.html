@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KaruFile 画像圧縮の内部仕様</title>
+  <style>
+    :root {
+      --bg: #ffffff;
+      --fg: #1a1a1a;
+      --muted: #555555;
+      --accent: #0066cc;
+      --code-bg: #f5f5f5;
+      --border: #d0d0d0;
+      --table-head: #e8e8e8;
+      --table-row: #fafafa;
+      --warn: #664400;
+      --warn-bg: #fff8e1;
+      --error: #880000;
+      --error-bg: #ffeeee;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #121212;
+        --fg: #e0e0e0;
+        --muted: #aaaaaa;
+        --accent: #66b3ff;
+        --code-bg: #1e1e1e;
+        --border: #444444;
+        --table-head: #2a2a2a;
+        --table-row: #1a1a1a;
+        --warn: #ffeebb;
+        --warn-bg: #332200;
+        --error: #ffaaaa;
+        --error-bg: #330000;
+      }
+    }
+    * { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Sans", "Noto Sans JP", sans-serif;
+      line-height: 1.75;
+      color: var(--fg);
+      background: var(--bg);
+      margin: 0;
+      padding: 0;
+    }
+    .container {
+      display: flex;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 2rem;
+      gap: 2rem;
+    }
+    nav#toc {
+      width: 260px;
+      flex-shrink: 0;
+      position: sticky;
+      top: 2rem;
+      align-self: flex-start;
+      font-size: 0.9rem;
+      border-right: 1px solid var(--border);
+      padding-right: 1rem;
+    }
+    nav#toc h2 {
+      font-size: 1rem;
+      margin-top: 0;
+    }
+    nav#toc ul {
+      list-style: none;
+      padding-left: 0;
+    }
+    nav#toc li { margin: 0.35rem 0; }
+    nav#toc a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+    nav#toc a:hover { text-decoration: underline; }
+    main {
+      flex: 1;
+      min-width: 0;
+    }
+    h1 { font-size: 1.9rem; margin-top: 0; }
+    h2 {
+      font-size: 1.4rem;
+      margin-top: 2.5rem;
+      padding-bottom: 0.3rem;
+      border-bottom: 2px solid var(--border);
+    }
+    h3 { font-size: 1.15rem; margin-top: 2rem; }
+    h4 { font-size: 1rem; margin-top: 1.5rem; }
+    p, li { max-width: 75ch; }
+    code, pre {
+      font-family: "SF Mono", Consolas, "Courier New", monospace;
+      background: var(--code-bg);
+      border-radius: 3px;
+    }
+    code { padding: 0.15rem 0.35rem; font-size: 0.9em; }
+    pre {
+      padding: 1rem;
+      overflow-x: auto;
+      font-size: 0.85rem;
+      border: 1px solid var(--border);
+    }
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      margin: 1rem 0;
+      font-size: 0.95rem;
+    }
+    th, td {
+      border: 1px solid var(--border);
+      padding: 0.5rem 0.75rem;
+      text-align: left;
+      vertical-align: top;
+    }
+    th { background: var(--table-head); }
+    tr:nth-child(even) { background: var(--table-row); }
+    .note {
+      padding: 0.75rem 1rem;
+      border-left: 4px solid var(--accent);
+      background: var(--code-bg);
+      margin: 1rem 0;
+    }
+    .warning {
+      padding: 0.75rem 1rem;
+      border-left: 4px solid #cc9900;
+      background: var(--warn-bg);
+      color: var(--warn);
+      margin: 1rem 0;
+    }
+    .error {
+      padding: 0.75rem 1rem;
+      border-left: 4px solid #cc0000;
+      background: var(--error-bg);
+      color: var(--error);
+      margin: 1rem 0;
+    }
+    ul.tight li, ol.tight li { margin: 0.35rem 0; }
+    .flow {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      margin: 1rem 0;
+      padding-left: 0;
+      list-style: none;
+    }
+    .flow li {
+      border: 1px solid var(--border);
+      padding: 0.6rem 0.9rem;
+      border-radius: 4px;
+      background: var(--code-bg);
+    }
+    .flow li:before {
+      content: attr(data-step);
+      display: inline-block;
+      width: 1.5rem;
+      height: 1.5rem;
+      line-height: 1.5rem;
+      text-align: center;
+      border-radius: 50%;
+      background: var(--accent);
+      color: white;
+      font-size: 0.8rem;
+      margin-right: 0.6rem;
+    }
+    .marker {
+      font-family: monospace;
+      word-break: break-all;
+    }
+    @media (max-width: 900px) {
+      .container { flex-direction: column; padding: 1rem; }
+      nav#toc {
+        position: static;
+        width: 100%;
+        border-right: none;
+        border-bottom: 1px solid var(--border);
+        padding-bottom: 1rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <nav id="toc">
+      <h2>目次</h2>
+      <ul>
+        <li><a href="#overview">1. 概要</a></li>
+        <li><a href="#supported-formats">2. 対応形式</a></li>
+        <li><a href="#presets">3. 変換プリセット</a></li>
+        <li><a href="#sizing">4. 出力寸法の計算</a></li>
+        <li><a href="#safety">5. 入出力の安全性検査</a></li>
+        <li><a href="#collection">6. ファイル収集と出力計画</a></li>
+        <li><a href="#conversion-flow">7. 1画像あたりの処理フロー</a></li>
+        <li><a href="#jpeg-encoding">8. JPEGエンコード</a></li>
+        <li><a href="#adoption">9. 候補採用条件</a></li>
+        <li><a href="#reuse">10. 生成済み・完成済み画像の再利用</a></li>
+        <li><a href="#marker">11. Markerの仕組み</a></li>
+        <li><a href="#reports">12. レポートとManifest</a></li>
+        <li><a href="#parallel">13. 並列実行</a></li>
+        <li><a href="#cli">14. 個別CLI</a></li>
+        <li><a href="#warnings">15. 警告・エラー・終了コード</a></li>
+        <li><a href="#verification">16. 開発検証</a></li>
+        <li><a href="#references">17. 参照先</a></li>
+      </ul>
+    </nav>
+    <main>
+      <h1>KaruFile 画像圧縮の内部仕様</h1>
+      <p>
+        この文書は、<code>media-shrink-tool</code> コンポーネントが画像をどう圧縮・変換するかを、
+        実装に基づいて詳しくまとめたものです。
+        エンドユーザー向けの手順は <a href="../MANUAL.md">MANUAL.md</a>、
+        保存先や status の一覧は <a href="REFERENCE.md">REFERENCE.md</a>、
+        個別 CLI の簡潔な説明は <a href="../media-shrink-tool/README.md">media-shrink-tool/README.md</a> を参照してください。
+      </p>
+
+      <h2 id="overview">1. 概要</h2>
+      <p>
+        KaruFile の画像処理は、入力画像を一切変更・削除せず、別の出力ツリーへ変換済み JPEG を書き出すことを目的としています。
+        処理は以下の原則に基づきます。
+      </p>
+      <ul class="tight">
+        <li>入力ファイルを書き換えない。出力は別ディレクトリ。</li>
+        <li>入力と出力が同一・親子関係になる指定は、実行前に拒否する。</li>
+        <li>symlink / junction / hard link 等の危険なリンクを検出して拒否する。</li>
+        <li>縦横比を維持し、拡大・切り抜きは行わない。</li>
+        <li>EXIF Orientation は画素へ適用し、出力から Orientation タグは削除する。</li>
+        <li>アルファ通道は白背景に合成する。</li>
+        <li>JPEG への保存時に「いつ・どのレシピで生成したか」を marker として埋め込み、再実行時の再利用を可能にする。</li>
+        <li>1ファイルの失敗で他のファイルの処理は止めない。</li>
+      </ul>
+
+      <h2 id="supported-formats">2. 対応形式</h2>
+      <p>探索対象となる拡張子は以下の通りです。大文字小文字は区別しません。</p>
+      <pre><code>.jpg .jpeg .png .tif .tiff .bmp .gif .webp .heic .heif</code></pre>
+      <p>HEIF/HEIC は <code>pillow-heif</code> が利用可能な場合のみ対応します。DLL 未インストール等で初期化に失敗しても、対応拡張子の列挙自体は続行し、実ファイル処理時に失敗します。</p>
+      <p>出力形式は常に JPEG です。拡張子の扱いは次の通りです。</p>
+      <table>
+        <thead><tr><th>入力</th><th>出力パス例</th></tr></thead>
+        <tbody>
+          <tr><td><code>photo.jpg</code></td><td><code>photo.jpg</code></td></tr>
+          <tr><td><code>photo.jpeg</code></td><td><code>photo.jpeg</code></td></tr>
+          <tr><td><code>photo.png</code></td><td><code>photo.png.jpg</code></td></tr>
+        </tbody>
+      </table>
+
+      <h2 id="presets">3. 変換プリセット</h2>
+      <p>画像レシピは <code>media-shrink-tool/src/media_shrink/config.py</code> に定義されています。現在は <code>standard</code> と <code>compact</code> の 2 つです。</p>
+      <table>
+        <thead>
+          <tr><th>項目</th><th>standard</th><th>compact</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>長辺上限</td><td>1280 px</td><td>1024 px</td></tr>
+          <tr><td>短辺上限</td><td>960 px</td><td>768 px</td></tr>
+          <tr><td>JPEG quality</td><td>72</td><td>60</td></tr>
+          <tr><td>サブサンプリング</td><td>4:2:0</td><td>4:2:0</td></tr>
+          <tr><td>optimize</td><td>true</td><td>true</td></tr>
+          <tr><td>progressive</td><td>true</td><td>true</td></tr>
+          <tr><td>アルファ処理</td><td>白背景合成</td><td>白背景合成</td></tr>
+          <tr><td>Orientation</td><td>画素適用</td><td>画素適用</td></tr>
+        </tbody>
+      </table>
+      <p>レシピ hash は以下の文字列です。これが marker に埋め込まれ、同一レシピ判定に使われます。</p>
+      <ul class="tight">
+        <li><code>standard</code>: <code class="marker">2f60924f29b4cedccd15bd92d6dab4da72b22c1358c23e2edf1174fa3b70f420</code></li>
+        <li><code>compact</code>: <code class="marker">c5233dcedea2119fbfa723eb7020ba4f295d0fbcb0881ec8340f389614a26ddd</code></li>
+      </ul>
+      <p>hash は <code>max_long=&lt;N&gt;</code>, <code>max_short=&lt;N&gt;</code>, <code>quality=&lt;N&gt;</code>, <code>subsampling=4:2:0</code>, <code>alpha=white</code>, <code>orientation=apply</code> を改行で連結した SHA-256 です。設定値が変われば hash も変わり、旧 marker は自動的に「未知のレシピ」として再処理されます。</p>
+
+      <h2 id="sizing">4. 出力寸法の計算</h2>
+      <p>寸法計算は <code>calculate_output_size()</code> で行います。Orientation 適用後の寸法を前提に、次式でスケールを決めます。</p>
+      <pre><code>scale = min(1.0, max_long / long_side, max_short / short_side)
+new_w = max(1, round(width  * scale))
+new_h = max(1, round(height * scale))</code></pre>
+      <p>つまり、上限内に収まり、かつ縦横比を維持する最大寸法を選びます。<code>scale=1.0</code> の場合は元の寸法のままです。</p>
+      <p>計算例（standard）:</p>
+      <table>
+        <thead><tr><th>元寸法</th><th>出力寸法</th><th>備考</th></tr></thead>
+        <tbody>
+          <tr><td>(4032, 3024)</td><td>(1280, 960)</td><td>長辺を 1280 に収める</td></tr>
+          <tr><td>(3024, 4032)</td><td>(960, 1280)</td><td>縦長を 1280 に収める</td></tr>
+          <tr><td>(3000, 3000)</td><td>(960, 960)</td><td>短辺上限も考慮</td></tr>
+          <tr><td>(4000, 300)</td><td>(1280, 96)</td><td>極端な比率でも短辺上限内</td></tr>
+          <tr><td>(640, 480)</td><td>(640, 480)</td><td>アップスケールしない</td></tr>
+        </tbody>
+      </table>
+
+      <h2 id="safety">5. 入出力の安全性検査</h2>
+      <p>すべての入出力操作の前に、<code>media-shrink-tool/src/media_shrink/utils.py</code> の検査関数を通します。</p>
+      <h4>5.1 入力ディレクトリの検査</h4>
+      <ul class="tight">
+        <li>入力は解決可能なディレクトリであること。</li>
+        <li>入力ルートからソースファイルまでに symlink / junction / reparse point がないこと。</li>
+        <li>ソースファイル自身が symlink でないこと。</li>
+        <li>解決済みパスが入力ルート外に出ないこと。</li>
+      </ul>
+      <h4>5.2 出力ディレクトリの検査</h4>
+      <ul class="tight">
+        <li>出力ディレクトリが入力ディレクトリと同一でないこと（Windows では大文字小文字無視）。</li>
+        <li>出力ディレクトリが入力ディレクトリの内部でないこと。</li>
+        <li>入力ディレクトリが出力ディレクトリの内部でないこと。</li>
+        <li>出力先までのパスに symlink / junction / reparse point がないこと。</li>
+        <li>出力先が既存のリンク、ディレクトリ、hard link ではないこと。</li>
+        <li>既存の出力ファイルが入力ファイルと同一 inode を指していないこと。</li>
+      </ul>
+      <h4>5.3 補助ファイルの検査</h4>
+      <p>レポートや manifest などの「sibling」ファイルも、入力領域と重ならず、既存ディレクトリ・リンク・hard link にならないことを検査します。</p>
+
+      <h2 id="collection">6. ファイル収集と出力計画</h2>
+      <h3>6.1 collect_images</h3>
+      <p><code>collect_images()</code> は、入力ディレクトリを再帰的に走査し、対応拡張子の通常ファイルを列挙します。</p>
+      <ul class="tight">
+        <li><code>os.scandir()</code> を使い、リンクは <code>follow_symlinks=False</code> で見ません。</li>
+        <li>symlink / junction / reparse point を含む入力パスは即座に <code>PathValidationError</code> として拒否します。</li>
+        <li>ファイルは相対パス（大文字小文字無視）→ 元の相対パスでソートされます。</li>
+      </ul>
+      <h3>6.2 plan_outputs</h3>
+      <p>変換前に、すべてのソースに対する出力パスを先に決めます。これにより、実行中の出力衝突を防ぎます。</p>
+      <ol class="tight">
+        <li>非 JPEG 入力は <code>&lt;basename&gt;.jpg</code> を付加。</li>
+        <li>JPEG 入力は元の拡張子を維持。</li>
+        <li>大文字小文字を無視して同名・同じディレクトリ prefix になる出力があれば、相対入力パスの SHA-256 先頭 8 文字をファイル名に追加して解消します。</li>
+        <li>8 桁 hash で解消できない重複が残った場合は <code>OutputCollisionError</code> で停止します。</li>
+      </ol>
+      <p>例:</p>
+      <pre><code>input/photo.png      -> output/photo~a1b2c3d4.jpg
+input/photo.png.jpg  -> output/photo~e5f6789a.jpg
+input/kept.jpeg      -> output/kept.jpeg</code></pre>
+
+      <h2 id="conversion-flow">7. 1画像あたりの処理フロー</h2>
+      <p><code>process_image()</code> は 1 枚の画像を処理します。以下の順序で実行されます。</p>
+      <ol class="flow">
+        <li data-step="1">入力・出力パスの解決と安全性検査</li>
+        <li data-step="2">ソースファイルの stat と SHA-256 を取得（SourceFingerprint）</li>
+        <li data-step="3">Pillow で画像を開き、format / mode / 元寸法 / EXIF Orientation / フレーム数を調べる</li>
+        <li data-step="4">既存 marker を解析。同じレシピ・同一ソースで生成済みなら「SKIPPED_GENERATED」短絡</li>
+        <li data-step="5">既存の完成済み出力が現在のソース・レシピと一致すれば「SKIPPED_COMPLETE」または「SKIPPED_COPY」短絡</li>
+        <li data-step="6">EXIF Orientation を画素に適用（<code>ImageOps.exif_transpose</code>）</li>
+        <li data-step="7">透過を白背景に合成、モードを RGB に変換</li>
+        <li data-step="8">出力寸法を計算し、必要なら LANCZOS で縮小</li>
+        <li data-step="9">dry-run ならここで予定寸法を返す（DRY_RUN）</li>
+        <li data-step="10">一時ファイルへ JPEG 保存（marker 付き）</li>
+        <li data-step="11">一時ファイルを検証（寸法・marker）</li>
+        <li data-step="12">候補サイズをもとに採用/原本コピーを決定</li>
+        <li data-step="13">採用時は <code>os.replace()</code> で正式出力へ原子公開</li>
+        <li data-step="14">結果 dict を返す</li>
+      </ol>
+
+      <h3>7.1 Orientation の扱い</h3>
+      <p>Orientation タグ（EXIF ID 274）が 2〜8 の場合は、<code>ImageOps.exif_transpose()</code> で画素を回転・反転してから処理します。出力 JPEG には Orientation タグを残さず、元の向きで保存します。</p>
+      <h3>7.2 透過処理</h3>
+      <p>アルファ通道を含む画像（<code>RGBA</code>、またはパレット透過を持つ <code>P</code>）は、白背景 <code>(255,255,255,255)</code> に <code>alpha_composite</code> してから RGB 変換します。警告 <code>ALPHA_FLATTENED</code> が出力されます。</p>
+      <h3>7.3 アニメーション・複数ページ</h3>
+      <p>先頭フレームのみを使用します。失われたフレームに対して警告を出します。</p>
+      <table>
+        <thead><tr><th>元形式</th><th>警告</th></tr></thead>
+        <tbody>
+          <tr><td>GIF, WebP（アニメーション）</td><td><code>ANIMATION_DROPPED</code></td></tr>
+          <tr><td>TIFF, MPO（複数ページ）</td><td><code>MULTIPAGE_DROPPED</code></td></tr>
+        </tbody>
+      </table>
+
+      <h2 id="jpeg-encoding">8. JPEGエンコード</h2>
+      <p>
+        JPEG 候補は Pillow の <code>Image.save()</code> で生成します。常に以下のパラメータを使用します。
+      </p>
+      <ul class="tight">
+        <li><code>quality</code>: プリセット値（standard=72, compact=60）</li>
+        <li><code>subsampling=2</code>: Pillow では 4:2:0 を意味します</li>
+        <li><code>optimize=True</code></li>
+        <li><code>progressive=True</code></li>
+      </ul>
+
+      <h3>8.1 メタデータの保持</h3>
+      <p><code>_optional_metadata()</code> は、Orientation 適用後の画像から以下のメタデータを可能な限り抽出します。</p>
+      <table>
+        <thead><tr><th>項目</th><th>抽出元</th><th>条件・注意</th></tr></thead>
+        <tbody>
+          <tr><td>EXIF</td><td><code>oriented.getexif()</code></td><td>Orientation タグ（ID 274）は削除</td></tr>
+          <tr><td>ICC プロファイル</td><td><code>source.info["icc_profile"]</code></td><td>RGB/RGBA/RGBX/RGBa/P のときのみ保持</td></tr>
+          <tr><td>XMP</td><td><code>info["xmp"]</code></td><td>bytes または str のとき</td></tr>
+          <tr><td>DPI</td><td><code>info["dpi"]</code></td><td>正のタプルのとき</td></tr>
+        </tbody>
+      </table>
+      <p>保持できなかった場合は <code>EXIF_DROPPED</code> / <code>ICC_DROPPED</code> / <code>XMP_DROPPED</code> / <code>DPI_DROPPED</code> 警告が出ます。</p>
+
+      <h3>8.2 フォールバック保存</h3>
+      <p>
+        既存 JPEG comment が長すぎる、または Pillow に渡せないメタデータがある場合に備え、
+        <code>_save_jpeg()</code> は 4 通りの組み合わせを順に試行します。
+      </p>
+      <ol class="tight">
+        <li><code>combined_comment + metadata</code></li>
+        <li><code>marker only + metadata</code>（既存 comment 廃棄 → <code>COMMENT_DROPPED</code>）</li>
+        <li><code>combined_comment + no metadata</code>（<code>METADATA_DROPPED</code>）</li>
+        <li><code>marker only + no metadata</code>（両方廃棄）</li>
+      </ol>
+      <p>どの組み合わせでも保存できなければ、JPEG 入力であれば原本コピー、それ以外は <code>ERROR</code> になります。</p>
+
+      <h3>8.3 候補検証</h3>
+      <p>保存後、<code>_verify_candidate()</code> で一時ファイルを検証します。</p>
+      <ul class="tight">
+        <li>寸法が予定値と一致すること</li>
+        <li>長辺・短辺がプリセット上限を超えていないこと</li>
+        <li>JPEG comment に <code>karufile:image-v2</code> marker が含まれていること</li>
+      </ul>
+
+      <h2 id="adoption">9. 候補採用条件</h2>
+      <p>JPEG 候補を採用するか、入力をそのままコピーするかは、以下の条件で決まります。</p>
+      <pre><code>adopt_candidate = (
+    not source_is_jpeg
+    or must_resize
+    or orientation_applied
+    or (reprocess_generated and savings &gt; 0)
+    or (savings &gt;= JPEG_MIN_SAVINGS and reduction &gt;= JPEG_MIN_REDUCTION)
+)</code></pre>
+      <p>定数は <code>JPEG_MIN_SAVINGS = 32 KiB</code>、<code>JPEG_MIN_REDUCTION = 10%</code> です。</p>
+      <ul class="tight">
+        <li>非 JPEG 入力 → 必ず JPEG 変換を行います（元形式に戻せないため）。サイズが元より大きくなる場合は <code>OUTPUT_LARGER_THAN_SOURCE</code> 警告。</li>
+        <li>リサイズが必要 → 必ず採用。</li>
+        <li>Orientation 適用が必要 → 必ず採用。</li>
+        <li>compact へ再処理する生成済み standard 画像 → 候補が小さければ採用。</li>
+        <li>その他の JPEG → 32 KiB 以上かつ 10% 以上削減できなければ原本コピー。</li>
+      </ul>
+
+      <h2 id="reuse">10. 生成済み・完成済み画像の再利用</h2>
+      <p>再実行時には、すでにある出力を再エンコードせずに再利用する経路が 3 つあります。</p>
+      <h3>10.1 SKIPPED_GENERATED</h3>
+      <p>
+        入力 JPEG 自身が KaruFile 生成済みで、現在のレシピと完全に一致し、かつ Orientation 適用が不要・寸法上限内なら、
+        入力をそのまま出力へコピーします。未知・破損・旧 v1 marker は無視して通常判定へ戻ります。
+      </p>
+      <h3>10.2 SKIPPED_COMPLETE</h3>
+      <p>
+        前回の実行で完成した出力ファイルが、同一ソースの stat・SHA-256・レシピ hash を含む marker を持ち、
+        寸法が上限内なら、完成出力をそのまま利用します。
+      </p>
+      <h3>10.3 SKIPPED_COPY</h3>
+      <p>
+        standard プリセット時、JPEG 入力がリサイズ不要で「原本コピー」されていた出力が、バイト列まで同一なら再利用します。
+        compact では既存コピーを再評価するため <code>SKIPPED_COPY</code> にはなりません。
+      </p>
+
+      <h2 id="marker">11. Markerの仕組み</h2>
+      <p>
+        KaruFile が生成した JPEG には、ソースの同一性とレシピを示す marker が JPEG comment として書き込まれます。
+      </p>
+      <pre><code>karufile:image-v2;recipe=&lt;sha256&gt;;src_size=&lt;bytes&gt;;src_mtime_ns=&lt;nanoseconds&gt;;src_sha256=&lt;sha256&gt;</code></pre>
+      <p>例:</p>
+      <pre><code class="marker">karufile:image-v2;recipe=2f60924f29b4cedccd15bd92d6dab4da72b22c1358c23e2edf1174fa3b70f420;src_size=3842048;src_mtime_ns=1725849600000000000;src_sha256=aabbccdd...</code></pre>
+      <p>marker は正規表現で解析されます。version、recipe hash、src_size、src_mtime_ns、src_sha256 が一致した場合に「同一ソース・同一レシピの生成済み」とみなします。v1 marker や sha256 の欠落は信頼できないため、通常の候補判定に戻します。</p>
+
+      <h2 id="reports">12. レポートとManifest</h2>
+      <p>画像処理の結果は、出力ディレクトリと sibling に 2 種類の CSV で保存されます。</p>
+      <h3>12.1 画像エラーレポート</h3>
+      <pre><code>&lt;output&gt;.image-errors.csv</code></pre>
+      <p>列: <code>source,planned_output,error</code></p>
+      <p>画像処理が起動し、レポート公開に成功した場合にのみ更新されます。検査・起動・公開に失敗すると終了コード 1 となり、以前の CSV が残ることがあります。</p>
+      <h3>12.2 画像結果 manifest</h3>
+      <pre><code>&lt;output&gt;.image-manifest.csv
+&lt;output&gt;.image-manifest.dry-run.csv</code></pre>
+      <p>列:</p>
+      <pre><code>source_path,source_size,source_sha256,output_path,output_size,output_sha256,
+action,error,preset,recipe_hash,orig_width,orig_height,new_width,new_height</code></pre>
+      <p>
+        manifest 行は、処理時の snapshot を使って検証されます。write 前にもう一度全 source/output を照合し、
+        整合しない場合は失敗します。正式ファイルへの公開は一時ファイルを <code>os.replace()</code> で移動する原子操作です。
+      </p>
+
+      <h2 id="parallel">13. 並列実行</h2>
+      <p>
+        <code>process_all()</code> は、対象数・worker 数に応じて逐次または ThreadPoolExecutor で実行します。
+        並列数は <code>--workers</code>（既定 4）で制御します。
+        結果リストは入力順を維持するためにインデックスで配置されます。
+      </p>
+
+      <h2 id="cli">14. 個別CLI</h2>
+      <p>画像コンポーネント単体では <code>python -m media_shrink resize</code> を使用します。</p>
+      <table>
+        <thead><tr><th>オプション</th><th>意味</th><th>既定値</th></tr></thead>
+        <tbody>
+          <tr><td><code>-i, --input PATH</code></td><td>入力ディレクトリ（必須）</td><td>—</td></tr>
+          <tr><td><code>-o, --output PATH</code></td><td>出力ディレクトリ</td><td><code>&lt;input&gt;_resized</code></td></tr>
+          <tr><td><code>-n, --dry-run</code></td><td>画像出力を書かず、寸法・action を確認</td><td>OFF</td></tr>
+          <tr><td><code>-j, --workers N</code></td><td>並列数</td><td>4</td></tr>
+          <tr><td><code>--preset NAME</code></td><td><code>standard</code> または <code>compact</code></td><td>standard</td></tr>
+          <tr><td><code>-v, --verbose</code></td><td>詳細ログ</td><td>OFF</td></tr>
+        </tbody>
+      </table>
+      <p>終了コード:</p>
+      <table>
+        <thead><tr><th>コード</th><th>意味</th></tr></thead>
+        <tbody>
+          <tr><td>0</td><td>画像エラーなし</td></tr>
+          <tr><td>1</td><td>画像エラーあり、レポート更新失敗、または入出力検査失敗</td></tr>
+          <tr><td>2</td><td>引数不正</td></tr>
+        </tbody>
+      </table>
+
+      <h2 id="warnings">15. 警告・エラー・終了コード</h2>
+      <h3>15.1 警告（ターミナル出力のみ）</h3>
+      <p>警告は画像エラー CSV には保存されません。主な警告は以下の通りです。</p>
+      <table>
+        <thead><tr><th>警告</th><th>発生条件</th></tr></thead>
+        <tbody>
+          <tr><td><code>ANIMATION_DROPPED</code></td><td>GIF/WebP アニメーションの先頭フレームのみ使用</td></tr>
+          <tr><td><code>MULTIPAGE_DROPPED</code></td><td>TIFF/MPO の先頭ページのみ使用</td></tr>
+          <tr><td><code>ALPHA_FLATTENED</code></td><td>アルファ通道を白背景に合成</td></tr>
+          <tr><td><code>EXIF_DROPPED</code></td><td>EXIF を保存できなかった</td></tr>
+          <tr><td><code>ICC_DROPPED</code></td><td>ICC プロファイルを保存できなかった</td></tr>
+          <tr><td><code>XMP_DROPPED</code></td><td>XMP を保存できなかった</td></tr>
+          <tr><td><code>DPI_DROPPED</code></td><td>DPI を保存できなかった</td></tr>
+          <tr><td><code>OUTPUT_LARGER_THAN_SOURCE</code></td><td>非 JPEG 変換で出力が元より大きくなった</td></tr>
+          <tr><td><code>ENCODE_FAILED_ORIGINAL_COPIED</code></td><td>JPEG 再エンコード失敗、原本コピーで回復</td></tr>
+          <tr><td><code>COMMENT_DROPPED</code></td><td>既存 JPEG comment を廃棄して保存</td></tr>
+          <tr><td><code>METADATA_DROPPED</code></td><td>メタデータを廃棄して保存</td></tr>
+        </tbody>
+      </table>
+      <h3>15.2 主な Action</h3>
+      <table>
+        <thead><tr><th>Action</th><th>意味</th></tr></thead>
+        <tbody>
+          <tr><td><code>CONVERTED</code></td><td>JPEG 変換または再エンコードを実行</td></tr>
+          <tr><td><code>COPIED_ORIGINAL</code></td><td>条件を満たさない JPEG を原本コピー</td></tr>
+          <tr><td><code>COPIED_ENCODE_FAILED</code></td><td>JPEG 再エンコード失敗後に原本コピー</td></tr>
+          <tr><td><code>SKIPPED_GENERATED</code></td><td>KaruFile 生成済み JPEG をコピー</td></tr>
+          <tr><td><code>SKIPPED_COMPLETE</code></td><td>完成済み出力を再利用</td></tr>
+          <tr><td><code>SKIPPED_COPY</code></td><td>standard 時の原本コピー出力を再利用</td></tr>
+          <tr><td><code>DRY_RUN</code></td><td>dry-run での予定変換</td></tr>
+          <tr><td><code>DRY_RUN_SKIPPED_GENERATED</code></td><td>dry-run での生成済み短絡予定</td></tr>
+          <tr><td><code>ERROR</code></td><td>処理失敗</td></tr>
+        </tbody>
+      </table>
+
+      <h2 id="verification">16. 開発検証</h2>
+      <p>リポジトリルートから実行します。</p>
+      <pre><code>uv run --project media-shrink-tool --extra dev python -m pytest -q media-shrink-tool/tests
+uv run --project media-shrink-tool python -m compileall -q media-shrink-tool/src media-shrink-tool/tests
+uv run --project media-shrink-tool python -m media_shrink --help</code></pre>
+
+      <h2 id="references">17. 参照先</h2>
+      <ul class="tight">
+        <li>実装: <code>media-shrink-tool/src/media_shrink/image.py</code></li>
+        <li>レシピ定義: <code>media-shrink-tool/src/media_shrink/config.py</code></li>
+        <li>CLI: <code>media-shrink-tool/src/media_shrink/cli.py</code></li>
+        <li>検証・パス処理: <code>media-shrink-tool/src/media_shrink/utils.py</code></li>
+        <li>テスト: <code>media-shrink-tool/tests/test_image_contract.py</code></li>
+        <li>簡潔な CLI 説明: <code>media-shrink-tool/README.md</code></li>
+        <li>統合 CLI マニュアル: <code>MANUAL.md</code></li>
+        <li>技術リファレンス: <code>docs/REFERENCE.md</code></li>
+      </ul>
+    </main>
+  </div>
+</body>
+</html>

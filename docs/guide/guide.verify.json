@@ -1,0 +1,147 @@
+{
+  "artifact_sha256": "8875820fd8dcf7b399879128c6e7ff192640ca719a52449975b9d168af6fa6c9",
+  "viewports": [
+    {
+      "width": 1440,
+      "height": 900,
+      "scrollWidth": 1425,
+      "images": [
+        {
+          "loaded": true,
+          "alt": true
+        },
+        {
+          "loaded": true,
+          "alt": true
+        }
+      ],
+      "h1": 1,
+      "externalResources": 0
+    },
+    {
+      "width": 1920,
+      "height": 1080,
+      "scrollWidth": 1905,
+      "images": [
+        {
+          "loaded": true,
+          "alt": true
+        },
+        {
+          "loaded": true,
+          "alt": true
+        }
+      ],
+      "h1": 1,
+      "externalResources": 0
+    },
+    {
+      "width": 768,
+      "height": 1024,
+      "scrollWidth": 753,
+      "images": [
+        {
+          "loaded": true,
+          "alt": true
+        },
+        {
+          "loaded": true,
+          "alt": true
+        }
+      ],
+      "h1": 1,
+      "externalResources": 0
+    },
+    {
+      "width": 390,
+      "height": 844,
+      "scrollWidth": 375,
+      "images": [
+        {
+          "loaded": true,
+          "alt": true
+        },
+        {
+          "loaded": true,
+          "alt": true
+        }
+      ],
+      "h1": 1,
+      "externalResources": 0
+    },
+    {
+      "width": 320,
+      "height": 740,
+      "scrollWidth": 305,
+      "images": [
+        {
+          "loaded": true,
+          "alt": true
+        },
+        {
+          "loaded": true,
+          "alt": true
+        }
+      ],
+      "h1": 1,
+      "externalResources": 0
+    }
+  ],
+  "toc": [
+    {
+      "target": "#uses",
+      "exists": true,
+      "headingVisible": true
+    },
+    {
+      "target": "#copies",
+      "exists": true,
+      "headingVisible": true
+    },
+    {
+      "target": "#care",
+      "exists": true,
+      "headingVisible": true
+    },
+    {
+      "target": "#check",
+      "exists": true,
+      "headingVisible": true
+    }
+  ],
+  "manualLinks": [
+    {
+      "href": "../MANUAL.md",
+      "pathExists": true,
+      "anchorExists": null
+    },
+    {
+      "href": "../MANUAL.md#pdfの原本と完成出力を見比べる",
+      "pathExists": true,
+      "anchorExists": true
+    },
+    {
+      "href": "../MANUAL.md#終了コードとエラー確認",
+      "pathExists": true,
+      "anchorExists": true
+    }
+  ],
+  "offline": {
+    "imagesLoaded": true,
+    "sections": 4,
+    "scriptCount": 0,
+    "externalRequests": 0
+  },
+  "print": {
+    "file": "validation/guide.a4.pdf",
+    "paper": "A4",
+    "preferCSSPageSize": true,
+    "visual_review": "pending"
+  },
+  "visual_review": "pending",
+  "zoom200Equivalent": {
+    "cssViewportWidth": 720,
+    "overflowX": false
+  },
+  "consoleErrors": 0
+}

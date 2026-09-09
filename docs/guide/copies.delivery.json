@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "ok": true,
+  "command": "deliver",
+  "type": "architecture",
+  "input": "C:\\Users\\tn\\c_projects\\KaruFile\\docs\\guide\\copies.architecture.json",
+  "output": "C:\\Users\\tn\\c_projects\\KaruFile\\docs\\guide\\copies.html",
+  "specification": {
+    "sha256": "38830eb673590ac7280cb509cb97cb92465b6d9871e4d6a7a2d3d190059af591",
+    "bytes": 3253
+  },
+  "artifact": {
+    "sha256": "4d20502f994a619f61512d1fc4c7ee8d716247d6ddb4f4fc1b0d893ce98863e7",
+    "bytes": 642449
+  },
+  "validation": {
+    "checksPassed": 9,
+    "checkCount": 9,
+    "compositionProfile": "showcase",
+    "compositionStatus": "pass",
+    "errors": 0,
+    "warnings": 0
+  }
+}

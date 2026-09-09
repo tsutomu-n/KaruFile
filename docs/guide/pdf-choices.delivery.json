@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "ok": true,
+  "command": "deliver",
+  "type": "architecture",
+  "input": "C:\\Users\\tn\\c_projects\\KaruFile\\docs\\guide\\pdf-choices.architecture.json",
+  "output": "C:\\Users\\tn\\c_projects\\KaruFile\\docs\\guide\\pdf-choices.html",
+  "specification": {
+    "sha256": "bfe918b4bf4df16c73066a22482e1f3f4495a31f6088d1cdeb1bfeca91f56345",
+    "bytes": 2572
+  },
+  "artifact": {
+    "sha256": "182a505e37feca7bba99c4b7b8ea53a79144b3b2b7e60cb7796c01cbcf64d1d3",
+    "bytes": 639788
+  },
+  "validation": {
+    "checksPassed": 9,
+    "checkCount": 9,
+    "compositionProfile": "showcase",
+    "compositionStatus": "pass",
+    "errors": 0,
+    "warnings": 0
+  }
+}

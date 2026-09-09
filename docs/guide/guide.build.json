@@ -1,0 +1,47 @@
+{
+  "diagrams": [
+    {
+      "name": "copies",
+      "specification": {
+        "sha256": "38830eb673590ac7280cb509cb97cb92465b6d9871e4d6a7a2d3d190059af591",
+        "bytes": 3253
+      },
+      "artifact": {
+        "sha256": "4d20502f994a619f61512d1fc4c7ee8d716247d6ddb4f4fc1b0d893ce98863e7",
+        "bytes": 642449
+      },
+      "export": {
+        "sha256": "97930cd2df29dc75e2387cd659276b0a7575e77b19514ed60714c4aeb72479af",
+        "bytes": 256238,
+        "canonical": true,
+        "theme": "light",
+        "width": 2080,
+        "height": 1136
+      }
+    },
+    {
+      "name": "pdf-choices",
+      "specification": {
+        "sha256": "bfe918b4bf4df16c73066a22482e1f3f4495a31f6088d1cdeb1bfeca91f56345",
+        "bytes": 2572
+      },
+      "artifact": {
+        "sha256": "182a505e37feca7bba99c4b7b8ea53a79144b3b2b7e60cb7796c01cbcf64d1d3",
+        "bytes": 639788
+      },
+      "export": {
+        "sha256": "35bc5fe4a31621f18b029b00359c462c725975e7cda8a9b3bac38a12d491cda8",
+        "bytes": 243772,
+        "canonical": true,
+        "theme": "light",
+        "width": 2080,
+        "height": 1136
+      }
+    }
+  ],
+  "html": {
+    "file": "../KARUFILE_GUIDE.html",
+    "sha256": "8875820fd8dcf7b399879128c6e7ff192640ca719a52449975b9d168af6fa6c9",
+    "bytes": 687015
+  }
+}

@@ -39,6 +39,9 @@ manifestの更新を試みます。
 
 ## 変換プリセット
 
+より詳細な内部動作（寸法計算、marker、再利用、安全性検査、レポート形式など）は
+[docs/image-processing.html](../docs/image-processing.html) を参照してください。
+
 | 項目 | `standard` | `compact` |
 |---|---:|---:|
 | 最大寸法 | 長辺1280px・短辺960px | 長辺1024px・短辺768px |

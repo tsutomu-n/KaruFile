@@ -6,6 +6,7 @@
 
 | 計画 | 状態 | 内容 |
 |---|---|---|
+| [2026-09-09-karufile-guide.md](2026-09-09-karufile-guide.md) | 完了・履歴 | 事務の仕事の例と2図、オフライン閲覧・A4表示検証を含む単独HTMLガイド |
 | [2026-08-15-karufile-v1.md](2026-08-15-karufile-v1.md) | 完了・履歴 | KaruFile v1の実装と安全性検証 |
 | [2026-08-16-karufile-user-manual.md](2026-08-16-karufile-user-manual.md) | 完了・履歴 | 正本マニュアル、図解、文書監査 |
 | [2026-08-20-pdf-300dpi-placed-images.md](2026-08-20-pdf-300dpi-placed-images.md) | 完了・履歴 | PDF配置画像を300DPIへ縮小 |
