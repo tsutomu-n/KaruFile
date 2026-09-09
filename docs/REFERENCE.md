@@ -217,6 +217,8 @@ Orientation適用を完了できなかった場合は、原本をコピーして
 
 ## PDF処理
 
+処理を順に読む場合は[PDF処理の流れと判断基準](PDF_PROCESSING.md)を参照してください。
+
 ### 必要なツール
 
 PyMuPDF 1.28.2を使用します。PDFを含む通常実行ではqpdfも使用し、次の順で探索します。
@@ -242,7 +244,7 @@ standard/compactとも、図・写真・その他の画像を含む未許可PDF�
 | `--pdf-text-scan-pattern` | 明示した文章だけのスキャンを許可 |
 | `--pdf-photo-pattern` | 既存の写真用150〜300 DPI候補を許可 |
 
-PDF個別CLIでは各オプションの`--pdf-`を外します。すべて反復可能な入力相対globで、
+PDF個別CLIでは`--pdf-text-pattern`を`--text-pattern`とするように名前の`pdf-`を外します。すべて反復可能な入力相対globで、
 大小文字を無視し、区切りを正規化、`*`はディレクトリ区切りにも一致します。空・絶対path・
 `..`は禁止です。保護されていないPDFが複数の処理許可に一致すると処理開始前にエラーになります。
 罫線表の意味や画像の内容を自動推測しません。曲線、塗り、斜線、特殊な描画は保護します。
@@ -303,18 +305,21 @@ photoの画像候補条件:
 
 明示選択したPDFでも、その中のJPEGが写真であるとは判定しません。図面や黒板文字などの細部を
 含む場合は、利用者が出力を原本と比較する必要があります。
-photoで配置の検査処理に失敗した場合は`ERROR`にします。通常presetの既存の保守的な
-`SKIPPED_COMPLEX`判定とは区別します。
+photoで配置の検査処理に失敗した場合は`ERROR`にします。共通保護判定の
+`PRESERVED_ORIGINAL`とは区別し、原本復旧できても成功扱いにはしません。
 
 ### 候補の検証
 
-- qpdfの構造検査
-- ページ数の一致
-- NFC正規化後の抽出テキストの一致
-- standardは72 DPIグレースケール表示の平均絶対差が5%以下
-- compactは72 DPI RGB表示のチャンネル平均絶対差が5%以下、かつ最大32×32 pixelの
-  局所タイルごとのチャンネル平均絶対差が20%以下
-- photoはページgeometryも照合し、compactと同じ72 DPI RGB比較に加え、変更画像の各配置領域を
+文章・罫線表・文章スキャンには、前述の文章向け検証を使います。qpdf単独を含む色を維持する候補は
+全ページ72／300 DPI RGB完全一致、グレー文字候補は同DPIの原本グレー描画との完全一致が必要です。
+スキャンJPEGは72 DPI全ページ・300 DPI画像配置領域のグレー差分を検査します。
+standard/compactの選択によって文章向けの検査を緩めることはありません。
+
+写真向けの通常候補では次を検査します。任意のJPEG可逆候補は次節の完全一致検査を使います。
+
+- qpdfの構造検査、ページ数、NFC正規化後の抽出テキスト、ページgeometryの一致
+- 72 DPI RGB表示のチャンネル平均絶対差が5%以下、かつ最大32×32 pixelの局所平均差が20%以下
+- 非可逆候補では72 DPI RGB比較に加え、変更画像の各配置領域を
   300 DPI RGBで比較します。256×256 pixel単位で描画し、その中の最大32×32 pixelの局所平均差は
   20%以下、変更領域全体の平均差は5%以下です。
 - photoの細部検査は変更配置10,000箇所、累計80,000,000 pixel、120秒を上限とします。
@@ -326,7 +331,8 @@ photoで配置の検査処理に失敗した場合は`ERROR`にします。通�
 有効時は明示`--pdf-jpegtran-path` / `--jpegtran-path`、次にPATHでjpegtranを解決し、
 libjpeg-turbo 3.2.0以外・未検出はPDF処理開始前にエラーにします。自動取得・インストールはしません。
 パス指定だけでは有効化せず、dry-runでは探索・実行せず要求設定だけを記録します。
-PDF個別CLIの`--safe`と併用できます。既存preset/photoの非可逆候補は無効化しません。
+PDF個別CLIの`--safe`と引数上は併用できます。既存の非可逆候補は無効化しません。
+ただし`--safe`は写真指定と併用できず、現行の保護方針ではsafe時にJPEG可逆候補を生成する対象はありません。
 
 保護判定を通ったphoto PDFへ追加します。保護対象や文章向け候補を迂回しません。
 初版の対象は単一DCTDecode・8-bit・直接指定のDeviceRGB/DeviceGray画像です。
@@ -366,8 +372,9 @@ JPEG progressive、非可逆の順です。候補の画質検査や非可逆の�
 新しい内容を誤って処理済みと記録せず、次回に再処理します。ただし、処理中の入力自体は
 ロックしません。出力SHA-256を持たない旧recordは一度再処理します。
 
-出力先、presetで選ばれた画像処理値、写真選択パターン、`photo_dpi`とphoto recipe、tool versionは
-設定hashに含みます。standard/compact、写真選択、写真用DPIを切り替えると再処理します。
+出力先、presetで選ばれた画像処理値、保護・文章・文章スキャン・写真の指定パターン、保護規則、
+文章recipe、`photo_dpi`とphoto recipe、tool versionは設定hashに含みます。
+standard/compact、各指定パターン、写真用DPIを切り替えると再評価します。
 現行版は`processing_schema=5`をhashに含み、以前のstateを一度再処理します。
 採用下限、JPEG有効状態、固定レシピ・検証規則、jpegtranのversion・SHA-256もhashへ含めます。
 SQLiteは列の追加移行で旧行を保持します。無効時のjpegtranパスは処理結果へ影響しません。
@@ -461,7 +468,7 @@ photoでは非可逆候補を試した場合はそれが一次候補です。後
 
 統合CLIの`--pdf-preview`、PDF個別CLIの`--preview`は既定OFFです。
 全PDFの原本・実際出力を比較し、保護理由も表示します。追加DPI候補は保護されていないphotoだけに生成します。
-PDF処理と状態・CSV保存の後に、現在選択したphoto行を対象として独立に比較資料を生成します。
+PDF処理と状態・CSV保存の後に、今回処理対象として選択した全PDF行について独立に比較資料を生成します。
 PDFの`ERROR`・`SKIPPED_*`は描画せず、比較側の`SKIPPED`と理由を記録します。
 対象なしも有効な結果です。
 
@@ -498,12 +505,13 @@ PDFの`ERROR`・`SKIPPED_*`は描画せず、比較側の`SKIPPED`と理由を�
 | `input_root` / `output_root` | 現在実行の絶対パス |
 | `status` / `errors` | 通常`COMPLETE`、dry-run`DRY_RUN`、失敗`ERROR` / エラー文字列配列 |
 | `run_dir` / `index_path` / `index_sha256` | 比較実行ディレクトリ、HTML、SHA-256。dry-runは全て`null` |
-| `items` | 現在のphoto行と1対1に対応する配列。対象なしは空 |
+| `items` | 今回処理対象として選択した全PDF行と1対1に対応する配列。保護・失敗・skip行も含み、対象なしは空 |
 
 各itemは入力相対パス、source/outputのパスとSHA-256、`pdf_status`、比較側`status`、`reason`を持ちます。
+`classification`、`permission_basis`、`preservation_reason`で判定・許可根拠・保護理由も記録します。
 比較側のstatusは`READY`・`SKIPPED`・`ERROR`です。`variants`は原本・完成出力・追加DPIごとの
 サイズ、リンク、`READY`・`REJECTED`・`ERROR`と理由、`views`はページ・領域と各PNGへの相対参照を持ちます。
-統合CLIはmanifestが現在実行で更新されたこと、要求設定・photo入力集合・検証済みPDFレポートとの
+統合CLIはmanifestが現在実行で更新されたこと、要求設定・PDF入力集合・検証済みPDFレポートとの
 整合、HTMLの保存先とSHA-256を照合します。欠落・古いmanifest・不一致・危険なパスは終了コード1です。
 
 ### PDF個別CLI
@@ -520,6 +528,9 @@ PDFの`ERROR`・`SKIPPED_*`は描画せず、比較側の`SKIPPED`と理由を�
 --retry-errors        前回ERRORを再処理
 --qpdf-path PATH      qpdf.exeを明示
 --preset NAME         standardまたはcompact。既定値standard
+--preserve-pattern PATTERN  一致するPDFを必ず原本保護。反復可
+--text-pattern PATTERN      文章と単純な罫線表を許可。反復可
+--text-scan-pattern PATTERN  文章だけのスキャンを許可。反復可
 --photo-pattern PATTERN  一致するPDFをphoto profileにする入力相対パターン。反復可
 --photo-dpi DPI        photoの目標DPI。150〜300の整数、既定200。photo-pattern必須
 --preview              PDFのローカル比較HTMLを作成。既定OFF
@@ -528,7 +539,7 @@ PDFの`ERROR`・`SKIPPED_*`は描画せず、比較側の`SKIPPED`と理由を�
 ```
 
 Nが奇数の場合、`--limit` は固定seedのランダム側を1件多く選びます。
-`--safe`は`--preset compact`および`--photo-pattern`と併用できません。
+`--safe`は`--preset compact`、`--photo-pattern`、`--text-scan-pattern`と併用できません。
 
 ## 画像個別CLI
 
@@ -633,9 +644,9 @@ KaruFileの対象外:
 1. qpdf配布ZIPの真正性
    - バージョンと展開先は固定・検査しますが、SHA-256または署名は検証しません。
 2. PDF表示検証の局所差分
-   - standardは72 DPIグレースケールのページ全体平均差を使います。compactは72 DPI RGBの
-     全体差と最大32×32 pixelの局所差を検査します。photoでは変更配置を300 DPIでも比較しますが、
-     細部の可読性やOCR精度を保証しません。検査量上限を超えた非可逆候補は採用しません。
+   - 文章向けは72／300 DPIの完全一致、スキャンJPEGはグレーの全体・局所差を検査します。
+     photoは72 DPI RGBと変更配置の300 DPI RGBを比較します。いずれも細部の可読性やOCR精度は
+     保証しません。検査量上限を超えた候補は採用しません。
 3. 入力ファイルの同時更新
    - 起動前と終了時に全対象のidentity・SHA-256を照合して変更を失敗として検出しますが、
      処理中の入力をロックせず、別プロセスによる変更そのものは防止しません。

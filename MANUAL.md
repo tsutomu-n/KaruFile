@@ -42,6 +42,8 @@ compactの方が必ず小さくなるとは限りません。PDFと動画は候�
 
 ### PDFの保護と文章向けの指定
 
+判定・候補生成・検証・採用のつながりは[PDF処理の流れと判断基準](docs/PDF_PROCESSING.md)を参照してください。
+
 無指定では文字だけのPDFを処理し、図・写真・スキャンを含むPDFは一冊まるごと原本コピーします。
 `--pdf-text-pattern`は文章と単純な水平・垂直罫線表、`--pdf-text-scan-pattern`は文章だけのスキャンを
 明示的に許可します。`--pdf-preserve-pattern`はすべての許可に優先して保護します。
@@ -79,7 +81,7 @@ uv run --script karufile.py -i "D:\作業\資料" -o "D:\作業\閲覧用\資料
 dry-runのPDFレポートで`profile`が`photo`になった対象を確認し、本実行後は文字や細部を原本と
 見比べてください。画質検証はありますが、可読性やOCR精度を保証しません。
 
-### 写真の解像度を見比べる
+### PDFの原本と完成出力を見比べる
 
 `--pdf-preview`を付けると、文章・罫線表・文章スキャン・写真PDFの原本と実際の完成出力を、ローカルHTMLで
 同じ倍率・スクロール位置に揃えて比較できます。既定では作成しません。ブラウザーで開くだけで使え、
@@ -127,13 +129,14 @@ JPEG画像の解像度を変えない追加最適化は、`--pdf-lossless-jpeg`�
 `jpegtran.exe`と同梱DLLの配置を維持し、明示パスまたはPATHを使います。
 
 ```powershell
-uv run --script karufile.py -i "D:\作業\資料" -o "D:\作業\JPEG検証\資料_軽量化" --pdf-lossless-jpeg --pdf-jpegtran-path "C:\Tools\libjpeg-turbo\bin\jpegtran.exe"
+uv run --script karufile.py -i "D:\作業\資料" -o "D:\作業\JPEG検証\資料_軽量化" --pdf-photo-pattern "*写真*.pdf" --pdf-lossless-jpeg --pdf-jpegtran-path "C:\Tools\libjpeg-turbo\bin\jpegtran.exe"
 ```
 
 パス指定だけでは有効になりません。有効時にツールが見つからない、または3.2.0でない場合はPDF処理開始前に
 エラーとなります。dry-runではツールを探索・実行せず、要求設定だけをCSVへ記録します。
 この指定は保護されていないphoto PDFへ可逆候補を追加します。保護指定を迂回しません。presetや写真指定による既存の非可逆候補も比較対象に残るため、
-「完成出力は必ず可逆」を意味しません。可逆処理だけが必要な場合はPDF個別CLIの`--safe --lossless-jpeg`を使います。
+「完成出力は必ず可逆」を意味しません。文章を可逆処理だけに限定する場合はPDF個別CLIの`--safe`を使います。
+`--safe`は写真指定と併用できないため、`--safe --lossless-jpeg`としても写真PDFのJPEG可逆候補は作りません。
 
 compactで動画を処理する場合は、`ffmpeg` と `ffprobe` が `PATH` に必要です。KaruFileは
 これらを自動取得・同梱しません。別の実行ファイルを使う場合は `--ffmpeg-path` と

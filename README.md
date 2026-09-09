@@ -11,7 +11,7 @@ KaruFileは、フォルダー内のPDFと画像、およびcompact presetで対�
 [KaruFile 利用者マニュアル](MANUAL.md)を参照してください。このREADMEは入口です。
 
 数値、status、再利用条件、個別CLIは [KaruFile技術リファレンス](docs/REFERENCE.md)で
-検索できます。
+検索できます。PDFの判定から出力までは[PDF処理の流れと判断基準](docs/PDF_PROCESSING.md)にまとめています。
 
 処理全体は、Archifyで生成・検証した図から先に確認できます。
 

@@ -23,6 +23,7 @@ ExecPlanは当時の判断と検証を残す履歴であり、現行仕様の正
 | [利用者マニュアル](../MANUAL.md) | 利用者向けの基本手順、安全条件、結果確認 | CLI、保存先、終了コード、対応形式の変更 |
 | [ルートREADME](../README.md) | リポジトリの入口と最短手順 | 正本や主要入口の変更 |
 | [技術リファレンス](REFERENCE.md) | 数値、status、保存先、再利用条件、個別CLI | 製品契約または固定値の変更 |
+| [PDF処理の流れと判断基準](PDF_PROCESSING.md) | PDFの保護判定から候補生成・検証・出力・比較までの説明 | PDFの処理順序、判定、候補、採用条件の変更 |
 | [AGENTS.md](../AGENTS.md) | AI・保守者向けの短い作業契約 | 責務境界、正本、検証入口の変更 |
 | [pdf-shrink README](../pdf-shrink/README.md) | PDF個別CLIと内部契約 | PDF処理、status、レポート、依存関係の変更 |
 | [media-shrink-tool README](../media-shrink-tool/README.md) | 画像個別CLIと内部契約 | 画像recipe、再利用、警告、エラーCSVの変更 |
@@ -65,6 +66,9 @@ visual-checkを実行してから、light/darkの画像を確認します。
 
 写真DPI選択・比較HTMLの[2026-09-09検証記録](validation/2026-09-09-photo-preview.md)は、実資料の結果と
 表示確認の証拠です。数値はその検証時点の結果であり、他資料の削減率や画質を保証しません。
+
+保護・文章向け候補の[2026-09-09検証記録](validation/2026-09-09-text-policy.md)には、
+合成文書と実資料の保護・写真圧縮の証拠、比較HTMLの未完了の表示確認を記録しています。
 
 完了済み計画の一覧と扱いは [ExecPlan索引](../.agent/execplans/README.md)を参照してください。
 履歴本文の `Current State`、`Facts`、検証件数は、その計画を実施した時点の記録です。
