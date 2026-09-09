@@ -37,6 +37,9 @@ uv run --project pdf-shrink pdf-shrink run `
 | `--output PATH` | 出力フォルダー。省略時は `<input>_軽量化` |
 | `--workers N` | 並列プロセス数。既定値は2、最小値は1 |
 | `--preset standard|compact` | 圧縮プリセット。既定値は `standard` |
+| `--preserve-pattern PATTERN` | 最優先の原本保護。反復可 |
+| `--text-pattern PATTERN` | 文章と単純罫線表を許可。反復可 |
+| `--text-scan-pattern PATTERN` | 文章スキャンを許可。反復可 |
 | `--photo-pattern PATTERN` | 一致するPDFだけphoto profileにする入力相対パターン。反復可 |
 | `--photo-dpi DPI` | photoの目標DPI。150〜300の整数、既定200。photo-pattern必須 |
 | `--preview` | 原本と実際の完成出力を比べるローカルHTMLを作成。既定OFF |
@@ -62,7 +65,7 @@ uv run --project pdf-shrink pdf-shrink run --input "C:\作業\PDF" --output "C:\
 
 パターンは入力相対パスに大文字小文字を無視して照合します。`\`は`/`へ正規化し、`*`は
 ディレクトリ区切りにも一致します。空、絶対パス、drive付き、`..`要素を含む指定は拒否します。
-一致しないPDFは元のpresetに従います。内容の自動分類や、DPIによるOCR要否判定は行いません。
+一致しないPDFは元のpresetに従います。写真やスキャンの意味を自動分類せず、DPIによるOCR要否判定は行いません。
 
 ## 出力、状態、レポート
 
@@ -156,6 +159,8 @@ qpdf検査、ページ形状・抽出文字・文字位置・罫線と画像の�
 
 ## レポートのstatus
 
+`SKIPPED_ENCRYPTED`・`SKIPPED_SIGNED`・`SKIPPED_COMPLEX`は旧記録との互換値です。共通保護判定は`PRESERVED_ORIGINAL`と理由を記録します。
+
 `--lossless-jpeg`は保護されていないphoto PDFの原本からbaseline/progressiveの可逆候補を追加し、既存の非可逆候補を無効化しません。
 手動準備したlibjpeg-turbo 3.2.0のjpegtranだけを使用し、明示パス→PATHで解決します。
 未検出/版不一致は処理開始前エラー。dry-runでは外部toolを実行しません。
@@ -172,7 +177,7 @@ qpdf検査、ページ形状・抽出文字・文字位置・罫線と画像の�
 | `ADOPTED_LOSSLESS` | 可逆圧縮候補を採用 |
 | `ADOPTED_LOSSY` | 非可逆圧縮候補を採用 |
 | `UNCHANGED` | 候補の画質・削減条件により原本を採用。理由は`decision_reason` |
-| `SKIPPED_SMALL` | 256 KiB未満のため原本を採用 |
+| `SKIPPED_SMALL` | photoが256 KiB未満のため原本を採用 |
 | `SKIPPED_ENCRYPTED` | 暗号化PDFのため原本を採用 |
 | `SKIPPED_SIGNED` | 電子署名を含むため原本を採用 |
 | `SKIPPED_COMPLEX` | フォーム、添付ファイル、修復済みなどのため原本を採用 |

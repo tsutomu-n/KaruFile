@@ -236,3 +236,41 @@ def test_scan_preflight_limits_protect_document(tmp_path, monkeypatch, limit, re
     make_pdf(path, "scan")
     monkeypatch.setattr(policy, limit, 0)
     assert policy.classify(path, "text_scan").preservation_reason == reason
+
+
+def test_scan_keeps_ocr_links_bookmarks_metadata_and_rejects_missing_text(tmp_path):
+    path, original, target = tmp_path / "scan.pdf", tmp_path / "ocr.pdf", tmp_path / "candidate.pdf"
+    make_pdf(path, "scan")
+    with fitz.open(path) as doc:
+        doc[0].insert_text((10, 25), "OCR 012345", fontsize=9, render_mode=3)
+        doc[0].insert_link({"kind": fitz.LINK_URI, "from": fitz.Rect(10, 10, 70, 30), "uri": "https://example.com/"})
+        doc.set_toc([[1, "chapter", 1]])
+        doc.set_metadata({"title": "scan with OCR", "author": "synthetic fixture"})
+        doc.save(original)
+    assert not policy.classify(original, "text_scan").protected
+    cfg = config.default_config(input_dir=tmp_path, output_dir=tmp_path.parent / "unused")
+    tool = qpdf.ensure_qpdf()
+    budget = text_optimize.Budget(time.monotonic() + 300)
+    text_optimize.generate(original, target, "text_scan_jpeg_92", cfg, tool, budget)
+    text_optimize.validate_candidate(original, target, "text_scan_jpeg_92", tool, budget)
+    with pytest.raises(CandidateRejected, match="structure_mismatch|position_mismatch"):
+        text_optimize.validate_candidate(original, path, "text_scan_jpeg_92", tool, budget)
+
+
+def test_equal_scan_jpeg_sizes_prefer_highest_quality(tmp_path, monkeypatch):
+    inputs = tmp_path / "input"
+    inputs.mkdir()
+    path = inputs / "scan.pdf"
+    make_pdf(path, "scan")
+    source = discovery.snapshot(path, inputs)
+    cfg = config.default_config(input_dir=inputs, output_dir=tmp_path / "out", text_scan_patterns=("*",))
+    def generate(src, dst, kind, *args):
+        assert src == path
+        dst.write_bytes(b"x" * (source.size if kind == "lossless" else source.size - 1))
+        return 0 if kind == "lossless" else 1
+    monkeypatch.setattr(text_optimize, "generate", generate)
+    monkeypatch.setattr(text_optimize, "validate_candidate", lambda *args: None)
+    result = worker.process_one_file(source, cfg, tmp_path / "temp", Path("qpdf"))
+    assert result.status == ProcessStatus.ADOPTED_LOSSY
+    assert result.decision_reason == "adopted_text_scan_jpeg_92"
+    assert next(d.kind for d in result.candidate_details if d.selected) == "text_scan_jpeg_92"

@@ -695,7 +695,7 @@ PDF圧縮/JPEG可逆/層別圧縮の概念語で検索後、1回だけcodec名�
 - [再現結果と実画面](../../docs/validation/2026-09-09-photo-preview.md)を保存。比較HTMLと原本・実際出力を含むbundleはローカル実資料parentへ保持。
 - 07:50:41に履歴上のHEADが別経路で`e477a63`へ進み、今回のruntime/文書/図を含むことを最終確認した。本agent群はcommit/pushコマンドを実行していない。生成時の基準revisionを履歴へ合わせて書き換えず、そのまま保持する。
 
-## 2026-09-09 保護優先・文章向け処理（実装中）
+## 2026-09-09 保護優先・文章向け処理（実装・自動検証完了、比較HTMLのブラウザー目視待ち）
 
 Goal: 未許可の図・画像PDFをバイト一致で保護し、許可済み文章候補のうち検証済み最小ファイルだけを別出力へ採用する。
 Facts: 開始時working tree clean。現行schema 4。小容量判定は構造検査前。既存photo/preview/JPEG候補と公開境界を維持する。
@@ -703,7 +703,7 @@ Decision: 共通policy判定と文章専用候補モジュールを追加し、�
 Unknowns: 実資料の利用可能性、グレー完全一致候補の採用可否は実測する。実資料文章スキャンの可読性は検証対象外。
 
 ### CP-017: 保護・許可指定
-- Status: In progress
+- Status: Complete
 - Objective: 候補生成前の文書単位保護。
 - Dependencies: 既存CP-016。
 - Files or components: config, policy, worker, CLI, runner。
@@ -714,7 +714,7 @@ Unknowns: 実資料の利用可能性、グレー完全一致候補の採用可�
 - Recovery: 原本復旧しERROR、他ファイル継続。
 
 ### CP-018: 文章候補・検証
-- Status: Not started
+- Status: Complete
 - Objective: 原本から独立生成した最小検証済み候補の採用。
 - Dependencies: CP-017。
 - Files or components: text optimization, worker, validation。
@@ -725,7 +725,7 @@ Unknowns: 実資料の利用可能性、グレー完全一致候補の採用可�
 - Recovery: 候補棄却または原本復旧ERROR。
 
 ### CP-019: 統合・記録・表示・文書
-- Status: Not started
+- Status: Implemented; browser visual verification pending
 - Objective: CLIから報告と比較表示まで同一policyを照合する。
 - Dependencies: CP-017/018。
 - Files or components: orchestrator, state/report, preview, manual/reference, architecture。
@@ -736,7 +736,7 @@ Unknowns: 実資料の利用可能性、グレー完全一致候補の採用可�
 - Recovery: 出力を保持してERROR。
 
 ### CP-020: 受入検証
-- Status: Not started
+- Status: Automated/Pilot complete; blocked only on browser visual verification
 - Objective: 合成・実資料と全指定検査の証拠を保存。
 - Dependencies: CP-017/018/019。
 - Files or components: 全suite、docs/validation、新規検証出力。
@@ -745,3 +745,25 @@ Unknowns: 実資料の利用可能性、グレー完全一致候補の採用可�
 - Validation: 実行コマンドと実測結果を追記。
 - Failure conditions: 回帰、入力変更、画質条件違反。
 - Recovery: 原本と既存出力を保持。削除・上書き・commit/pushなし。
+
+
+### CP-017〜020 実績・判断・残事項（2026-09-09）
+
+- 共通policyで文字自動許可／罫線表・scan・photo明示許可／preserve最優先を実装。全入力の許可競合をtool実行前に検査。
+- 保護対象で候補呼出しゼロとバイト一致を検証。構造・metadata検査障害はERRORと原本復旧を確認。
+- 文章候補はqpdf、subset、gray。scanはqpdfとgray JPEG 92/85/80。1 byte削減、増大、同サイズ、品質棄却、予算、OCR・文字位置・リンク・しおり・metadata保持をテスト。
+- 灰色化を可逆採用と誤記しないよう採用reasonをadopted_text_gray/adopted_text_scan_jpeg_Qへ修正。dry-runでは非safe文章候補の予定modeをlossyとして記録。
+- scanの画像辞書とサイズをdecode前に検査し、共有配置と重複digestの曖昧さは文書全体保護。前処理・候補工程の協調時間確認を追加。
+- schema 5をhash/DB/CSV/root照合へ導入。旧DB行は追加移行で保持。全policyと文章recipe・strictly-smaller採用条件をhashに含める。
+- previewを全PDFへ拡張。独立候補生成前にも現在policyを検査し、保護出力SHA一致を確認。保護対象の追加DPI候補はゼロ。
+- JPEG可逆は保護を迂回せず、photoの許可内で既存recipeを維持。文章・scanは指定された候補群を使用。
+- 全指定試験: PDF330、画像64、動画104、統合244、計742 passed。4件の実jpegtran試験は既存手動準備済み3.2.0のSHA照合後に環境変数で有効化し、skipなし。全compileall、両CLI help、wheel/sdist、wheel内HTMLと新module同梱、git diff --check成功。
+- 実資料5冊: 無指定standard/compactは全冊PRESERVED_ORIGINAL/候補なし/SHA一致。写真2冊150 DPI指定は2冊だけADOPTED_LOSSY、他3冊保護。
+- 日本語文字5022→1043 bytes、罫線表6182→1128、300 DPI scan3243572→130363、600 DPI scan12963575→123701。検証基準は緩めていない。実資料文章scanの可読性・削減率は対象外。
+- 新規検証フォルダー01で1059ファイル、02で640ファイルの原本・既存出力等SHA不変。フォルダー間で保護集合が異なるため件数を合算しない。
+- 構成図はshowcase9/9、0 errors/warnings、4 viewport overflowなし、light/dark4画像を目視確認。比較HTMLは構文・JSON・画像参照・同寸法（6 view×2セット）を静的検査し、生成PNGも目視確認。
+- Stop condition: ブラウザーツールがlocal file URLをURL安全ポリシーで拒否し、代替ブラウザー等による回避も禁止した。比較HTMLそのものの表示・操作確認のみ未完了。PNG/静的検査をHTMLブラウザー目視合格とは扱わない。
+- 次の行動: [検証記録](../../docs/validation/2026-09-09-text-policy.md)にある2つのindex.htmlを利用者がブラウザーで開き、資料・ページ・倍率切替と画像ロード・左右スクロール・保護理由を確認する。実装継続や外部書込みの追加承認は不要。
+- 別経路でHEADが9469ce7、3f7a6b2へ更新された。このagentはcommit/pushしておらず、既存履歴を巻き戻していない。構成図の基準revisionは生成時の9469ce7を保持。
+
+詳細なコマンド、SHA、候補履歴、表示資料: [保護・文章向け検証](../../docs/validation/2026-09-09-text-policy.md)。

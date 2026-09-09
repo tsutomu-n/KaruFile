@@ -385,7 +385,7 @@ profileと理由は空文字、候補履歴は空配列として扱います。�
 | `ADOPTED_LOSSLESS` | 可逆圧縮候補を採用 |
 | `ADOPTED_LOSSY` | 非可逆圧縮候補を採用 |
 | `UNCHANGED` | 候補の画質・削減条件により原本を採用。理由は`decision_reason` |
-| `SKIPPED_SMALL` | 256 KiB未満のため原本を採用 |
+| `SKIPPED_SMALL` | photoが256 KiB未満のため原本を採用 |
 | `SKIPPED_ENCRYPTED` | 暗号化PDFのため原本を採用 |
 | `SKIPPED_SIGNED` | 電子署名を含むため原本を採用 |
 | `SKIPPED_COMPLEX` | フォーム、添付ファイル、修復済みなどのため原本を採用 |
@@ -399,6 +399,8 @@ PDFレポートの列:
 source_path,source_size,source_sha256,output_path,output_size,output_sha256,saved_bytes,saved_percent,preset,mode,status,page_count,scan_page_ratio,error_message,profile,decision_reason,candidate_size,candidate_saved_bytes,candidate_saved_percent,images_changed,candidate_details,lossless_jpeg_requested,photo_dpi,requested_policy,classification,permission_basis,preservation_reason,processing_schema
 ```
 
+`SKIPPED_ENCRYPTED`・`SKIPPED_SIGNED`・`SKIPPED_COMPLEX`は旧記録との互換値です。共通保護判定は`PRESERVED_ORIGINAL`と理由を記録します。
+
 ### PDFレポートの診断列
 
 JPEG可逆の採用statusは`ADOPTED_LOSSLESS`、採用理由は`adopted_jpeg_lossless_baseline`または
@@ -408,7 +410,7 @@ JPEG可逆の採用statusは`ADOPTED_LOSSLESS`、採用理由は`adopted_jpeg_lo
 | 列 | 意味 |
 |---|---|
 | `preset` | 起動時に指定した`standard`または`compact` |
-| `profile` | ファイルに適用した`standard`・`compact`・`photo`。統合CLIは相対パスと指定パターンから検証 |
+| `profile` | ファイルに適用した`standard`・`compact`・`photo`・`text`・`text_scan`・`preserve`。統合CLIは相対パスと指定パターンから検証 |
 | `photo_dpi` | photo行の要求目標DPI（150〜300の整数）。原本・可逆採用でも要求値を記録。他profileは空欄。統合CLIは列の欠落・指定不一致を拒否 |
 | `decision_reason` | 最終的な採否理由 |
 | `candidate_size` | 一次候補のbyte数。生成していない場合は空欄 |
@@ -418,7 +420,7 @@ JPEG可逆の採用statusは`ADOPTED_LOSSLESS`、採用理由は`adopted_jpeg_lo
 | `candidate_details` | 試した候補の順序付きJSON配列。一次候補が先頭 |
 | `lossless_jpeg_requested` | 全行で`true`または`false`。統合CLIが実行指定と照合し、旧CSVの欠落・不一致を拒否 |
 
-非可逆候補を試した場合はそれが一次候補です。後から可逆候補を採用しても、`candidate_*`は
+photoでは非可逆候補を試した場合はそれが一次候補です。後から可逆候補を採用しても、`candidate_*`は
 非可逆候補の記録のままです。完成出力の`output_size`・`saved_bytes`・`saved_percent`と混同しないで
 ください。`saved_percent`も0.05が5%です。dry-runでは候補サイズを計算しません。
 
@@ -457,7 +459,8 @@ JPEG可逆の採用statusは`ADOPTED_LOSSLESS`、採用理由は`adopted_jpeg_lo
 
 ### 任意のPDF比較HTML
 
-統合CLIの`--pdf-preview`、PDF個別CLIの`--preview`は既定OFFです。全PDFの原本・実際出力を比較し、保護理由も表示します。追加DPI候補は保護されていないphotoだけに生成します。
+統合CLIの`--pdf-preview`、PDF個別CLIの`--preview`は既定OFFです。
+全PDFの原本・実際出力を比較し、保護理由も表示します。追加DPI候補は保護されていないphotoだけに生成します。
 PDF処理と状態・CSV保存の後に、現在選択したphoto行を対象として独立に比較資料を生成します。
 PDFの`ERROR`・`SKIPPED_*`は描画せず、比較側の`SKIPPED`と理由を記録します。
 対象なしも有効な結果です。

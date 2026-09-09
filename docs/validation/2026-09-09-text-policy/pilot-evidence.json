@@ -1,0 +1,487 @@
+{
+  "repository_base": "3f7a6b2a0acff1fedde5ea69fe51efe1ac537c78",
+  "working_tree_changes": true,
+  "pilot_root": "C:\\Users\\tn\\Downloads\\KaruFile_文章保護検証_20260909_02",
+  "protected_files": 640,
+  "protected_unchanged": true,
+  "runs": [
+    {
+      "name": "default-standard",
+      "command": [
+        "uv",
+        "run",
+        "--script",
+        "karufile.py",
+        "-i",
+        "C:\\Users\\tn\\Downloads\\西牧分遣所アスベスト調査報告書",
+        "-o",
+        "C:\\Users\\tn\\Downloads\\KaruFile_文章保護検証_20260909_02\\default-standard\\files",
+        "--preset",
+        "standard"
+      ],
+      "exit": 0,
+      "seconds": 1.206,
+      "files": [
+        {
+          "name": "1.現地調査報告書9340-001（西牧分遣所庁舎）.pdf",
+          "status": "PRESERVED_ORIGINAL",
+          "profile": "standard",
+          "classification": "protected",
+          "source_size": "340536",
+          "output_size": "340536",
+          "source_sha256": "852ff5c625d46f37874353b952d8cf7000942b92da0c11e937d2a0b28389e157",
+          "output_sha256": "852ff5c625d46f37874353b952d8cf7000942b92da0c11e937d2a0b28389e157",
+          "decision_reason": "drawing",
+          "candidate_details": "[]"
+        },
+        {
+          "name": "2.現地写真（西牧）.pdf",
+          "status": "PRESERVED_ORIGINAL",
+          "profile": "standard",
+          "classification": "protected",
+          "source_size": "3556324",
+          "output_size": "3556324",
+          "source_sha256": "000f1c06e43fb302cbd97e36cd49cac62ea12e5127e672651f31bc25e049ae9c",
+          "output_sha256": "000f1c06e43fb302cbd97e36cd49cac62ea12e5127e672651f31bc25e049ae9c",
+          "decision_reason": "drawing",
+          "candidate_details": "[]"
+        },
+        {
+          "name": "3.試料採取箇所.pdf",
+          "status": "PRESERVED_ORIGINAL",
+          "profile": "standard",
+          "classification": "protected",
+          "source_size": "588304",
+          "output_size": "588304",
+          "source_sha256": "a710ccfdc83cf297ead38a17a5ac7f7b0548bae69237d344ef0139bca40d347b",
+          "output_sha256": "a710ccfdc83cf297ead38a17a5ac7f7b0548bae69237d344ef0139bca40d347b",
+          "decision_reason": "annotations",
+          "candidate_details": "[]"
+        },
+        {
+          "name": "4.アスベスト分析報告書9340（西牧分）.pdf",
+          "status": "PRESERVED_ORIGINAL",
+          "profile": "standard",
+          "classification": "protected",
+          "source_size": "1517266",
+          "output_size": "1517266",
+          "source_sha256": "b73649573686c5a81eee1ee2914353d6a5bc454509ee31eb89733060d0d910ae",
+          "output_sha256": "b73649573686c5a81eee1ee2914353d6a5bc454509ee31eb89733060d0d910ae",
+          "decision_reason": "drawing",
+          "candidate_details": "[]"
+        },
+        {
+          "name": "5.採取写真（西牧）.pdf",
+          "status": "PRESERVED_ORIGINAL",
+          "profile": "standard",
+          "classification": "protected",
+          "source_size": "2539782",
+          "output_size": "2539782",
+          "source_sha256": "a358748166527235eb9a3df2ea60ca190e0021a4b63d3b33b0cea6ce6bd9ab92",
+          "output_sha256": "a358748166527235eb9a3df2ea60ca190e0021a4b63d3b33b0cea6ce6bd9ab92",
+          "decision_reason": "drawing",
+          "candidate_details": "[]"
+        }
+      ]
+    },
+    {
+      "name": "default-compact",
+      "command": [
+        "uv",
+        "run",
+        "--script",
+        "karufile.py",
+        "-i",
+        "C:\\Users\\tn\\Downloads\\西牧分遣所アスベスト調査報告書",
+        "-o",
+        "C:\\Users\\tn\\Downloads\\KaruFile_文章保護検証_20260909_02\\default-compact\\files",
+        "--preset",
+        "compact"
+      ],
+      "exit": 0,
+      "seconds": 1.249,
+      "files": [
+        {
+          "name": "1.現地調査報告書9340-001（西牧分遣所庁舎）.pdf",
+          "status": "PRESERVED_ORIGINAL",
+          "profile": "compact",
+          "classification": "protected",
+          "source_size": "340536",
+          "output_size": "340536",
+          "source_sha256": "852ff5c625d46f37874353b952d8cf7000942b92da0c11e937d2a0b28389e157",
+          "output_sha256": "852ff5c625d46f37874353b952d8cf7000942b92da0c11e937d2a0b28389e157",
+          "decision_reason": "drawing",
+          "candidate_details": "[]"
+        },
+        {
+          "name": "2.現地写真（西牧）.pdf",
+          "status": "PRESERVED_ORIGINAL",
+          "profile": "compact",
+          "classification": "protected",
+          "source_size": "3556324",
+          "output_size": "3556324",
+          "source_sha256": "000f1c06e43fb302cbd97e36cd49cac62ea12e5127e672651f31bc25e049ae9c",
+          "output_sha256": "000f1c06e43fb302cbd97e36cd49cac62ea12e5127e672651f31bc25e049ae9c",
+          "decision_reason": "drawing",
+          "candidate_details": "[]"
+        },
+        {
+          "name": "3.試料採取箇所.pdf",
+          "status": "PRESERVED_ORIGINAL",
+          "profile": "compact",
+          "classification": "protected",
+          "source_size": "588304",
+          "output_size": "588304",
+          "source_sha256": "a710ccfdc83cf297ead38a17a5ac7f7b0548bae69237d344ef0139bca40d347b",
+          "output_sha256": "a710ccfdc83cf297ead38a17a5ac7f7b0548bae69237d344ef0139bca40d347b",
+          "decision_reason": "annotations",
+          "candidate_details": "[]"
+        },
+        {
+          "name": "4.アスベスト分析報告書9340（西牧分）.pdf",
+          "status": "PRESERVED_ORIGINAL",
+          "profile": "compact",
+          "classification": "protected",
+          "source_size": "1517266",
+          "output_size": "1517266",
+          "source_sha256": "b73649573686c5a81eee1ee2914353d6a5bc454509ee31eb89733060d0d910ae",
+          "output_sha256": "b73649573686c5a81eee1ee2914353d6a5bc454509ee31eb89733060d0d910ae",
+          "decision_reason": "drawing",
+          "candidate_details": "[]"
+        },
+        {
+          "name": "5.採取写真（西牧）.pdf",
+          "status": "PRESERVED_ORIGINAL",
+          "profile": "compact",
+          "classification": "protected",
+          "source_size": "2539782",
+          "output_size": "2539782",
+          "source_sha256": "a358748166527235eb9a3df2ea60ca190e0021a4b63d3b33b0cea6ce6bd9ab92",
+          "output_sha256": "a358748166527235eb9a3df2ea60ca190e0021a4b63d3b33b0cea6ce6bd9ab92",
+          "decision_reason": "drawing",
+          "candidate_details": "[]"
+        }
+      ]
+    },
+    {
+      "name": "photo-two",
+      "command": [
+        "uv",
+        "run",
+        "--script",
+        "karufile.py",
+        "-i",
+        "C:\\Users\\tn\\Downloads\\西牧分遣所アスベスト調査報告書",
+        "-o",
+        "C:\\Users\\tn\\Downloads\\KaruFile_文章保護検証_20260909_02\\photo-two\\files",
+        "--pdf-photo-pattern",
+        "2.*.pdf",
+        "--pdf-photo-pattern",
+        "5.*.pdf",
+        "--pdf-photo-dpi",
+        "150"
+      ],
+      "exit": 0,
+      "seconds": 15.108,
+      "files": [
+        {
+          "name": "1.現地調査報告書9340-001（西牧分遣所庁舎）.pdf",
+          "status": "PRESERVED_ORIGINAL",
+          "profile": "standard",
+          "classification": "protected",
+          "source_size": "340536",
+          "output_size": "340536",
+          "source_sha256": "852ff5c625d46f37874353b952d8cf7000942b92da0c11e937d2a0b28389e157",
+          "output_sha256": "852ff5c625d46f37874353b952d8cf7000942b92da0c11e937d2a0b28389e157",
+          "decision_reason": "drawing",
+          "candidate_details": "[]"
+        },
+        {
+          "name": "2.現地写真（西牧）.pdf",
+          "status": "ADOPTED_LOSSY",
+          "profile": "photo",
+          "classification": "photo",
+          "source_size": "3556324",
+          "output_size": "1588343",
+          "source_sha256": "000f1c06e43fb302cbd97e36cd49cac62ea12e5127e672651f31bc25e049ae9c",
+          "output_sha256": "bd038e3037cb9eb07b88647211d03cf5ae91a7e1fec32279b261dea44ec6280f",
+          "decision_reason": "adopted_lossy",
+          "candidate_details": "[{\"kind\":\"photo\",\"size\":1588343,\"images_changed\":28,\"reason\":\"eligible\",\"validation_reason\":\"\",\"selected\":true},{\"kind\":\"lossless\",\"size\":3550522,\"images_changed\":0,\"reason\":\"reduction_below_threshold\",\"validation_reason\":\"\",\"selected\":false}]"
+        },
+        {
+          "name": "3.試料採取箇所.pdf",
+          "status": "PRESERVED_ORIGINAL",
+          "profile": "standard",
+          "classification": "protected",
+          "source_size": "588304",
+          "output_size": "588304",
+          "source_sha256": "a710ccfdc83cf297ead38a17a5ac7f7b0548bae69237d344ef0139bca40d347b",
+          "output_sha256": "a710ccfdc83cf297ead38a17a5ac7f7b0548bae69237d344ef0139bca40d347b",
+          "decision_reason": "annotations",
+          "candidate_details": "[]"
+        },
+        {
+          "name": "4.アスベスト分析報告書9340（西牧分）.pdf",
+          "status": "PRESERVED_ORIGINAL",
+          "profile": "standard",
+          "classification": "protected",
+          "source_size": "1517266",
+          "output_size": "1517266",
+          "source_sha256": "b73649573686c5a81eee1ee2914353d6a5bc454509ee31eb89733060d0d910ae",
+          "output_sha256": "b73649573686c5a81eee1ee2914353d6a5bc454509ee31eb89733060d0d910ae",
+          "decision_reason": "drawing",
+          "candidate_details": "[]"
+        },
+        {
+          "name": "5.採取写真（西牧）.pdf",
+          "status": "ADOPTED_LOSSY",
+          "profile": "photo",
+          "classification": "photo",
+          "source_size": "2539782",
+          "output_size": "1228846",
+          "source_sha256": "a358748166527235eb9a3df2ea60ca190e0021a4b63d3b33b0cea6ce6bd9ab92",
+          "output_sha256": "6a03f9a3f00e12c730c45a4609a2e0b2249f3e20ecf26da94b09b45672e80606",
+          "decision_reason": "adopted_lossy",
+          "candidate_details": "[{\"kind\":\"photo\",\"size\":1228846,\"images_changed\":20,\"reason\":\"eligible\",\"validation_reason\":\"\",\"selected\":true},{\"kind\":\"lossless\",\"size\":2534216,\"images_changed\":0,\"reason\":\"reduction_below_threshold\",\"validation_reason\":\"\",\"selected\":false}]"
+        }
+      ]
+    },
+    {
+      "name": "synthetic",
+      "command": [
+        "uv",
+        "run",
+        "--script",
+        "karufile.py",
+        "-i",
+        "C:\\Users\\tn\\Downloads\\KaruFile_文章保護検証_20260909_02\\synthetic-input",
+        "-o",
+        "C:\\Users\\tn\\Downloads\\KaruFile_文章保護検証_20260909_02\\synthetic\\files",
+        "--pdf-text-pattern",
+        "*罫線表.pdf",
+        "--pdf-text-scan-pattern",
+        "文章スキャン*.pdf",
+        "--pdf-preview"
+      ],
+      "exit": 0,
+      "seconds": 4.055,
+      "files": [
+        {
+          "name": "文章スキャン300.pdf",
+          "status": "ADOPTED_LOSSY",
+          "profile": "text_scan",
+          "classification": "text_scan",
+          "source_size": "3243572",
+          "output_size": "130363",
+          "source_sha256": "35ef9f391e959b2f1f28d9eb5dd3f9e97d490654485907b9b28407339421d4eb",
+          "output_sha256": "d92890e8a3b93d7ee6169c72b885d4a36b5f35e05f6e52950bc54e89c094f589",
+          "decision_reason": "adopted_text_scan_jpeg_80",
+          "candidate_details": "[{\"kind\":\"lossless\",\"size\":142896,\"images_changed\":0,\"reason\":\"eligible\",\"validation_reason\":\"\",\"selected\":false},{\"kind\":\"text_scan_jpeg_92\",\"size\":170772,\"images_changed\":1,\"reason\":\"eligible\",\"validation_reason\":\"\",\"selected\":false},{\"kind\":\"text_scan_jpeg_85\",\"size\":142903,\"images_changed\":1,\"reason\":\"eligible\",\"validation_reason\":\"\",\"selected\":false},{\"kind\":\"text_scan_jpeg_80\",\"size\":130363,\"images_changed\":1,\"reason\":\"eligible\",\"validation_reason\":\"\",\"selected\":true}]"
+        },
+        {
+          "name": "文章スキャン600.pdf",
+          "status": "ADOPTED_LOSSY",
+          "profile": "text_scan",
+          "classification": "text_scan",
+          "source_size": "12963575",
+          "output_size": "123701",
+          "source_sha256": "d6960290cdca8e571034c9ad37715eca3985228ab5be7b3ba9dbb6b4e2333b5f",
+          "output_sha256": "166120fcef37ae15e96875ef5def3e4cb7effe7e1f9259d7091fce3d8da2deff",
+          "decision_reason": "adopted_text_scan_jpeg_80",
+          "candidate_details": "[{\"kind\":\"lossless\",\"size\":303219,\"images_changed\":0,\"reason\":\"eligible\",\"validation_reason\":\"\",\"selected\":false},{\"kind\":\"text_scan_jpeg_92\",\"size\":162737,\"images_changed\":1,\"reason\":\"eligible\",\"validation_reason\":\"\",\"selected\":false},{\"kind\":\"text_scan_jpeg_85\",\"size\":135374,\"images_changed\":1,\"reason\":\"eligible\",\"validation_reason\":\"\",\"selected\":false},{\"kind\":\"text_scan_jpeg_80\",\"size\":123701,\"images_changed\":1,\"reason\":\"eligible\",\"validation_reason\":\"\",\"selected\":true}]"
+        },
+        {
+          "name": "日本語文章.pdf",
+          "status": "ADOPTED_LOSSY",
+          "profile": "standard",
+          "classification": "text",
+          "source_size": "5022",
+          "output_size": "1043",
+          "source_sha256": "fda97a8a033a868cb9e0a2294460e895c1a57be43cb686cc9cdd17054f223189",
+          "output_sha256": "cd4fcbc8dd2b61e9df5e95edd37b5df90c9355d6671e94b6dd91d70c31d20487",
+          "decision_reason": "adopted_text_gray",
+          "candidate_details": "[{\"kind\":\"lossless\",\"size\":4411,\"images_changed\":0,\"reason\":\"eligible\",\"validation_reason\":\"\",\"selected\":false},{\"kind\":\"text_subset\",\"size\":4411,\"images_changed\":0,\"reason\":\"eligible\",\"validation_reason\":\"\",\"selected\":false},{\"kind\":\"text_gray\",\"size\":1043,\"images_changed\":0,\"reason\":\"eligible\",\"validation_reason\":\"\",\"selected\":true}]"
+        },
+        {
+          "name": "日本語罫線表.pdf",
+          "status": "ADOPTED_LOSSY",
+          "profile": "text",
+          "classification": "text_table",
+          "source_size": "6182",
+          "output_size": "1128",
+          "source_sha256": "10515771a6e5e069f3ea0e737616ef3d80816adc45664fd17cd60578caebe45d",
+          "output_sha256": "9a7d868cb6bc9268a1627eee5059320cc85e852f1c5377b9ded9c9b9b7f96786",
+          "decision_reason": "adopted_text_gray",
+          "candidate_details": "[{\"kind\":\"lossless\",\"size\":5600,\"images_changed\":0,\"reason\":\"eligible\",\"validation_reason\":\"\",\"selected\":false},{\"kind\":\"text_subset\",\"size\":5600,\"images_changed\":0,\"reason\":\"eligible\",\"validation_reason\":\"\",\"selected\":false},{\"kind\":\"text_gray\",\"size\":1128,\"images_changed\":0,\"reason\":\"eligible\",\"validation_reason\":\"\",\"selected\":true}]"
+        }
+      ]
+    },
+    {
+      "name": "protected-preview",
+      "command": [
+        "uv",
+        "run",
+        "--script",
+        "karufile.py",
+        "-i",
+        "C:\\Users\\tn\\Downloads\\KaruFile_文章保護検証_20260909_02\\synthetic-input",
+        "-o",
+        "C:\\Users\\tn\\Downloads\\KaruFile_文章保護検証_20260909_02\\protected-preview\\files",
+        "--pdf-preserve-pattern",
+        "*",
+        "--pdf-photo-pattern",
+        "*",
+        "--pdf-preview",
+        "--pdf-preview-dpi",
+        "150"
+      ],
+      "exit": 0,
+      "seconds": 2.014,
+      "files": [
+        {
+          "name": "文章スキャン300.pdf",
+          "status": "PRESERVED_ORIGINAL",
+          "profile": "preserve",
+          "classification": "protected",
+          "source_size": "3243572",
+          "output_size": "3243572",
+          "source_sha256": "35ef9f391e959b2f1f28d9eb5dd3f9e97d490654485907b9b28407339421d4eb",
+          "output_sha256": "35ef9f391e959b2f1f28d9eb5dd3f9e97d490654485907b9b28407339421d4eb",
+          "decision_reason": "explicit_preserve",
+          "candidate_details": "[]"
+        },
+        {
+          "name": "文章スキャン600.pdf",
+          "status": "PRESERVED_ORIGINAL",
+          "profile": "preserve",
+          "classification": "protected",
+          "source_size": "12963575",
+          "output_size": "12963575",
+          "source_sha256": "d6960290cdca8e571034c9ad37715eca3985228ab5be7b3ba9dbb6b4e2333b5f",
+          "output_sha256": "d6960290cdca8e571034c9ad37715eca3985228ab5be7b3ba9dbb6b4e2333b5f",
+          "decision_reason": "explicit_preserve",
+          "candidate_details": "[]"
+        },
+        {
+          "name": "日本語文章.pdf",
+          "status": "PRESERVED_ORIGINAL",
+          "profile": "preserve",
+          "classification": "protected",
+          "source_size": "5022",
+          "output_size": "5022",
+          "source_sha256": "fda97a8a033a868cb9e0a2294460e895c1a57be43cb686cc9cdd17054f223189",
+          "output_sha256": "fda97a8a033a868cb9e0a2294460e895c1a57be43cb686cc9cdd17054f223189",
+          "decision_reason": "explicit_preserve",
+          "candidate_details": "[]"
+        },
+        {
+          "name": "日本語罫線表.pdf",
+          "status": "PRESERVED_ORIGINAL",
+          "profile": "preserve",
+          "classification": "protected",
+          "source_size": "6182",
+          "output_size": "6182",
+          "source_sha256": "10515771a6e5e069f3ea0e737616ef3d80816adc45664fd17cd60578caebe45d",
+          "output_sha256": "10515771a6e5e069f3ea0e737616ef3d80816adc45664fd17cd60578caebe45d",
+          "decision_reason": "explicit_preserve",
+          "candidate_details": "[]"
+        }
+      ]
+    },
+    {
+      "name": "dry-run",
+      "command": [
+        "uv",
+        "run",
+        "--script",
+        "karufile.py",
+        "-i",
+        "C:\\Users\\tn\\Downloads\\KaruFile_文章保護検証_20260909_02\\synthetic-input",
+        "-o",
+        "C:\\Users\\tn\\Downloads\\KaruFile_文章保護検証_20260909_02\\dry-run\\files",
+        "--pdf-text-pattern",
+        "*罫線表.pdf",
+        "--pdf-text-scan-pattern",
+        "文章スキャン*.pdf",
+        "--pdf-preview",
+        "--dry-run"
+      ],
+      "exit": 0,
+      "seconds": 1.226,
+      "files": [
+        {
+          "name": "文章スキャン300.pdf",
+          "status": "DRY_RUN_LOSSY",
+          "profile": "text_scan",
+          "classification": "text_scan",
+          "source_size": "3243572",
+          "output_size": "",
+          "source_sha256": "35ef9f391e959b2f1f28d9eb5dd3f9e97d490654485907b9b28407339421d4eb",
+          "output_sha256": "",
+          "decision_reason": "dry_run_lossy",
+          "candidate_details": "[]"
+        },
+        {
+          "name": "文章スキャン600.pdf",
+          "status": "DRY_RUN_LOSSY",
+          "profile": "text_scan",
+          "classification": "text_scan",
+          "source_size": "12963575",
+          "output_size": "",
+          "source_sha256": "d6960290cdca8e571034c9ad37715eca3985228ab5be7b3ba9dbb6b4e2333b5f",
+          "output_sha256": "",
+          "decision_reason": "dry_run_lossy",
+          "candidate_details": "[]"
+        },
+        {
+          "name": "日本語文章.pdf",
+          "status": "DRY_RUN_LOSSY",
+          "profile": "standard",
+          "classification": "text",
+          "source_size": "5022",
+          "output_size": "",
+          "source_sha256": "fda97a8a033a868cb9e0a2294460e895c1a57be43cb686cc9cdd17054f223189",
+          "output_sha256": "",
+          "decision_reason": "dry_run_lossy",
+          "candidate_details": "[]"
+        },
+        {
+          "name": "日本語罫線表.pdf",
+          "status": "DRY_RUN_LOSSY",
+          "profile": "text",
+          "classification": "text_table",
+          "source_size": "6182",
+          "output_size": "",
+          "source_sha256": "10515771a6e5e069f3ea0e737616ef3d80816adc45664fd17cd60578caebe45d",
+          "output_sha256": "",
+          "decision_reason": "dry_run_lossy",
+          "candidate_details": "[]"
+        }
+      ]
+    }
+  ],
+  "source_sha256": {
+    "pdf-shrink\\src\\pdf_shrink\\cli.py": "2842454a40a177afbeaace9257ed619492557307d02135af86b9be3eb772d09d",
+    "pdf-shrink\\src\\pdf_shrink\\config.py": "44e727d851ec25757e536d1d67c7801af495ba3ffcfbde62313b4212173be7c8",
+    "pdf-shrink\\src\\pdf_shrink\\discovery.py": "69ee6c3437e9c95987976cf9b9edb98060c8859b8240e027a2f4ad0a89626e9f",
+    "pdf-shrink\\src\\pdf_shrink\\inspect_pdf.py": "239f6e830b01ac41e4b81a58223d2e0ee3a17b1c9735b190a958f2ade6094280",
+    "pdf-shrink\\src\\pdf_shrink\\lossless_jpeg.py": "3619ea2e05393016c5df61c441227e22798c9bd11d82616f6874c06aafaeaf03",
+    "pdf-shrink\\src\\pdf_shrink\\models.py": "7fb53a54c567a924c2735d0cbfedc0a58fa737834f130fb15deba5bc7e740575",
+    "pdf-shrink\\src\\pdf_shrink\\output.py": "b8d1887abc0f70cba89b058fca5ff7628599b527e7d17af43fd2b8af4d5fd926",
+    "pdf-shrink\\src\\pdf_shrink\\policy.py": "f0144b5ce7265c2fd8172b642a447b70558805d3579eeacb5f1ff04df7e1c844",
+    "pdf-shrink\\src\\pdf_shrink\\preview.py": "ba11853baa753697b9d519a65c2b1065444c17dcb01aea10a6788da00e411628",
+    "pdf-shrink\\src\\pdf_shrink\\qpdf.py": "f51ec6988eb5bcf5a72bac4f323386c7505e657af6a3f0c6ed58bc705e108348",
+    "pdf-shrink\\src\\pdf_shrink\\report.py": "98e78c6d0630cad188a504122d92d1c51a7c76b53bd0dc97bcdccd921a069dd7",
+    "pdf-shrink\\src\\pdf_shrink\\runner.py": "eb41870bea1cb992941bedaf24724b365b9fc28f64bf9fe063c24b47664608b6",
+    "pdf-shrink\\src\\pdf_shrink\\state.py": "1e53da529842166f22a9ed76050570a280b2b4916618e5e5607df9b72a64820e",
+    "pdf-shrink\\src\\pdf_shrink\\text_optimize.py": "693ed39ee815fddee7e325ce3895644eb3cc457f89b19a435618df0ab358f8a8",
+    "pdf-shrink\\src\\pdf_shrink\\transform.py": "c76227d763982dcddb2ed891d9a3bfd4b44ff1600fbbb4db7e40b88aac390d1f",
+    "pdf-shrink\\src\\pdf_shrink\\utils.py": "8b334b56cad079d3f774d330a4b66f2f075ccf0e4859ba18531006a2af165d2d",
+    "pdf-shrink\\src\\pdf_shrink\\validate.py": "53f0233133ae8462dea1ec90fab6dd06d41e965c8f8fa6355e3641ecf076abca",
+    "pdf-shrink\\src\\pdf_shrink\\worker.py": "741708a962940dd8d0369da9c6d1d401ec9ce2d4a47fcd39695aa5d42203adc5",
+    "pdf-shrink\\src\\pdf_shrink\\__init__.py": "8c0633402c90e972872fd5e08b2e408a4c7d46d0a95e5b38184a316a30baf62c",
+    "pdf-shrink\\src\\pdf_shrink\\__main__.py": "38e4369b27289449b5d93b25f7ad88ff2457859213624321d25cb07ac1a0fcdf",
+    "pdf-shrink\\src\\pdf_shrink\\preview.html": "715216fc396e81071f8b8ca78bc33ff347a1d1715dd49d3dcf5a1d862cc4f7c7",
+    "orchestrator\\shrink_all.py": "d16ed511bacbe979a380001e9c198867f426bc7ffd9595bf5ac567677430a91c"
+  }
+}
