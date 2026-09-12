@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import math
+import re
 import time
 from pathlib import Path
 
@@ -13,6 +14,18 @@ from .inspect_pdf import _effective_image_dpis
 MAX_PAGES = 100
 MAX_IMAGE_PIXELS = 80_000_000
 MAX_STREAM_BYTES = 64 * 1024 * 1024
+
+
+def _stream_length(doc: fitz.Document, xref: int) -> int:
+    """Read a direct or indirect integer without loading the image stream."""
+    kind, value = doc.xref_get_key(xref, "Length")
+    if kind == "xref":
+        value = doc.xref_object(int(value.split()[0])).strip()
+    elif kind != "int":
+        raise ValueError("invalid scan image stream length")
+    if not re.fullmatch(r"\+?[0-9]+", value):
+        raise ValueError("invalid scan image stream length")
+    return int(value)
 
 
 @dataclass(frozen=True)
@@ -65,7 +78,7 @@ def scan_images(doc: fitz.Document, *, deadline: float = float("inf")) -> tuple[
                 raise ValueError("invalid scan image dimensions")
             if image[2] * image[3] > MAX_IMAGE_PIXELS:
                 return {}, "image_pixel_limit"
-            if int(get("Length")[1]) > MAX_STREAM_BYTES:
+            if _stream_length(doc, xref) > MAX_STREAM_BYTES:
                 return {}, "image_stream_limit"
     # Digest matching is ambiguous when two resource xrefs decode identically.
     # Bound dictionaries first and check time between individual decodes.
@@ -134,7 +147,7 @@ def classify(path: Path, requested: str) -> Decision:
         # semantics than the first text/scan recipe supports.
         if doc.get_ocgs():
             return preserve("optional_content")
-        if requested == "text_scan":
+        if requested in {"text_scan", "text_scan_bilevel"}:
             _, reason = scan_images(doc, deadline=deadline)
             if reason:
                 return preserve(reason)
@@ -157,13 +170,13 @@ def classify(path: Path, requested: str) -> Decision:
                     return preserve("non_table_drawing")
             elif drawings:
                 return preserve("drawing")
-            if requested == "text_scan":
+            if requested in {"text_scan", "text_scan_bilevel"}:
                 allowed.add("fill-image")
             elif images:
                 return preserve("unpermitted_image")
             if kinds - allowed:
                 return preserve("non_text_paint")
-        if requested == "text_scan":
+        if requested in {"text_scan", "text_scan_bilevel"}:
             if not has_images:
                 return preserve("no_scan_image")
             return Decision("text_scan", basis)

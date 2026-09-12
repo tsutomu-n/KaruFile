@@ -104,8 +104,8 @@
       .care-list li { padding:10px 0 10px 21px; } .care-list li::before { top:19px; width:5px; height:5px; }
       .care-list p { font-size:10pt; } .checks { gap:12px; margin:18px 0; } .checks li { padding:15px 18px; }
       .checks strong { font-size:13pt; } .checks p { font-size:10pt; } .compare { padding:17px 20px; margin:20px 0; }
-      .manual { padding-top:17px; margin-top:20px; } .manual-links { font-size:10pt; margin:12px 0; }
-      footer { margin-top:22px; padding:15px 0 0; font-size:9pt; } .back,.skip { display:none; }
+      .manual { padding-top:12px; margin-top:12px; } .manual-links { font-size:10pt; margin:8px 0; }
+      footer { margin-top:8px; padding:6px 0 0; font-size:9pt; } .back,.skip { display:none; }
       h2,h3,figcaption { break-after:avoid; } .care-list li,.checks li,.callout,.compare,.manual { break-inside:avoid; }
       a { color:var(--ink); } p,li { orphans:3; widows:3; }
     }
@@ -119,7 +119,7 @@
       <div class="hero">
         <p class="eyebrow">写真や資料を、送る・共有する前に</p>
         <h1>KaruFileで何ができるの？</h1>
-        <p class="lead"><strong>KaruFileは、写真やPDFから、容量を抑えたコピーを作る道具です。</strong></p>
+        <p class="lead"><strong>KaruFileは、写真やPDF、指定したExcel、対応する動画から、容量を抑えたコピーを作る道具です。</strong></p>
         <p>メールで送ったり、共有フォルダーに置いたりする前の準備に使えます。<br>元の資料はそのまま残ります。</p>
         <p class="promise">原本を残して、配布用のコピーを用意する。</p>
       </div>
@@ -128,8 +128,11 @@
         <ol>
           <li><a href="#uses"><span>01</span>こんなときに使えます</a></li>
           <li><a href="#copies"><span>02</span>元の資料と、できあがった資料</a></li>
-          <li><a href="#care"><span>03</span>ここだけは知っておいてください</a></li>
-          <li><a href="#check"><span>04</span>できあがったら、ここを確認</a></li>
+          <li><a href="#pdf"><span>03</span>PDFをもっと軽くしたいとき</a></li>
+          <li><a href="#video"><span>04</span>動画を軽くする・音声を消す</a></li>
+          <li><a href="#excel"><span>05</span>Excelの中の写真を軽くする</a></li>
+          <li><a href="#care"><span>06</span>ここだけは知っておいてください</a></li>
+          <li><a href="#check"><span>07</span>できあがったら、ここを確認</a></li>
         </ol>
       </nav>
       <section id="uses" aria-labelledby="uses-heading">
@@ -155,50 +158,88 @@
           <figure aria-describedby="copies-summary">
             <figcaption><span class="figure-number">図1</span>元の資料は残り、別の場所にコピーができる</figcaption>
             <img class="diagram" width="520" height="284" src="@@COPIES_IMAGE@@" alt="左に元の会議資料フォルダー、右に会議資料_軽量化フォルダー。会議資料PDFは小さくできれば軽量化、配置図PDFは通常そのままコピー、現場写真は縮小・圧縮。WordとExcelは出力されません。左の原本はすべて残ります。">
-            <p class="diagram-summary" id="copies-summary">左の原本はすべて残ります。右には、軽量化した資料と、そのままコピーしたPDFが並びます。Word・Excelのコピーは作りません。</p>
+            <p class="diagram-summary" id="copies-summary">左の原本はすべて残ります。右には、軽量化した資料と、そのままコピーしたPDFが並びます。この通常設定ではWord・Excelのコピーは作りません。</p>
           </figure>
           <div class="facts">
             <article><h3>出力先は別の場所です</h3><p>保存先を指定しない場合は、元のフォルダーと同じ階層に「会議資料_軽量化」を使います。中のフォルダー構成も引き継ぎます。</p></article>
             <article><h3>そのままのPDFもあります</h3><p>加工しない方針のPDFや、小さくできないPDFは原本をコピーします。容量が変わらないこと自体は、失敗ではありません。</p></article>
           </div>
-          <aside class="callout warning"><p><strong>フォルダー全部のバックアップを作る道具ではありません。</strong><br>Word・Excelなど、処理対象でないファイルはコピーされません。通常設定では動画も出力されません。必要な資料がすべてそろうとは限りません。</p></aside>
+          <aside class="callout warning"><p><strong>フォルダー全部のバックアップを作る道具ではありません。</strong><br>Wordや選択していないExcelなど、処理対象でないファイルはコピーされません。既定のstandardでは動画も出力されません。動画は第4節、Excelは第5節の追加指定で処理します。</p></aside>
           <p class="note" style="margin-top:16px">図は処理結果の例です。エラーが出た場合は、出力ファイルがあっても、実行結果を確認してください。</p>
         </section>
       </div>
 
       <div class="print-sheet">
-        <div class="pdf-block" aria-label="PDFの扱いの補足">
+        <section id="pdf" class="pdf-block" aria-labelledby="pdf-heading">
+          <h2 id="pdf-heading"><span class="num">03</span>PDFをもっと軽くしたいとき</h2>
           <figure aria-describedby="pdf-summary">
             <figcaption><span class="figure-number">図2</span>PDFは、内容によって扱いが違う</figcaption>
-            <img class="diagram" width="520" height="284" src="@@PDF_IMAGE@@" alt="文字だけのPDFは通常設定で軽量化を試します。図・写真入りPDFや未指定のスキャンPDFはそのままコピーします。文章のスキャンと人が確認し、追加指定したPDFは白黒の軽いコピー候補を作ります。">
+            <img class="diagram" width="600" height="320" src="@@PDF_IMAGE@@" alt="通常は文字だけのPDFの軽量化を試し、図・写真入りや未指定のスキャンPDFはそのままコピーします。追加指定した文章スキャンは白黒化、字体を変えてよい日本語・英語のPDFはメイリオへの統一を試します。条件を満たす小さい候補だけを採用します。">
             <p class="diagram-summary" id="pdf-summary">通常は文字だけを自動処理し、図・写真入りPDFや未指定のスキャンPDFは加工しません。どの場合も、元のPDFは残ります。</p>
           </figure>
-          <p class="note">文章のスキャンと確認して指定すると、白黒の軽いコピーを作れる場合があります。指定しても、構造や確認結果によっては原本をコピーします。罫線のある表も通常は保護され、加工には内容の確認と指定が必要です。</p>
-        </div>
+          <p class="note">スキャンは「画像」を軽くする処理です。文章の資料と確認して指定します。罫線のある表も通常は保護され、加工には内容の確認と指定が必要です。</p>
+          <h3>文字の形を変えてよければ、字体を統一できます</h3>
+          <p>たとえば、明朝体の報告書をゴシック体にして配布できる場合です。PDF内の字体のデータが大きい資料では、容量を減らせる場合があります。<strong>追加指定すると、日本語・英語の横書きを、Windows 11の「メイリオ（標準の太さ）」へ統一する候補を作ります。</strong><strong>対象PDFの指定は必要ですが、字体名の指定は不要です。</strong>追加指定で「游ゴシック」も選べます。通常のPDF圧縮では字体を変えません。</p>
+          <p>文字の形や太字の強調が変わり、検索・コピー時の空白が変わる場合があります。<strong>スキャン画像の中の文字には、この字体統一は効きません。</strong>対応できないPDFや、小さくならないPDFでは、字体を変えない結果になることもあります。元のPDFは残ります。</p>
+          <p class="note">タグ付きPDFや透過ロゴ入りでも、対応する構造なら試せます。游ゴシックにない「☑」はメイリオで処理できる場合があります。選んだ字体にない文字や注釈内の文字があるPDFは、そのまま残ります。最初は1冊を別フォルダーで試し、できあがりを確認してください。操作は末尾の「字体を統一する手順」を参照します。</p>
+        </section>
+      </div>
+
+      <div class="print-sheet">
+        <section id="video" aria-labelledby="video-heading">
+          <h2 id="video-heading"><span class="num">04</span>動画を軽くする・音声を消す</h2>
+          <p>現場の様子や作業手順を撮った動画を、共有前に軽くする用途にも使えます。<strong>元動画は残し、別フォルダーに結果を作ります。</strong></p>
+          <p>既定の <code>standard</code> は動画を処理しません。動画を処理するには <code>compact</code> を選びます。初回は動画用の道具（FFmpeg・ffprobe）の準備も必要です。</p>
+          <ul class="care-list video-options">
+            <li><strong>説明の声を残して、動画を軽くしたい</strong><p><code>--preset compact</code><br>映像と音声を圧縮します。音声は自動では消しません。</p></li>
+            <li><strong>会話や周囲の音を消して、動画を軽くしたい</strong><p><code>--preset compact</code> に <code>--video-remove-audio</code> を追加します。成功した出力には音声が入りません。</p></li>
+            <li><strong>従来の厳しい形式判定を使いたい</strong><p><code>--video-safe</code> を追加します。通常は付けません。撮影方式などの情報が不足した動画や、フレーム間隔が変わる動画を除外します。</p></li>
+          </ul>
+          <p class="note" style="margin-top:16px">上の指定はコマンドに付けるオプションです。音声除去と厳格判定は併用できます。入力・保存先を含む実行例は、末尾の「動画を圧縮・無音化する手順」で確認してください。</p>
+          <aside class="callout warning"><p><strong>音声除去に失敗したら、音声付きコピーでは代用しません。</strong><br>未対応の動画や、画質・容量の条件を満たせない動画はエラーになります。以前の出力が残る場合もあるため、ファイルがあるだけで成功と判断しないでください。</p></aside>
+          <p class="note" style="margin-top:16px">HDR・字幕付きなど、まだ変換できない動画もあります。細部や動きは変わる場合があります。縦1080×1920の動画は404×720へ縮小されます。音声除去は、映像に写った顔や文字を消す機能ではありません。</p>
+          <p class="note">compactは同じフォルダー内のPDF・写真も処理します。動画だけを処理したい場合は、対象の動画だけを入れたフォルダーを指定します。原本保護・保存先の検査・変換後の検証は常に有効です。</p>
+        </section>
+      </div>
+
+      <div class="print-sheet">
+        <section id="excel" aria-labelledby="excel-heading">
+          <h2 id="excel-heading"><span class="num">05</span>Excelの中の写真を軽くする</h2>
+          <p>写真をたくさん貼った報告書や台帳で、画像が表示サイズより大きすぎる場合に使います。<strong>対象のExcel（.xlsx）を追加指定すると、画像の余分な画素数を減らしたコピーを作ります。</strong>通常はOFFで、元のExcelは残します。</p>
+          <p><code>--excel-pattern "写真台帳/*.xlsx"</code>で対象を選びます。初回はExcel用の道具の準備が必要です。両presetとも既定は長辺800px・JPEG品質72です。小さいJPEGも再圧縮するため画質は劣化します。</p>
+          <p>シート上の画像の大きさとトリミングは変えず、PNGの透明部分も維持します。数式や書式など、画像以外の内部データが変わっていないことを確認してから出力します。</p>
+          <aside class="callout warning"><p><strong>初版では、縮小できない画像もあります。</strong><br>行や列のサイズ、字体などから表示サイズを確定できない配置では、その画像を変更しません。他の対応画像は処理できます。セル内画像・マクロ・署名付きなどはブック全体をそのままコピーします。古い.xls形式は対象外です。</p></aside>
+          <p class="note" style="margin-top:16px">まず1冊で試し、Excelで開けること、写真内の小さい文字・数式・印刷結果を原本と見比べてください。表示や印刷をExcel自身で自動確認する機能はありません。縮小できなかった場合とエラーはレポートで区別できます。</p>
+          <p class="note">エラー時には新しいExcelコピーを作らず、以前の出力が残る場合があります。ファイルがあるだけで成功と判断しないでください。準備とコマンドは、末尾の「Excelの画像を縮小する手順」を参照してください。</p>
+        </section>
+      </div>
+
+      <div class="print-sheet">
         <section id="care" aria-labelledby="care-heading">
-          <h2 id="care-heading"><span class="num">03</span>ここだけは知っておいてください</h2>
+          <h2 id="care-heading"><span class="num">06</span>ここだけは知っておいてください</h2>
           <ul class="care-list">
             <li><strong>文章PDFが白黒になる場合があります。</strong><p>色分けした文字など、仕事に必要な色が残っているか見比べてください。</p></li>
             <li><strong>写真を小さくすると、細部が見えにくくなる場合があります。</strong><p>写真内の小さな文字や細い線を確認してください。小さい写真を鮮明にする機能ではありません。</p></li>
             <li><strong>「写真ファイル」と「写真入りPDF」は扱いが違います。</strong><p>写真ファイルは縮小・圧縮します。写真入りPDFは、通常は加工せずコピーします。</p></li>
             <li><strong>読めない文字を読み取ったり、個人情報を消したりする機能はありません。</strong><p>写真の位置情報などが残る場合もあります。共有前の情報確認は別途必要です。</p></li>
-            <li><strong>動画は通常設定では処理・コピーしません。</strong><p>動画も追加設定で処理できます。別の準備が必要なので、詳しくはマニュアルを確認してください。</p></li>
+            <li><strong>動画は、共有先で映像と音を確認してください。</strong><p>音声を残す指定なら必要な声が聞こえるか、除去する指定なら音が出ないかを確認します。出力のAV1形式に対応しない再生ソフトでは開けない場合があります。</p></li>
           </ul>
         </section>
       </div>
 
       <div class="print-sheet">
         <section id="check" aria-labelledby="check-heading">
-          <h2 id="check-heading"><span class="num">04</span>できあがったら、ここを確認</h2>
+          <h2 id="check-heading"><span class="num">07</span>できあがったら、ここを確認</h2>
           <p>メールに添付したり、共有フォルダーへ置いたりする前に、原本と結果を見比べます。</p>
           <ol class="checks">
-            <li><div><strong>文字や数字が読めるか</strong><p>日付・金額・寸法や、スキャンした小さな文字を確認します。</p></div></li>
-            <li><div><strong>必要な色や写真の細部が残っているか</strong><p>色分けの意味や、写真の線・傷・黒板の文字などを確認します。</p></div></li>
+            <li><div><strong>文字や数字が読めるか</strong><p>日付・金額・寸法や、小さな文字を確認します。字体を統一した場合は、太字の強調と、普段使うPDF閲覧ソフトでの検索・コピーも確認します。</p></div></li>
+            <li><div><strong>必要な色・細部・音声が意図どおりか</strong><p>色分けや写真の線・傷・黒板の文字を確認します。動画は最初から最後まで再生し、映像の向き・動きと、音声が指定どおりに残る／消えることを確認します。</p></div></li>
             <li><div><strong>エラーが出ていないか</strong><p>実行画面のエラー表示とレポートを確認します。ファイルができていても、エラーが残っている場合があります。</p></div></li>
           </ol>
           <aside class="compare">
             <h3>PDFは、原本と結果を並べる比較画面も作れます</h3>
             <p>追加設定の <code>--pdf-preview</code> を付けると、原本と実際のできあがりを同じ倍率で見比べる画面を作れます。通常は作成しません。</p>
+            <p class="note">比較画面は1冊100ページまでです。字体統一は200ページまで試せますが、101ページ以上では比較画面を作れません。比較側のエラーが出ても、完成したPDFは残ります。</p>
             <p class="note">比較画面はブラウザーで開けます。持ち運ぶときは、画像やPDFを含む比較用フォルダー全体をまとめてください。</p>
           </aside>
           <div class="manual">
@@ -206,8 +247,11 @@
             <p>PowerShellという画面にコマンドを入力して使います。初回の準備、対象の指定、実行、エラーの確認は、既存の利用者マニュアルに沿って進めてください。</p>
             <div class="manual-links">
               <a href="../MANUAL.md">利用者マニュアルを読む</a>
+              <a href="../MANUAL.md#日本語英語のpdfをメイリオへ統一する">字体を統一する手順</a>
               <a href="../MANUAL.md#pdfの原本と完成出力を見比べる">PDFの比較画面について</a>
               <a href="../MANUAL.md#終了コードとエラー確認">エラーの確認方法</a>
+              <a href="../MANUAL.md#動画">動画を圧縮・無音化する手順</a>
+              <a href="../MANUAL.md#excel内の大きな画像を縮小する">Excelの画像を縮小する手順</a>
             </div>
             <p class="note">このガイドだけを受け取った場合は、KaruFile一式にある <strong>MANUAL.md</strong> を確認してください。上のリンクは、リポジトリ内の配置で開くためのものです。</p>
           </div>
@@ -215,7 +259,7 @@
         </section>
         <footer>
           <p>このHTMLは、インターネット接続なしで本文と図を読めます。</p>
-          <p>説明はKaruFileの通常設定（standard）が中心です。2026年9月9日時点の実装・マニュアルと照合。図のフォルダーと資料は架空の例です。</p>
+          <p>2026年9月10日時点の実装・マニュアルと照合。既定はstandardです。字体統一は第3節、compactでの動画圧縮・音声除去は第4節を参照してください。図のフォルダーと資料は架空の例です。</p>
         </footer>
       </div>
     </main>

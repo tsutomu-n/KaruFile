@@ -6,12 +6,12 @@
   "input": "C:\\Users\\tn\\c_projects\\KaruFile\\docs\\guide\\pdf-choices.architecture.json",
   "output": "C:\\Users\\tn\\c_projects\\KaruFile\\docs\\guide\\pdf-choices.html",
   "specification": {
-    "sha256": "bfe918b4bf4df16c73066a22482e1f3f4495a31f6088d1cdeb1bfeca91f56345",
-    "bytes": 2572
+    "sha256": "d6b00025fb60c81b3dd163e5ce2d7b20164d37ebd4e47035e9ab6953e45ebcb5",
+    "bytes": 3505
   },
   "artifact": {
-    "sha256": "182a505e37feca7bba99c4b7b8ea53a79144b3b2b7e60cb7796c01cbcf64d1d3",
-    "bytes": 639788
+    "sha256": "dd6793c5d8336e7437ccd458963159701e75bb1bdab52827842ef09e226751ba",
+    "bytes": 642725
   },
   "validation": {
     "checksPassed": 9,

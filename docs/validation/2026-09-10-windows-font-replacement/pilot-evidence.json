@@ -1,0 +1,71 @@
+{
+  "status": "CLI_PILOT_PASS_WITH_EXTRACTION_WHITESPACE_DIFFERENCES",
+  "resume": {
+    "exit_code": 0,
+    "state_unchanged": true,
+    "output_unchanged": true,
+    "elapsed_seconds": 1.156296500004828
+  },
+  "dry_run": {
+    "exit_code": 0,
+    "status": "DRY_RUN_LOSSY",
+    "no_candidates": true,
+    "normal_output_and_report_unchanged": true,
+    "elapsed_seconds": 3.8077124999836087
+  },
+  "baseline_files_unchanged": 44,
+  "normal": {
+    "source_size": "7436386",
+    "source_sha256": "c30a37d01d88358956753bb206ba3aa005be8644a9a52446468d29b722e878f8",
+    "output_size": "4265318",
+    "output_sha256": "edcc4f3d7caedb3d8adf6e9cc1871cb26171ca054ccfdeb776ab400d76efb132",
+    "saved_bytes": "3171068",
+    "saved_percent": "0.42642595475813116",
+    "preset": "standard",
+    "mode": "lossy",
+    "status": "ADOPTED_LOSSY",
+    "page_count": "101",
+    "scan_page_ratio": "0.0",
+    "error_message": "",
+    "profile": "font_replace",
+    "decision_reason": "adopted_font_replace",
+    "candidate_size": "7156384",
+    "candidate_saved_bytes": "280002",
+    "candidate_saved_percent": "0.03765296744951109",
+    "images_changed": "0",
+    "candidate_details": [
+      {
+        "kind": "lossless",
+        "size": 7156384,
+        "images_changed": 0,
+        "reason": "eligible",
+        "validation_reason": "",
+        "selected": false,
+        "text_extraction_changed": false
+      },
+      {
+        "kind": "font_replace",
+        "size": 4265318,
+        "images_changed": 0,
+        "reason": "eligible",
+        "validation_reason": "",
+        "selected": true,
+        "text_extraction_changed": true
+      }
+    ],
+    "lossless_jpeg_requested": "false",
+    "photo_dpi": "",
+    "requested_policy": "font_replace",
+    "classification": "font_replace",
+    "permission_basis": "explicit_font_replace",
+    "preservation_reason": "",
+    "processing_schema": "6",
+    "font_replacement_requested": "true",
+    "replacement_font": "Yu Gothic Regular",
+    "replacement_font_sha256": "cd24b5617c1e26572b0a7fe7e558f7121ca42c36f7b50e8d9216ac222a1c0a93",
+    "text_extraction_changed": "true"
+  },
+  "input_name": "Ⅱ-7_群馬県土木工事写真管理要領（R7.10改定）【最新版】.pdf",
+  "normal_elapsed_seconds": 79.70164980000118,
+  "recipe_version": 5
+}

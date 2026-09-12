@@ -1,0 +1,60 @@
+usage: karufile [-h] -i INPUT [-o OUTPUT] [--pdf-workers PDF_WORKERS]
+                [--image-workers IMAGE_WORKERS]
+                [--video-workers VIDEO_WORKERS] [--preset {standard,compact}]
+                [--pdf-preserve-pattern PATTERN] [--pdf-text-pattern PATTERN]
+                [--pdf-text-scan-pattern PATTERN]
+                [--pdf-text-scan-bilevel-pattern PATTERN]
+                [--pdf-font-replace-pattern PATTERN]
+                [--pdf-photo-pattern PATTERN] [--pdf-photo-dpi DPI]
+                [--pdf-preview] [--pdf-preview-dpi DPI] [--pdf-lossless-jpeg]
+                [--pdf-jpegtran-path PDF_JPEGTRAN_PATH]
+                [--excel-pattern PATTERN] [--excel-dpi DPI] [--video-safe]
+                [--video-remove-audio] [--ffmpeg-path FFMPEG_PATH]
+                [--ffprobe-path FFPROBE_PATH] [-n] [-v]
+
+PDF・画像・明示選択Excel・対応動画を、原本を変更せず別フォルダーへ軽量化する
+
+options:
+  -h, --help            show this help message and exit
+  -i, --input INPUT     入力ディレクトリ
+  -o, --output OUTPUT   出力ディレクトリ（未指定時は <input>_軽量化）
+  --pdf-workers PDF_WORKERS
+                        pdf-shrink の並列数（デフォルト 2）
+  --image-workers IMAGE_WORKERS
+                        media-shrink-tool の並列数（デフォルト 4）
+  --video-workers VIDEO_WORKERS
+                        video-shrink の並列数（デフォルト 1、compactのみ）
+  --preset {standard,compact}
+                        圧縮プリセット（デフォルト standard）
+  --pdf-preserve-pattern PATTERN
+                        原本保護（すべての許可より優先）。入力相対glob、反復可
+  --pdf-text-pattern PATTERN
+                        文章と単純な罫線表を許可。入力相対glob、反復可
+  --pdf-text-scan-pattern PATTERN
+                        文章スキャンの300 DPIグレーJPEG候補を許可。入力相対glob、反復可
+  --pdf-text-scan-bilevel-pattern PATTERN
+                        白黒書類スキャンに二値化候補を追加（色・階調が失われる）。入力相対glob、反復可
+  --pdf-font-replace-pattern PATTERN
+                        日本語・英語をWindowsの游ゴシックへ統一する候補を許可（字形・検索/コピーの空白が変わる場合あり）。入
+                        力相対glob、反復可
+  --pdf-photo-pattern PATTERN
+                        指定した写真中心PDFに閲覧用DPI縮小・JPEG品質80候補を許可（画質劣化あり）。入力相対パスのglob
+                        、大小文字を区別せず、*は/も含む。反復可
+  --pdf-photo-dpi DPI   写真PDFの目標DPI（150〜300の整数、既定200、--pdf-photo-pattern必須）
+  --pdf-preview         PDFの原本と実際の出力を比較する静的HTMLを追加（保護理由も表示）
+  --pdf-preview-dpi DPI
+                        目視比較用の追加DPI候補（150〜300、反復可、最大5種類、--pdf-preview必須）
+  --pdf-lossless-jpeg   jpegtran 3.2.0のJPEG可逆候補を追加（既定OFF、手動準備）
+  --pdf-jpegtran-path PDF_JPEGTRAN_PATH
+                        PDFで使うjpegtran実行ファイル。指定だけでは有効化しない
+  --excel-pattern PATTERN
+                        指定xlsxの貼り付け画像の縮小を許可（画質劣化あり）。入力相対glob、反復可、既定OFF
+  --excel-dpi DPI       Excel画像の目標DPI（150〜300の整数、既定220、--excel-pattern必須）
+  --video-safe          動画のprogressive/SAR/CFR情報を厳格判定（compactのみ）
+  --video-remove-audio  動画を音声除去して圧縮（compactのみ、有音コピーにfallbackしない）
+  --ffmpeg-path FFMPEG_PATH
+                        compact動画で使うffmpeg実行ファイル（未指定時はPATH）
+  --ffprobe-path FFPROBE_PATH
+                        compact動画で使うffprobe実行ファイル（未指定時はPATH）
+  -n, --dry-run         完成PDF・画像・Excel・動画を作らず判定を確認（状態・レポートは更新される場合あり）
+  -v, --verbose         詳細ログ

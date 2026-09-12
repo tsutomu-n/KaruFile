@@ -1,0 +1,46 @@
+﻿[
+    {
+        "relative_path":  "grid.xlsx",
+        "side":  "source",
+        "excel_version":  "16.0",
+        "opened_read_only":  true,
+        "worksheet_count":  1,
+        "formula_a1":  "=SUM(1,2)",
+        "value_a1":  3,
+        "shapes":  [
+                       {
+                           "name":  "Photo",
+                           "width_points":  137.25,
+                           "height_points":  60,
+                           "left_points":  0,
+                           "top_points":  0,
+                           "type":  13
+                       }
+                   ],
+        "exported_pdf":  "C:\\Users\\tn\\c_projects\\KaruFile\\docs\\validation\\2026-09-10-excel-image\\excel-native-grid\\grid-source.pdf",
+        "sha256_before":  "6A4A6937F706078C5E0FB0C131FB0A5A39C52046BDA7A230FB83E9467DED8135",
+        "sha256_after":  "6A4A6937F706078C5E0FB0C131FB0A5A39C52046BDA7A230FB83E9467DED8135"
+    },
+    {
+        "relative_path":  "grid.xlsx",
+        "side":  "output",
+        "excel_version":  "16.0",
+        "opened_read_only":  true,
+        "worksheet_count":  1,
+        "formula_a1":  "=SUM(1,2)",
+        "value_a1":  3,
+        "shapes":  [
+                       {
+                           "name":  "Photo",
+                           "width_points":  137.25,
+                           "height_points":  60,
+                           "left_points":  0,
+                           "top_points":  0,
+                           "type":  13
+                       }
+                   ],
+        "exported_pdf":  "C:\\Users\\tn\\c_projects\\KaruFile\\docs\\validation\\2026-09-10-excel-image\\excel-native-grid\\grid-output.pdf",
+        "sha256_before":  "3791B941C4A8C4FB9B9CCC1A279246D4AD3E1FE3CAF4915D89C7B1A27DF57AD3",
+        "sha256_after":  "3791B941C4A8C4FB9B9CCC1A279246D4AD3E1FE3CAF4915D89C7B1A27DF57AD3"
+    }
+]

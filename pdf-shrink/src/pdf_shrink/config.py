@@ -11,6 +11,7 @@ from typing import Any
 
 
 PDF_IMAGE_DPI_TARGET = 300
+BILEVEL_THRESHOLD = 220
 PHOTO_IMAGE_DPI_TARGET = 200
 PHOTO_DPI_MIN = 150
 PHOTO_DPI_MAX = 300
@@ -166,6 +167,11 @@ class RunConfig:
     preserve_patterns: tuple[str, ...] = ()
     text_patterns: tuple[str, ...] = ()
     text_scan_patterns: tuple[str, ...] = ()
+    text_scan_bilevel_patterns: tuple[str, ...] = ()
+    font_replace_patterns: tuple[str, ...] = ()
+    font_family: str = "meiryo"
+    font_replace_path: Path | None = None
+    font_replace_sha256: str = ""
     photo_dpi: int = PHOTO_IMAGE_DPI_TARGET
     preview: bool = False
     preview_dpis: tuple[int, ...] = ()
@@ -174,9 +180,17 @@ class RunConfig:
     jpegtran_version: str = ""
     jpegtran_sha256: str = ""
 
+    @property
+    def replacement_font(self) -> str:
+        return {"yu-gothic": "Yu Gothic Regular", "meiryo": "Meiryo Regular"}[self.font_family]
+
     def __post_init__(self) -> None:
         object.__setattr__(self, "photo_patterns", normalize_photo_patterns(self.photo_patterns))
-        for name in ("preserve_patterns", "text_patterns", "text_scan_patterns"):
+        if self.font_family not in {"yu-gothic", "meiryo"}:
+            raise ValueError("unsupported font family")
+        if self.font_family != "meiryo" and not self.font_replace_patterns:
+            raise ValueError("--font-family requires --font-replace-pattern")
+        for name in ("preserve_patterns", "text_patterns", "text_scan_patterns", "text_scan_bilevel_patterns", "font_replace_patterns"):
             object.__setattr__(self, name, normalize_photo_patterns(
                 getattr(self, name), option="--" + name.replace("_", "-")[:-1],
             ))
@@ -192,6 +206,10 @@ class RunConfig:
             raise ValueError("--safe cannot be combined with --photo-pattern")
         if self.safe and self.text_scan_patterns:
             raise ValueError("--safe cannot be combined with --text-scan-pattern")
+        if self.safe and self.text_scan_bilevel_patterns:
+            raise ValueError("--safe cannot be combined with --text-scan-bilevel-pattern")
+        if self.safe and self.font_replace_patterns:
+            raise ValueError("--safe cannot be combined with --font-replace-pattern")
 
     def with_tool_versions(self, *, pymupdf: str, qpdf: str) -> RunConfig:
         return replace(self, pymupdf_version=pymupdf, qpdf_version=qpdf)
@@ -206,6 +224,8 @@ def default_config(
     preserve_patterns: tuple[str, ...] = (),
     text_patterns: tuple[str, ...] = (),
     text_scan_patterns: tuple[str, ...] = (),
+    text_scan_bilevel_patterns: tuple[str, ...] = (),
+    font_replace_patterns: tuple[str, ...] = (),
     photo_dpi: int = PHOTO_IMAGE_DPI_TARGET,
     preview: bool = False,
     preview_dpis: tuple[int, ...] = (),
@@ -226,6 +246,8 @@ def default_config(
         preserve_patterns=preserve_patterns,
         text_patterns=text_patterns,
         text_scan_patterns=text_scan_patterns,
+        text_scan_bilevel_patterns=text_scan_bilevel_patterns,
+        font_replace_patterns=font_replace_patterns,
         photo_dpi=photo_dpi,
         preview=preview,
         preview_dpis=preview_dpis,
@@ -258,6 +280,8 @@ def build_config(args: Any) -> RunConfig:
     safe = bool(getattr(args, "safe", False))
     if safe and preset is CompressionPreset.COMPACT:
         raise ValueError("--safe cannot be combined with --preset compact")
+    if getattr(args, "font_family", None) is not None and not getattr(args, "font_replace_pattern", None):
+        raise ValueError("--font-family requires --font-replace-pattern")
     photo_patterns = tuple(getattr(args, "photo_pattern", None) or ())
     photo_dpi = getattr(args, "photo_dpi", None)
     if photo_dpi is not None and not photo_patterns:
@@ -279,6 +303,9 @@ def build_config(args: Any) -> RunConfig:
         preserve_patterns=tuple(getattr(args, "preserve_pattern", ()) or ()),
         text_patterns=tuple(getattr(args, "text_pattern", ()) or ()),
         text_scan_patterns=tuple(getattr(args, "text_scan_pattern", ()) or ()),
+        text_scan_bilevel_patterns=tuple(getattr(args, "text_scan_bilevel_pattern", ()) or ()),
+        font_replace_patterns=tuple(getattr(args, "font_replace_pattern", ()) or ()),
+        font_family=getattr(args, "font_family", None) or "meiryo",
         preview=bool(getattr(args, "preview", False)),
         preview_dpis=tuple(getattr(args, "preview_dpi", None) or ()),
         lossless_jpeg=bool(getattr(args, "lossless_jpeg", False)),
@@ -293,6 +320,8 @@ def profile_for_path(cfg: RunConfig, relative_path: Path) -> str:
     matches = [name for name, patterns in (
         ("photo", cfg.photo_patterns), ("text", cfg.text_patterns),
         ("text_scan", cfg.text_scan_patterns),
+        ("text_scan_bilevel", cfg.text_scan_bilevel_patterns),
+        ("font_replace", cfg.font_replace_patterns),
     ) if any(fnmatchcase(path, p) for p in patterns)]
     if len(matches) > 1:
         raise ValueError(f"conflicting PDF permissions: {relative_path}: {', '.join(matches)}")
@@ -320,11 +349,15 @@ def config_hash(cfg: RunConfig) -> str:
         lossy.pop("jpeg_recompress_min_percent")
     relevant = {
         # Legacy rows lack the requested photo DPI and must run once again.
-        "processing_schema": 5,
+        "processing_schema": 6,
         "protection_policy": "text-only-auto-v1",
         "preserve_patterns": cfg.preserve_patterns,
         "text_patterns": cfg.text_patterns,
         "text_scan_patterns": cfg.text_scan_patterns,
+        "text_scan_bilevel_patterns": cfg.text_scan_bilevel_patterns,
+        "font_replace_patterns": cfg.font_replace_patterns,
+        "font_replace_sha256": cfg.font_replace_sha256 if cfg.font_replace_patterns else "",
+        "bilevel_recipe": {"threshold": BILEVEL_THRESHOLD, "encoding": "1-bit-flate", "dpi": 300},
         "text_recipe": {"dpi": 300, "qualities": [92, 85, 80], "minimum": "strictly_smaller", "pages": 100, "image_pixels": 80000000, "stream_bytes": 67108864, "validation_pixels": 600000000, "seconds": 300},
         "lossless_jpeg": cfg.lossless_jpeg,
         "jpeg_recipe": RECIPE,
@@ -344,6 +377,12 @@ def config_hash(cfg: RunConfig) -> str:
         "pymupdf_version": cfg.pymupdf_version,
         "qpdf_version": cfg.qpdf_version,
     }
+    if cfg.font_replace_patterns:
+        from importlib.metadata import version
+        from .font_replace import RECIPE as FONT_RECIPE
+        relevant["font_family"] = cfg.font_family
+        relevant["font_replace_recipe"] = FONT_RECIPE
+        relevant["font_replace_libraries"] = {name: version(name) for name in ("fonttools", "pikepdf")}
     # Preview is a separate artifact: requesting it must reuse valid PDF output.
     # Neither preview nor preview_dpis participates in the processing hash.
     data = json.dumps(relevant, sort_keys=True, ensure_ascii=False)

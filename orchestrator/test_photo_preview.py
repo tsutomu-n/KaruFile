@@ -51,6 +51,9 @@ def _preview_payload(input_dir: Path, output_dir: Path, rows, *, dry_run=False, 
                 "pdf_status": row["status"],
                 "status": "ERROR" if failed else "SKIPPED" if dry_run else "READY",
                 "reason": "render failed" if failed else "dry run" if dry_run else "",
+                "font_replacement_requested": row.get("font_replacement_requested", False) in (True, "true"),
+                "replacement_font": row.get("replacement_font", ""),
+                "text_extraction_changed": row.get("text_extraction_changed", False) in (True, "true"),
             } for row in rows
         ],
         "errors": ["render failed"] if failed else [],
@@ -173,10 +176,39 @@ def test_preview_manifest_rejects_forged_fields(preview_case, field, value):
     ("source_path", "photo.pdf"), ("output_path", "photo.pdf"),
     ("relative_path", "../photo.pdf"), ("pdf_status", "ADOPTED_LOSSY"),
     ("status", "COMPLETE"), ("reason", None),
+    ("font_replacement_requested", True), ("font_replacement_requested", 0),
+    ("replacement_font", "Yu Gothic Regular"), ("text_extraction_changed", True),
+    ("text_extraction_changed", "false"),
 ])
 def test_preview_manifest_rejects_forged_item(preview_case, field, value):
     path, payload, options = preview_case
     payload["items"][0][field] = value
+    path.write_text(json.dumps(payload), encoding="utf-8")
+    assert shrink_all.validate_pdf_preview_manifest(path, **options) is None
+
+
+@pytest.mark.parametrize("field", ["font_replacement_requested", "replacement_font", "text_extraction_changed"])
+def test_preview_manifest_rejects_missing_font_diagnostic(preview_case, field):
+    path, payload, options = preview_case
+    del payload["items"][0][field]
+    path.write_text(json.dumps(payload), encoding="utf-8")
+    assert shrink_all.validate_pdf_preview_manifest(path, **options) is None
+
+
+@pytest.mark.parametrize("changed", [False, True])
+def test_preview_manifest_requires_actual_font_request_and_extraction_result(preview_case, changed):
+    path, payload, options = preview_case
+    row = options["report_result"]["rows"][0]
+    row.update(profile="font_replace", requested_policy="font_replace", classification="font_replace",
+               permission_basis="explicit_font_replace", photo_dpi=None, status="ADOPTED_LOSSY",
+               font_replacement_requested=True, replacement_font="Yu Gothic Regular",
+               replacement_font_sha256="a" * 64, text_extraction_changed=changed)
+    item = payload["items"][0]
+    item.update(pdf_status=row["status"], font_replacement_requested=True,
+                replacement_font="Yu Gothic Regular", text_extraction_changed=changed)
+    path.write_text(json.dumps(payload), encoding="utf-8")
+    assert shrink_all.validate_pdf_preview_manifest(path, **options) == payload
+    item["text_extraction_changed"] = not changed
     path.write_text(json.dumps(payload), encoding="utf-8")
     assert shrink_all.validate_pdf_preview_manifest(path, **options) is None
 

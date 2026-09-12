@@ -30,12 +30,18 @@ try {
     assert.equal(metrics.images.length,2);
     assert(metrics.images.every(i=>i.loaded&&i.alt));
     receipt.viewports.push(metrics);
-    if ([1440,390].includes(width)) await browser.screenshot(path.join(output,`guide.${width}.png`),true);
+    if ([1440,390].includes(width)) {
+      await browser.screenshot(path.join(output,`guide.${width}.png`),true);
+      for (const [name,selector] of [['top','.hero'],['copies','#copies h2'],['pdf','#pdf h2'],['font','#pdf h3'],['video','#video h2'],['excel','#excel h2']]) {
+        await browser.evaluate(`document.querySelector('${selector}').scrollIntoView()`);
+        await browser.screenshot(path.join(output,`guide.${width}.${name}.png`));
+      }
+    }
   }
   await browser.viewport(1440,900);
   await browser.navigate(artifact);
   const toc = await browser.evaluate(`[...document.querySelectorAll('nav a')].map(a=>a.hash)`);
-  assert.equal(toc.length,4);
+  assert.equal(toc.length,7);
   for (const target of toc) {
     await browser.evaluate(`document.querySelector('nav a[href="${target}"]').click()`);
     const result = await browser.evaluate(`({target:location.hash,exists:!!document.querySelector('${target}'),
@@ -52,7 +58,8 @@ try {
     const target = path.resolve(path.dirname(artifact),relative);
     assert(fs.existsSync(target),`Missing manual: ${link}`);
     if(anchor) {
-      const headings = [...fs.readFileSync(target,'utf8').matchAll(/^#+\s+(.+)$/gm)].map(m=>m[1].trim().toLowerCase().replace(/\s+/g,'-'));
+      // GitHub removes punctuation (including Japanese middle dots) from heading IDs.
+      const headings = [...fs.readFileSync(target,'utf8').matchAll(/^#+\s+(.+)$/gm)].map(m=>m[1].trim().toLowerCase().replace(/[^\p{L}\p{M}\p{N}_\-\s]/gu,'').replace(/\s/g,'-'));
       assert(headings.includes(decodeURIComponent(anchor)),`Missing manual heading: ${link}`);
     }
     receipt.manualLinks.push({href:link,pathExists:true,anchorExists:anchor?true:null});
@@ -70,7 +77,7 @@ try {
     sections:document.querySelectorAll('main section').length,scriptCount:document.scripts.length})`);
   receipt.offline.externalRequests=browser.events.filter(e=>e.method==='Network.requestWillBeSent'&&/^https?:/.test(e.params.request.url)).length;
   assert(receipt.offline.imagesLoaded);
-  assert.equal(receipt.offline.sections,4);
+  assert.equal(receipt.offline.sections,7);
   assert.equal(receipt.offline.externalRequests,0);
   assert.equal(receipt.offline.scriptCount,0);
   // Also verify the document remains fully readable with JavaScript disabled.

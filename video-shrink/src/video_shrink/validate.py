@@ -46,7 +46,8 @@ def validate_structure(
         raise ToolError(f"candidate pixel format is {video.pix_fmt}, expected yuv420p")
     if video.sample_aspect_ratio != "1:1":
         raise ToolError("candidate sample aspect ratio is not 1:1")
-    if video.field_order.casefold() != "progressive":
+    # AV1 is progressive; ffprobe builds may omit this redundant field.
+    if video.field_order.casefold() not in {"progressive", "", "unknown"}:
         raise ToolError("candidate is not progressive")
     if display_rotation(video) != 0:
         raise ToolError("candidate display rotation is not zero")
@@ -89,13 +90,17 @@ def validate_structure(
                 f"candidate {label} stream duration differs: "
                 f"{candidate_duration:.6f} vs {source_duration:.6f}"
             )
+    expected_duration = (
+        eligibility.video.duration
+        if config.remove_audio and eligibility.video.duration else source.duration
+    )
     if not _close_enough(
         candidate.duration,
-        source.duration,
+        expected_duration,
         config.recipe.duration_tolerance_seconds,
     ):
         raise ToolError(
-            f"candidate duration differs: {candidate.duration:.6f} vs {source.duration:.6f}"
+            f"candidate duration differs: {candidate.duration:.6f} vs {expected_duration:.6f}"
         )
 
 

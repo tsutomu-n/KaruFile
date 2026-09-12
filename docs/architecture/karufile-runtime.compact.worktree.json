@@ -1,0 +1,119 @@
+{
+  "schema_version": 1,
+  "captured_utc": "2026-09-10T12:46:23.7311160Z",
+  "basis": "working tree including Excel CLI and Python API defaults of 800px/JPEG72",
+  "base_revision": "ce7f4bdca6ec36f8ebc8df5c9eee97b5ba426e36",
+  "source_links": "Archify source links refer only to files existing at base_revision; current local source and Excel dependency snapshot evidence is below",
+  "specification_sha256": "e315bb8517b03038d7b0a576a0bf4bb83a125b8de084236df5ba88799ff067c6",
+  "artifact_sha256": "f44a99449d2e760e94c3d9a2e8e3886b60b51fd540a1ef3a02f13b2e893b7d5e",
+  "files": [
+    {
+      "path": "excel-shrink/.python-version",
+      "sha256": "02e735b3dfe1c32833eb550b7ff8ffa17f5f2bc3fa1e7bae61a8f5a3883ce398"
+    },
+    {
+      "path": "excel-shrink/pyproject.toml",
+      "sha256": "6228b6b6f188d96a84e970e692e82e71a7adc9b576a95b345206775b16bd638a"
+    },
+    {
+      "path": "excel-shrink/src/excel_shrink/__init__.py",
+      "sha256": "ec1914a9c880971f3d232792702fbb3803ec32b4a77be2fd78133c53b3508018"
+    },
+    {
+      "path": "excel-shrink/src/excel_shrink/__main__.py",
+      "sha256": "935a1c1166b0c1ea35a82256345000bf2c73ded718d77773bc27a71ecce28f7d"
+    },
+    {
+      "path": "excel-shrink/src/excel_shrink/cli.py",
+      "sha256": "458cc2932beb20c395495426f516440309120c06b99c52be24b3de2457ad1e44"
+    },
+    {
+      "path": "excel-shrink/src/excel_shrink/config.py",
+      "sha256": "e9a41ccb5be0f07a01948e1db98d1d3b08f8435e536333a88bc6edd7d6826bb9"
+    },
+    {
+      "path": "excel-shrink/src/excel_shrink/core.py",
+      "sha256": "e95a065b489691a686990877b6b436378225e37779dfbf2ef3858a62507115eb"
+    },
+    {
+      "path": "excel-shrink/src/excel_shrink/diagnostics.py",
+      "sha256": "0545447edda39b4b434f970952edf7dabc9f0a55b2ae04e2b04e832abcaa1c7f"
+    },
+    {
+      "path": "excel-shrink/src/excel_shrink/drawing.py",
+      "sha256": "b62555d7441a4419c7e9445cb50ec04160bf10ef2d726891b67f5972861c3af0"
+    },
+    {
+      "path": "excel-shrink/src/excel_shrink/drawing_extensions.py",
+      "sha256": "1862bb604c6115dc8011998ab894a478ff19862bc236cdc876511e746e461a8f"
+    },
+    {
+      "path": "excel-shrink/src/excel_shrink/font_metrics.py",
+      "sha256": "3521ffca58bfcdbd4cbdf7ab7beef93c442239825179e95758e37e4f4f03bb97"
+    },
+    {
+      "path": "excel-shrink/src/excel_shrink/grid.py",
+      "sha256": "955dc2885f7073c7fcf9497225607867d6ef3bb1a9da12680a56791762c8134f"
+    },
+    {
+      "path": "excel-shrink/src/excel_shrink/models.py",
+      "sha256": "b7130196b7f4fa59d5fcf00f7d276f0b441d4f09aba00e4d319767c4d50c90db"
+    },
+    {
+      "path": "excel-shrink/src/excel_shrink/output.py",
+      "sha256": "e6afa6594f6a0df26d1e0696345f11c7fa7f6cd569da32559a12c596e52c0afd"
+    },
+    {
+      "path": "excel-shrink/src/excel_shrink/package.py",
+      "sha256": "4c01a76d7bda87b48dac49625f108a2fbd8369780b61d369f7c2f7afda8ed248"
+    },
+    {
+      "path": "excel-shrink/src/excel_shrink/report.py",
+      "sha256": "c2f4d61bf0e27ec0e9878f996981c0bf40a0c819e8075db410fc32340515ddae"
+    },
+    {
+      "path": "excel-shrink/src/excel_shrink/runner.py",
+      "sha256": "c3d78c8594e72ccf0db5f8c1ff31368004f150ee3df5ba485dc66745fd3a486a"
+    },
+    {
+      "path": "excel-shrink/uv.lock",
+      "sha256": "1a3468c5c7f8e608cb51709162a153750133730d7b1dd547daf69398a56721af"
+    },
+    {
+      "path": "karufile.py",
+      "sha256": "d494858a343d88e4715b68eab4e789debff8890bf42a3f22b9796b61a50eac14"
+    },
+    {
+      "path": "media-shrink-tool/src/media_shrink/cli.py",
+      "sha256": "0d5d0caa73e6a793529c700cf6af16ac9fb829d1648fd0ca1c8a3b051f9087fb"
+    },
+    {
+      "path": "media-shrink-tool/src/media_shrink/image.py",
+      "sha256": "8a27730ea8df2c47f9502c96f630a192a42fabe0825208a8a76b90af9875798b"
+    },
+    {
+      "path": "orchestrator/shrink_all.py",
+      "sha256": "ce73f43caa6c756a4cb46eb792124e6fc5b84757a4050e70fd997ab2a32467da"
+    },
+    {
+      "path": "pdf-shrink/src/pdf_shrink/report.py",
+      "sha256": "e4170c52ba13336bd542667c98ee6056ff5c3084e7ce472c0ae4a22ad2ec173f"
+    },
+    {
+      "path": "pdf-shrink/src/pdf_shrink/runner.py",
+      "sha256": "913a0423d12083350e11dbde21132378d9c9c8d3b0eb1ce69c0b60ed771d3838"
+    },
+    {
+      "path": "pdf-shrink/src/pdf_shrink/state.py",
+      "sha256": "dbef6791f574660d2bbb57c5fdfce04a6b3a25ad06e80dd4109b5edba68e3701"
+    },
+    {
+      "path": "pdf-shrink/src/pdf_shrink/worker.py",
+      "sha256": "6d5dc09f7142d2563a46bbad06f676b6928ae6ed71b1a1fb35c89651a350e8fc"
+    },
+    {
+      "path": "excel-shrink/src/excel_shrink/recipe.py",
+      "sha256": "d4544a5923704e784ef357c59b0d3bcc07233d73d9b2e8a379c7d93597ec32de"
+    }
+  ]
+}

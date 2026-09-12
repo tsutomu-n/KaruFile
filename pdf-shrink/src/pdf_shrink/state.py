@@ -65,6 +65,10 @@ DIAGNOSTIC_COLUMNS = {
     "candidate_details": "TEXT NOT NULL DEFAULT '[]'",
     "lossless_jpeg_requested": "INTEGER NOT NULL DEFAULT 0",
     "photo_dpi": "INTEGER",
+    "font_replacement_requested": "INTEGER NOT NULL DEFAULT 0",
+    "replacement_font": "TEXT NOT NULL DEFAULT ''",
+    "replacement_font_sha256": "TEXT NOT NULL DEFAULT ''",
+    "text_extraction_changed": "INTEGER NOT NULL DEFAULT 0",
 }
 
 
@@ -101,6 +105,10 @@ class Record:
     permission_basis: str = ""
     preservation_reason: str = ""
     processing_schema: int = 0
+    font_replacement_requested: bool = False
+    replacement_font: str = ""
+    replacement_font_sha256: str = ""
+    text_extraction_changed: bool = False
 
 
 def init_db(db_path: Path) -> sqlite3.Connection:
@@ -163,6 +171,10 @@ def _record_from_row(row: sqlite3.Row) -> Record:
         permission_basis=row["permission_basis"],
         preservation_reason=row["preservation_reason"],
         processing_schema=row["processing_schema"],
+        font_replacement_requested=bool(row["font_replacement_requested"]),
+        replacement_font=row["replacement_font"],
+        replacement_font_sha256=row["replacement_font_sha256"],
+        text_extraction_changed=bool(row["text_extraction_changed"]),
         candidate_details=tuple(
             CandidateResult(**candidate)
             for candidate in json.loads(row["candidate_details"])
@@ -312,9 +324,12 @@ def save_result(
         ),
     )
     conn.execute(
-        "UPDATE files SET requested_policy=?, classification=?, permission_basis=?, preservation_reason=?, processing_schema=? WHERE source_path=?",
+        "UPDATE files SET requested_policy=?, classification=?, permission_basis=?, preservation_reason=?, processing_schema=?, "
+        "font_replacement_requested=?, replacement_font=?, replacement_font_sha256=?, text_extraction_changed=? WHERE source_path=?",
         (result.requested_policy, result.classification, result.permission_basis,
-         result.preservation_reason, result.processing_schema, str(source.path)),
+         result.preservation_reason, result.processing_schema,
+         int(result.font_replacement_requested), result.replacement_font,
+         result.replacement_font_sha256, int(result.text_extraction_changed), str(source.path)),
     )
     if commit:
         conn.commit()

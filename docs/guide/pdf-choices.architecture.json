@@ -5,8 +5,8 @@
     "title": "PDFは、内容によって扱いが違う",
     "quality_profile": "showcase",
     "viewBox": [
-      520,
-      284
+      600,
+      320
     ],
     "legend": {
       "mode": "hidden"
@@ -20,10 +20,10 @@
       "sublabel": "例：文章だけの会議資料",
       "pos": [
         40,
-        42
+        40
       ],
       "size": [
-        180,
+        220,
         36
       ]
     },
@@ -33,11 +33,11 @@
       "label": "小さくできれば軽量化",
       "sublabel": "白黒になる場合もある",
       "pos": [
-        300,
-        42
+        340,
+        40
       ],
       "size": [
-        180,
+        220,
         36
       ]
     },
@@ -48,10 +48,10 @@
       "sublabel": "未指定のスキャンPDFも含む",
       "pos": [
         40,
-        102
+        92
       ],
       "size": [
-        180,
+        220,
         36
       ]
     },
@@ -61,11 +61,11 @@
       "label": "そのままコピー",
       "sublabel": "PDF全体を加工しない",
       "pos": [
-        300,
-        102
+        340,
+        92
       ],
       "size": [
-        180,
+        220,
         36
       ]
     },
@@ -76,10 +76,10 @@
       "sublabel": "文章の資料と人が確認",
       "pos": [
         40,
-        204
+        190
       ],
       "size": [
-        180,
+        220,
         36
       ]
     },
@@ -89,11 +89,39 @@
       "label": "白黒の軽いコピー候補",
       "sublabel": "条件を満たすものだけ採用",
       "pos": [
-        300,
-        204
+        340,
+        190
       ],
       "size": [
-        180,
+        220,
+        36
+      ]
+    },
+    {
+      "id": "font-replacement-pdf",
+      "type": "external",
+      "label": "フォント置換を指定",
+      "sublabel": "日本語・英語の文字が対象",
+      "pos": [
+        40,
+        242
+      ],
+      "size": [
+        220,
+        36
+      ]
+    },
+    {
+      "id": "font-replacement-result",
+      "type": "backend",
+      "label": "文字の形を変えて小さく",
+      "sublabel": "条件を満たす候補だけ採用",
+      "pos": [
+        340,
+        242
+      ],
+      "size": [
+        220,
         36
       ]
     }
@@ -113,6 +141,11 @@
       "id": "try-selected-scan",
       "from": "scan-pdf",
       "to": "scan-result"
+    },
+    {
+      "id": "try-selected-font-replacement",
+      "from": "font-replacement-pdf",
+      "to": "font-replacement-result"
     }
   ],
   "boundaries": [
@@ -125,16 +158,18 @@
         "illustrated-pdf",
         "preserved-result"
       ],
-      "pad": 28
+      "pad": 24
     },
     {
       "kind": "region",
       "label": "内容を確認して、追加指定",
       "wraps": [
         "scan-pdf",
-        "scan-result"
+        "scan-result",
+        "font-replacement-pdf",
+        "font-replacement-result"
       ],
-      "pad": 28
+      "pad": 24
     }
   ]
 }

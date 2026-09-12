@@ -36,6 +36,8 @@ def build_parser() -> argparse.ArgumentParser:
         help="standard copies without transcoding; compact uses validated AV1",
     )
     command.add_argument("--workers", type=_positive_int, default=1)
+    command.add_argument("--safe", action="store_true", help="require explicit progressive/SAR/CFR metadata (compact only)")
+    command.add_argument("--remove-audio", action="store_true", help="compress without audio; never fall back to an audible copy (compact only)")
     command.add_argument("--dry-run", action="store_true", help="do not create video outputs")
     command.add_argument("--ffmpeg-path", help="explicit ffmpeg executable")
     command.add_argument("--ffprobe-path", help="explicit ffprobe executable")
@@ -53,7 +55,10 @@ def _human_size(value: int) -> str:
 
 
 def main(argv: list[str] | None = None) -> int:
-    args = build_parser().parse_args(argv)
+    parser = build_parser()
+    args = parser.parse_args(argv)
+    if args.preset != "compact" and (args.safe or args.remove_audio):
+        parser.error("--safe and --remove-audio require --preset compact")
     logging.basicConfig(
         level=logging.DEBUG if args.verbose else logging.INFO,
         format="%(asctime)s [%(levelname)s] %(message)s",
@@ -65,6 +70,8 @@ def main(argv: list[str] | None = None) -> int:
         preset=Preset(args.preset),
         workers=args.workers,
         dry_run=args.dry_run,
+        safe=args.safe,
+        remove_audio=args.remove_audio,
         ffmpeg_path=Path(args.ffmpeg_path) if args.ffmpeg_path else None,
         ffprobe_path=Path(args.ffprobe_path) if args.ffprobe_path else None,
     )

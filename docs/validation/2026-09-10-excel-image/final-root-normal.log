@@ -1,0 +1,52 @@
+KaruFile
+
+Input  : C:\Users\tn\AppData\Local\Temp\karufile-excel-root-smoke-766w3sjs\input
+Output : C:\Users\tn\AppData\Local\Temp\karufile-excel-root-smoke-766w3sjs\output
+Preset : standard
+
+PDF    : 0
+Images : 0
+Excel  : 3
+Videos : 0
+
+Source files : keep
+Files deleted: 0
+
+Starting...
+15:50:49 [INFO] [media-shrink] Starting: uv run --project C:\Users\tn\c_projects\KaruFile\media-shrink-tool python -m media_shrink resize -i C:\Users\tn\AppData\Local\Temp\karufile-excel-root-smoke-766w3sjs\input -o C:\Users\tn\AppData\Local\Temp\karufile-excel-root-smoke-766w3sjs\output -j 4 --preset standard
+15:50:49 [INFO] Image error report: C:\Users\tn\AppData\Local\Temp\karufile-excel-root-smoke-766w3sjs\output.image-errors.csv
+
+15:50:49 [INFO] Image result manifest: C:\Users\tn\AppData\Local\Temp\karufile-excel-root-smoke-766w3sjs\output.image-manifest.csv
+
+Resized 0 images (0 errors)
+
+  0.00 B -> 0.00 B
+
+15:50:49 [INFO] [media-shrink] Finished in 0.29s (exit code: 0)
+15:50:49 [INFO] [excel-shrink] Starting: uv run --project C:\Users\tn\c_projects\KaruFile\excel-shrink excel-shrink run --input C:\Users\tn\AppData\Local\Temp\karufile-excel-root-smoke-766w3sjs\input --output C:\Users\tn\AppData\Local\Temp\karufile-excel-root-smoke-766w3sjs\output --dpi 220 --pattern=good/*.xlsx
+Excel: 3 workbooks, 0 per-file errors
+
+Excel report: C:\Users\tn\AppData\Local\Temp\karufile-excel-root-smoke-766w3sjs\output.excel-report.csv
+
+15:50:49 [INFO] [excel-shrink] Finished in 0.46s (exit code: 0)
+
+KaruFile completed
+
+PDF errors   : 0
+Image errors : 0
+Excel errors : 0
+Video errors : 0
+
+Original size : 804.11 KB
+Output size   : 49.63 KB
+Saved         : 754.48 KB
+Reduction     : 93.83%
+
+Source files changed: NO
+Files deleted       : 0
+
+Image error report:
+C:\Users\tn\AppData\Local\Temp\karufile-excel-root-smoke-766w3sjs\output.image-errors.csv
+Excel report:
+C:\Users\tn\AppData\Local\Temp\karufile-excel-root-smoke-766w3sjs\output.excel-report.csv
+Elapsed: 0.77s

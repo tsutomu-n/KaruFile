@@ -1,5 +1,5 @@
 {
-  "artifact_sha256": "8875820fd8dcf7b399879128c6e7ff192640ca719a52449975b9d168af6fa6c9",
+  "artifact_sha256": "b1494aa1a3aac48d548cbcaf1349285333d74f5b422fb6a92d5edfbdfd444639",
   "viewports": [
     {
       "width": 1440,
@@ -72,7 +72,7 @@
     {
       "width": 320,
       "height": 740,
-      "scrollWidth": 305,
+      "scrollWidth": 309,
       "images": [
         {
           "loaded": true,
@@ -99,6 +99,21 @@
       "headingVisible": true
     },
     {
+      "target": "#pdf",
+      "exists": true,
+      "headingVisible": true
+    },
+    {
+      "target": "#video",
+      "exists": true,
+      "headingVisible": true
+    },
+    {
+      "target": "#excel",
+      "exists": true,
+      "headingVisible": true
+    },
+    {
       "target": "#care",
       "exists": true,
       "headingVisible": true
@@ -116,6 +131,11 @@
       "anchorExists": null
     },
     {
+      "href": "../MANUAL.md#日本語英語のpdfをメイリオへ統一する",
+      "pathExists": true,
+      "anchorExists": true
+    },
+    {
       "href": "../MANUAL.md#pdfの原本と完成出力を見比べる",
       "pathExists": true,
       "anchorExists": true
@@ -124,11 +144,21 @@
       "href": "../MANUAL.md#終了コードとエラー確認",
       "pathExists": true,
       "anchorExists": true
+    },
+    {
+      "href": "../MANUAL.md#動画",
+      "pathExists": true,
+      "anchorExists": true
+    },
+    {
+      "href": "../MANUAL.md#excel内の大きな画像を縮小する",
+      "pathExists": true,
+      "anchorExists": true
     }
   ],
   "offline": {
     "imagesLoaded": true,
-    "sections": 4,
+    "sections": 7,
     "scriptCount": 0,
     "externalRequests": 0
   },

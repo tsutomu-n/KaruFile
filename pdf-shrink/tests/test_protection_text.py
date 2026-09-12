@@ -141,11 +141,12 @@ def test_real_candidates_preserve_text_and_placements(tmp_path, kind):
 
 
 @pytest.mark.parametrize("dpi", [150, 300, 600])
-def test_scan_dimensions_never_upscale_and_respect_shared_placement(tmp_path, dpi):
+@pytest.mark.parametrize("candidate_kind", ["text_scan_jpeg_92", "text_scan_bilevel"])
+def test_scan_dimensions_never_upscale_and_respect_shared_placement(tmp_path, dpi, candidate_kind):
     path, target = tmp_path / "scan.pdf", tmp_path / "candidate.pdf"
     make_pdf(path, "shared", dpi)
     cfg = config.default_config(input_dir=tmp_path, output_dir=tmp_path.parent / "unused")
-    text_optimize.generate(path, target, "text_scan_jpeg_92", cfg, qpdf.ensure_qpdf(), text_optimize.Budget(time.monotonic() + 300))
+    text_optimize.generate(path, target, candidate_kind, cfg, qpdf.ensure_qpdf(), text_optimize.Budget(time.monotonic() + 300))
     with fitz.open(path) as src, fitz.open(target) as dst:
         original = src[0].get_images()[0]
         actual = dst[0].get_images()[0]
@@ -238,7 +239,8 @@ def test_scan_preflight_limits_protect_document(tmp_path, monkeypatch, limit, re
     assert policy.classify(path, "text_scan").preservation_reason == reason
 
 
-def test_scan_keeps_ocr_links_bookmarks_metadata_and_rejects_missing_text(tmp_path):
+@pytest.mark.parametrize("candidate_kind", ["text_scan_jpeg_92", "text_scan_bilevel"])
+def test_scan_keeps_ocr_links_bookmarks_metadata_and_rejects_missing_text(tmp_path, candidate_kind):
     path, original, target = tmp_path / "scan.pdf", tmp_path / "ocr.pdf", tmp_path / "candidate.pdf"
     make_pdf(path, "scan")
     with fitz.open(path) as doc:
@@ -251,10 +253,10 @@ def test_scan_keeps_ocr_links_bookmarks_metadata_and_rejects_missing_text(tmp_pa
     cfg = config.default_config(input_dir=tmp_path, output_dir=tmp_path.parent / "unused")
     tool = qpdf.ensure_qpdf()
     budget = text_optimize.Budget(time.monotonic() + 300)
-    text_optimize.generate(original, target, "text_scan_jpeg_92", cfg, tool, budget)
-    text_optimize.validate_candidate(original, target, "text_scan_jpeg_92", tool, budget)
+    text_optimize.generate(original, target, candidate_kind, cfg, tool, budget)
+    text_optimize.validate_candidate(original, target, candidate_kind, tool, budget)
     with pytest.raises(CandidateRejected, match="structure_mismatch|position_mismatch"):
-        text_optimize.validate_candidate(original, path, "text_scan_jpeg_92", tool, budget)
+        text_optimize.validate_candidate(original, path, candidate_kind, tool, budget)
 
 
 def test_equal_scan_jpeg_sizes_prefer_highest_quality(tmp_path, monkeypatch):

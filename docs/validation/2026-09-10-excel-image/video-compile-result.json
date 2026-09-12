@@ -1,0 +1,7 @@
+{
+  "suite": "video-compile",
+  "command": "uv run --project video-shrink python -m compileall -q video-shrink/src video-shrink/tests",
+  "started_utc": "2026-09-10T06:41:55.0052344Z",
+  "elapsed_seconds": 0.1206726,
+  "exit_code": 0
+}

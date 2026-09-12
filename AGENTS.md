@@ -17,15 +17,18 @@ document in the same change. Do not invent setup, behavior, guarantees, or valid
 ## Architecture
 
 - `karufile.py`: normal user entry point; requires Python 3.13 or later.
-- `orchestrator/shrink_all.py`: validates paths and input/output identities, runs PDF then images,
+- `orchestrator/shrink_all.py`: validates paths and input/output identities, runs PDF then images and explicitly selected Excel,
   and runs video only for `compact`. Validates reports/manifests against current inputs and outputs
   before combining results; do not replace this with stdout parsing or approximate counts.
 - `pdf-shrink/`: only PDF processor; owns PDF state and reports.
 - `media-shrink-tool/`: only standalone-image processor; outputs JPEG and owns image error reports/manifests.
+- `excel-shrink/`: only Excel processor; owns bounded OOXML parsing, image resizing, reports and temporary workspace.
 - `video-shrink/`: only standalone-video processor; owns video state and reports and calls external FFmpeg tools.
 
-Do not move PDF or video processing into `media-shrink-tool`. HDR/VFR/interlaced/complex-stream video
-conversion, deduplication, perceptual hashing, source deletion, and a GUI are outside the supported scope.
+Do not move PDF, Excel or video processing into `media-shrink-tool`. HDR/interlaced/complex-stream video
+conversion, preservation of VFR timing, deduplication, perceptual hashing, source deletion, and a GUI
+are outside the supported scope. Default compact video accepts VFR input and converts it to CFR;
+explicit video safe mode rejects VFR input.
 
 The root CLI's `standard` preset does not discover or copy videos. The standalone video CLI's
 `standard` preset copies discovered videos without transcoding; preserve this distinction.
@@ -35,7 +38,7 @@ The root CLI's `standard` preset does not discover or copy videos. The standalon
 - Run repository commands from the root unless a command explicitly changes directory.
 - Each processor has its own `pyproject.toml`, `uv.lock`, and local `.venv`; there is no root Python project.
   The root entry point uses inline script metadata; the orchestrator uses the standard library.
-- Root/PDF/video require Python 3.13 or later; the image component declares Python 3.11 or later.
+- Root/PDF/Excel/video require Python 3.13 or later; the image component declares Python 3.11 or later.
 - PDF uses PyMuPDF and external qpdf; video uses external FFmpeg/ffprobe. Do not assume Python dependency
   installation provides these executables. FFmpeg/ffprobe are not downloaded or bundled by this project.
 - Keep lockfiles, `.python-version`, ExecPlans, architecture HTML, and visual-check evidence versioned.
@@ -51,6 +54,49 @@ The root CLI's `standard` preset does not discover or copy videos. The standalon
 - Continue independent files after a per-file failure; return nonzero when any required result fails.
 - Root defaults: output `<input>_軽量化`, preset `standard`, PDF workers `2`, image workers `4`, video workers `1`.
 - The standalone image CLI defaults to `<input>_resized`; the standalone video CLI requires `--output`.
+- Excel is opt-in through repeatable root `--excel-pattern` / standalone `--pattern` using the photo glob rules.
+  Discover only selected `.xlsx`, skip names starting `~$`, and never discover/copy Excel by default.
+  CLI defaults in both presets: long side 800px and JPEG quality72/subsampling0; PNG preserves alpha, no upscale.
+  ExcelConfig/process_workbook also resolve omitted sizing/quality to 800px/72. Only explicit DPI selects legacy sizing.
+  Root `--excel-max-side` / standalone `--max-side` accepts 100..10000. JPEG quality accepts 40..95.
+  Explicit `--excel-dpi` / `--dpi` selects legacy 150..300 DPI sizing, excludes max-side, defaults quality85.
+  All explicit root Excel settings require patterns. Pixel mode recompresses even JPEGs within the cap;
+  DPI mode and PNG require downsizing. Adopt only smaller image bytes. Keep placement/format protections in both modes.
+  JPEG unknown/duplicate metadata, metadata after scans, and trailing data protect that image; split ICC is
+  validated separately. Preserve supported ICC/EXIF/comments and PNG metadata payload bytes; do not sanitize.
+  Preserve displayed dimensions. DPI sizing accounts for inward crop and maximum needs across shared references.
+  Pixel sizing rounds each axis to nearest integer (half up), min1px; protected/rejected images can exceed the cap.
+  Support oneCellAnchor/absoluteAnchor and same-cell twoCellAnchor with exact offset differences.
+  Multi-cell twoCellAnchor requires one worksheet owner and verified regular 11pt Calibri/Yu Gothic Normal font.
+  Windows GDI measures digits, validates actual face/style/size/charset/MDW and hashes font data; no Excel runtime.
+  Calibri theme Latin or Yu Gothic EA/Jpan must match. Non-Windows retains ISO Calibri only.
+  Explicit/defaultColWidth or baseColWidth=8 defaults are supported. Saved bestFit requires width/customWidth=true.
+  No hidden/collapsed/border-adjusted dimensions or formula/RTL/custom sheet views.
+  Widths are >0 and <=255; heights >0 and <=409 pt, integral 96-DPI pixels. Require customHeight=true,
+  or defaultRowHeight on empty unstyled rows without explicit ht or nonzero column styles; never infer autoFit.
+  Permit x14ac:dyDescent only from zero through the row pixel height. Cap each grid span at 1024 cells.
+  Use MDW 7/8 and floor(((256*width+floor(128/MDW))*MDW)/256); default base8 rounds (8*MDW+5) up to 8px.
+  Use 9525 EMU/pixel; endpoint offsets stay within cells.
+  Allow only exact creationId/useLocalDpi extension structures, preserving bytes. Missing fillRect protects the image.
+  Saved xfrm/ext, when present, must exactly match resolved dimensions; never use it alone to guess size.
+  Replace image parts only; every other ZIP member must match decompressed bytes exactly, including XML settings.
+  Unsupported placements protect that image part across all its references; other independent safe parts may shrink.
+  Signed/encrypted/macro/in-cell/richdata/embedded-object workbooks and package-level preflight excess protect
+  the whole workbook with an exact original copy. Structure/I/O/runtime failures
+  are ERROR without recovery copying; retain existing outputs. Adopt only a validated strictly smaller workbook.
+  Excel uses one worker, no state DB/cache, `<output>.excel-report[.dry-run].csv` and `<output>.excel-work/`.
+  Dry-run produces only eligibility reports, no completed workbook/candidates, and records zero changed images.
+  Limits: ZIP 128 MiB, 4096 entries, central directory 4 MiB checked before ZipFile allocation,
+  64 MiB/expanded part, 256 MiB expanded total, 8 MiB/XML, cumulative XML 32 MiB/1M nodes, 1000 images,
+  32 MP/image, 200 MP cumulative source/candidate decode and a 300-second cooperative deadline.
+  Preflight excess protects; runtime excess is ERROR. Never claim Excel render/print or real-data Pilot validation
+  without separate evidence. Unknown image reference owners/extensions protect their referenced image parts.
+  ZIP64, multi-disk, and nonstandard central-directory layouts protect the whole workbook.
+  CSV schema 3, recipe grid2-pixel-jpeg-v2; images_total is nullable, never confuse unknown with zero.
+  Record max_side/dpi exclusively (unused is blank), plus jpeg_quality. Root binds each to the request.
+  Same-size changed parts are permitted only for JPEG in pixel mode; root verifies exact cap dimensions.
+  Record analysis_complete, diagnostics_complete, image_diagnostics (1000 records, depth8, 2MiB UTF-8/field).
+  Child/root finite CSV limits match; root independently checks known inventory with Content Types.
 - Standard image recipe: long side `1280`, short side `960`, quality `72`; compact image recipe:
   long side `1024`, short side `768`, quality `60`. Both use JPEG `4:2:0`, white alpha,
   EXIF Orientation applied, no upscale or crop.
@@ -63,7 +109,16 @@ The root CLI's `standard` preset does not discover or copy videos. The standalon
   Structure inspection failures are ERROR with recovery copying, never unsupported guesses.
 - Text candidates independently use qpdf, font subset/cleanup plus qpdf, grayscale plus cleanup/qpdf.
   Scan candidates use 300 DPI gray JPEG quality 92/85/80 plus qpdf, and retain a qpdf-only candidate.
-  Preserve text/OCR and geometry; never rasterize text, add OCR, substitute fonts, scrub or upscale.
+  Explicit root `--pdf-text-scan-bilevel-pattern` / PDF `--text-scan-bilevel-pattern` adds an independent
+  1-bit DeviceGray/Flate candidate (gray samples below 220 black, otherwise white; no dithering or glyph
+  matching). It shares scan protection, DPI, validation and budget limits. Colors/tones are lost; never
+  infer this permission automatically. Same-size ties prefer qpdf, JPEG 92/85/80, then bilevel.
+  Profile/requested_policy is text_scan_bilevel, classification text_scan, permission_basis
+  explicit_text_scan_bilevel; adoption is ADOPTED_LOSSY with kind text_scan_bilevel. Safe rejects it;
+  preserve overrides it and other overlapping permissions fail preflight. Hash its patterns and recipe.
+  Scan stream Length supports direct and indirect integers; check limits before decoding.
+  Preserve text/OCR and geometry; never rasterize text, add OCR, scrub or upscale. These existing profiles
+  never substitute fonts; only the explicit font_replace profile below permits substitution.
   Shared images use minimum placement DPI per axis with ceil dimensions. Limits: 100 pages, 80 MP/image,
   64 MiB compressed stream, 600 MP cumulative validation (both renders), 300 seconds cooperative candidate budget.
   Preflight limit excess protects; runtime budget excess rejects the candidate.
@@ -94,9 +149,44 @@ The root CLI's `standard` preset does not discover or copy videos. The standalon
   remain separate ERRORs with exit 1, preserve completed PDF results, and continue independent files.
   Write `pdf-preview.json` or `pdf-preview.dry-run.json` in the output parent. Dry-run writes requests only,
   with no HTML, PNG, comparison PDF, or additional external-tool execution.
-- PDF processing schema is `5`; record requested_policy, classification, permission_basis, preservation_reason; include `photo_dpi` in the processing hash and retain old DB rows through
+- Font replacement itself is opt-in; ordinary PDF compression never replaces fonts. Meiryo is the default replacement font, not automatic permission to replace.
+- Explicit root `--pdf-font-replace-pattern` / PDF `--font-replace-pattern` selects font_replace only.
+  Use the same relative-glob rules, preserve priority and conflicting-permission preflight as other PDF policies.
+  PDF `--safe` rejects it. Use installed Windows meiryo.ttc face 0, Meiryo Regular by default; explicit root --pdf-font-family yu-gothic / PDF --font-family yu-gothic selects YuGothR.ttc face 0, Yu Gothic Regular. Require font-replace patterns for explicit family, bind family to hash/report/preview/root validation, and retain font SHA checks. For supported horizontal
+  Japanese/English text; verify family/style, embedding flags and the whole font file SHA-256. Never bundle,
+  download or modify Windows font outlines/metrics. Subset mapped Unicode (including unused source mappings);
+  adjust widths/spacing on the PDF side. Preserve orthogonal rotated horizontal text; protect vertical writing,
+  nonorthogonal, reflected or degenerate text matrices. Preserve bounded passive BMC/BDC/EMC only; reject
+  ActualText, OC and resource-property indirection, and validate inline property types with depth at most 64.
+  Never add ActualText or replace image-burned text. Missing glyphs and unsupported encoding/structures protect
+  the entire document; structure, tool and I/O failures remain ERROR even with successful recovery copying.
+  Compare independently validated original-derived qpdf-only and font_replace+qpdf candidates; adopt only
+  strictly smaller output, prefer qpdf on ties. Font substitution adoption is ADOPTED_LOSSY. lossless_jpeg
+  still records the request but adds no candidates in this profile. Dry-run reads fonts/structure only.
+  No selected font_replace files after preserve resolution means no Windows font preparation is required.
+  Validate displayed text/order/origins and non-text content independently. Copy/search inferred whitespace
+  may change; text_extraction_changed reports MuPDF extraction differences, never all-viewer equivalence.
+  Font limits: 200 pages, 128 MiB source, 256 fonts, 1,000,000 text-show characters and 1,000,000 total
+  source character mappings across fonts. Preflight validates unused ExtGState definitions too. Source font/image streams
+  32 MiB compressed and 64 MiB decoded each; source content 32 MiB compressed/decoded and 32 MiB document
+  decoded-content total; source decoded-stream total 256 MiB. Candidate validation caps each stream at 32 MiB compressed/64 MiB decoded
+  and both PDFs' decoded streams at 256 MiB; images/renders 32 MP each. Render both PDFs at 144 DPI,
+  600 MP per candidate, at most two candidates (1,200 MP). Share a 300-second cooperative deadline across
+  preflight and candidates. Preflight excess protects; runtime excess rejects the candidate. Origins allow
+  0.02 pt per coordinate; qpdf-only requires exact rendered pixels, font replacement allows changed glyphs.
+  Font previews retain the independent 100-page limit and recheck processing metadata plus original/output
+  SHA instead of applying the ordinary text classifier. Root preview items require the font request/name/
+  extraction-change fields to match the validated PDF report with strict boolean types.
+- PDF processing schema is `6`; record requested_policy, classification, permission_basis, preservation_reason; include `photo_dpi` in the processing hash and retain old DB rows through
   additive migration. CSV/DB `photo_dpi` is the requested integer for photo rows and empty/NULL otherwise;
   root rejects missing or mismatched values. Preview options are excluded from the processing hash.
+  Add font_replacement_requested, replacement_font, replacement_font_sha256, text_extraction_changed to CSV/DB
+  through additive migration. Only font_replace rows request true and record the requested Yu Gothic Regular or Meiryo Regular plus lowercase
+  64-hex font-file SHA; all other profiles record false/empty/empty. Preserve/dry-run/qpdf wins retain requests.
+  text_extraction_changed is true only for an adopted font_replace lossy candidate with extraction differences;
+  otherwise false. Root requires all fields, profile agreement and identical font SHA across the run's font rows.
+  Font recipe, installed-font SHA and fontTools/pikepdf versions participate in config hashes; schema 5
+  successes must run again.
 - Photo candidates add bounded 300 DPI changed-placement validation; this does not guarantee readability
   or OCR accuracy. Photo lossy adoption requires `64 KiB` and `5%`, photo lossless `16 KiB` and `2%`.
   The below-256-KiB skip applies to photo, not text recipes. PRESERVED_ORIGINAL requires output/source SHA equality;
@@ -116,8 +206,15 @@ The root CLI's `standard` preset does not discover or copy videos. The standalon
   candidate meeting its reduction gates, preferring lossless on a size tie. Real tool, structure, and I/O
   failures remain `ERROR`, including when recovery copying succeeds. Retain primary-candidate
   diagnostics and full `candidate_details` in state/CSV; root verifies each required report `profile`.
-- Compact video: only supported simple SDR/CFR streams are encoded without upscale to at most
-  `1280x720`, at most `30 fps`, using SVT-AV1. Unsupported/complex videos are copied unchanged.
+- Compact video: simple SDR streams are encoded without upscale to at most `1280x720`, at most
+  `30 fps`, using SVT-AV1. Default allows missing progressive/SAR metadata and converts VFR to CFR.
+  Root `--video-safe` / standalone `--safe` restores explicit progressive/SAR 1:1/CFR input checks.
+  Known HDR/interlace/non-square SAR, subtitles, multiple video streams remain unsupported.
+  Root `--video-remove-audio` / standalone `--remove-audio` removes all audio while compressing;
+  multiple/multichannel audio is accepted for removal. Both flags default OFF and require compact.
+  Removal failures including unsupported/quality/savings rejection are ERROR with no audible fallback
+  or recovery copy; existing outputs are retained. Other unsupported/complex videos are copied unchanged.
+  CSV safe/remove_audio booleans must match the root request; both enter the v2 processing hash.
 - Video candidates must pass stream/duration checks, full decode, VMAF, and size-reduction gates.
   Tool/encoding failures remain `ERROR` even if a recovery copy succeeds; do not silently count them as skips.
 - Image metadata is best-effort, not a sanitization guarantee.
@@ -165,12 +262,14 @@ Run from the repository root (the orchestrator suite requires its own working di
 ```powershell
 uv run --project pdf-shrink python -m pytest -q pdf-shrink/tests
 uv run --project media-shrink-tool --extra dev python -m pytest -q media-shrink-tool/tests
+uv run --project excel-shrink python -m pytest -q excel-shrink/tests
 uv run --project video-shrink python -m pytest -q video-shrink/tests
 Push-Location orchestrator
 uv run --with pytest python -m pytest -q
 Pop-Location
 uv run --project pdf-shrink python -m compileall -q pdf-shrink/src pdf-shrink/tests
 uv run --project media-shrink-tool python -m compileall -q media-shrink-tool/src media-shrink-tool/tests
+uv run --project excel-shrink python -m compileall -q excel-shrink/src excel-shrink/tests
 uv run --project video-shrink python -m compileall -q video-shrink/src video-shrink/tests
 uv run --project pdf-shrink python -m compileall -q karufile.py orchestrator
 uv run --script karufile.py --help

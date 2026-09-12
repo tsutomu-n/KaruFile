@@ -29,10 +29,13 @@ def build_parser() -> argparse.ArgumentParser:
     run_parser = subparsers.add_parser("run", help="PDFフォルダーを軽量化する")
     run_parser.add_argument("--input", required=True, help="入力PDFフォルダー")
     run_parser.add_argument("--output", help="出力フォルダー（未指定時は <input>_軽量化）")
+    run_parser.add_argument("--font-family", choices=("yu-gothic", "meiryo"), default=None, help="置換字体（既定meiryo、--font-replace-pattern必須）")
     run_parser.add_argument("--workers", type=int, default=2, help="並列プロセス数（デフォルト2）")
     for name, help_text in (("preserve", "すべての許可に優先して原本を保護"),
                             ("text", "文章と単純な水平・垂直罫線表の処理を許可"),
-                            ("text-scan", "文章だけのスキャンを300 DPIグレーJPEG候補へ処理")):
+                            ("text-scan", "文章だけのスキャンを300 DPIグレーJPEG候補へ処理"),
+                            ("text-scan-bilevel", "白黒書類スキャンに二値化候補を追加（色・階調が失われる）"),
+                            ("font-replace", "Windowsのメイリオへ統一（字体・コピーや検索時の空白が変わる場合あり）")):
         run_parser.add_argument(f"--{name}-pattern", action="append", default=[], metavar="PATTERN",
                                 help=f"{help_text}（入力相対glob、反復可）")
     run_parser.add_argument(

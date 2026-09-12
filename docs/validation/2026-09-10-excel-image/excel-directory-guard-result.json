@@ -1,0 +1,8 @@
+{
+  "suite": "excel-directory-guard",
+  "command": "uv run --project excel-shrink python -m pytest -q excel-shrink/tests",
+  "workdir": "C:/Users/tn/c_projects/KaruFile",
+  "started_utc": "2026-09-10T06:50:19.4495096Z",
+  "elapsed_seconds": 8.6083975,
+  "exit_code": 0
+}

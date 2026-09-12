@@ -1,0 +1,26 @@
+[
+  {
+    "case": "jpeg",
+    "pages": 1,
+    "text_and_geometry_equal": true,
+    "image_placements_equal": true,
+    "changed_pixels_144_dpi": 14160,
+    "changed_pixels_outside_images": 0
+  },
+  {
+    "case": "png",
+    "pages": 1,
+    "text_and_geometry_equal": true,
+    "image_placements_equal": true,
+    "changed_pixels_144_dpi": 13482,
+    "changed_pixels_outside_images": 0
+  },
+  {
+    "case": "small",
+    "pages": 1,
+    "text_and_geometry_equal": true,
+    "image_placements_equal": true,
+    "changed_pixels_144_dpi": 0,
+    "changed_pixels_outside_images": 0
+  }
+]

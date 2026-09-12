@@ -270,8 +270,11 @@
         $("saving").textContent = reduction(item.source_size, item.output_size);
         $("decision").textContent = [
           item.classification === "photo" ? `写真の目標：${data.photo_dpi} DPI / JPEG品質80` : "",
-          item.classification === "text_scan" ? "文章スキャン：300 DPI・グレーJPEG候補" : "",
+          item.permission_basis === "explicit_text_scan_bilevel" ? "白黒書類スキャン：二値化候補を追加（色・階調は失われます）"
+            : item.classification === "text_scan" ? "文章スキャン：300 DPI・グレーJPEG候補" : "",
           item.preservation_reason ? `原本保護：${item.preservation_reason}` : "",
+          item.font_replacement_requested ? `フォント置換の指定：${item.replacement_font}（字体・検索やコピーの空白が変わる場合があります）` : "",
+          item.text_extraction_changed ? "採用出力で抽出時の空白・改行の変化を検出" : "",
           `PDFの処理結果：${item.pdf_status}`,
           item.selected_kind ? `採用候補：${item.selected_kind}` : "",
           item.decision_reason,

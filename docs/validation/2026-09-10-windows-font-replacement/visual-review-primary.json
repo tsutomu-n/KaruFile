@@ -1,0 +1,19 @@
+{
+  "candidate_sha256": "edcc4f3d7caedb3d8adf6e9cc1871cb26171ca054ccfdeb776ab400d76efb132",
+  "reviewer": "Primary AI agent visual inspection",
+  "pages": [
+    4,
+    12,
+    48
+  ],
+  "dpi": 300,
+  "status": "REVIEWED_WITH_TYPEFACE_AND_SPACING_DIFFERENCES",
+  "findings": [
+    "代表部分に欠字・罫線の破損・文字の切れを認めない。",
+    "字体・太さは変化し、字間の見た目も原本とは異なる。",
+    "30fps等の推定空白変化は既知のまま記録する。"
+  ],
+  "limitations": [
+    "全字の校正、実機印刷、全ビューアー検証ではない。"
+  ]
+}

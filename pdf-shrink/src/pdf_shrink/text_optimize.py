@@ -9,7 +9,7 @@ import time
 
 import pymupdf as fitz
 
-from .config import RunConfig
+from .config import BILEVEL_THRESHOLD, RunConfig
 from .lossless_jpeg import CandidateRejected
 from .policy import scan_images
 from .qpdf import qpdf_check, qpdf_optimize
@@ -30,6 +30,25 @@ class Budget:
             raise CandidateRejected("text_validation_pixel_limit")
 
 
+def _bilevel_samples(gray: fitz.Pixmap, budget: Budget) -> bytes:
+    """Pack rows MSB first, with white padding and no dithering or glyph matching."""
+    samples = gray.samples
+    packed = bytearray()
+    table = bytes(0 if value < BILEVEL_THRESHOLD else 1 for value in range(256))
+    for y in range(gray.height):
+        if y % 64 == 0:
+            budget.check()
+        row = samples[y * gray.stride:y * gray.stride + gray.width].translate(table)
+        row += b"\x01" * (-gray.width % 8)
+        for x in range(0, len(row), 8):
+            value = 0
+            for bit in row[x:x + 8]:
+                value = (value << 1) | bit
+            packed.append(value)
+    budget.check()
+    return bytes(packed)
+
+
 def generate(source: Path, target: Path, kind: str, cfg: RunConfig,
              qpdf: Path, budget: Budget) -> int:
     budget.check()
@@ -41,8 +60,7 @@ def generate(source: Path, target: Path, kind: str, cfg: RunConfig,
     with tempfile.TemporaryDirectory(prefix="text-", dir=target.parent) as folder:
         intermediate = Path(folder) / "prepared.pdf"
         with fitz.open(source) as doc:
-            if kind.startswith("text_scan_jpeg_"):
-                quality = int(kind.rsplit("_", 1)[1])
+            if kind.startswith("text_scan_"):
                 minimums, reason = scan_images(doc, deadline=budget.deadline)
                 if reason:
                     if reason == "scan_preflight_time_limit":
@@ -58,9 +76,15 @@ def generate(source: Path, target: Path, kind: str, cfg: RunConfig,
                     )
                     if (width, height) != (pix.width, pix.height):
                         gray = fitz.Pixmap(gray, width, height, None)
-                    encoded = gray.tobytes("jpeg", jpg_quality=quality)
-                    doc.update_stream(xref, encoded, compress=False)
-                    for key, value in (("Filter", "/DCTDecode"), ("ColorSpace", "/DeviceGray"),
+                    if kind == "text_scan_bilevel":
+                        doc.update_stream(xref, _bilevel_samples(gray, budget), compress=True)
+                        doc.xref_set_key(xref, "BitsPerComponent", "1")
+                    else:
+                        quality = int(kind.rsplit("_", 1)[1])
+                        encoded = gray.tobytes("jpeg", jpg_quality=quality)
+                        doc.update_stream(xref, encoded, compress=False)
+                        doc.xref_set_key(xref, "Filter", "/DCTDecode")
+                    for key, value in (("ColorSpace", "/DeviceGray"),
                                        ("Width", str(width)), ("Height", str(height))):
                         doc.xref_set_key(xref, key, value)
                     changed += 1
@@ -151,8 +175,8 @@ def validate_candidate(source: Path, candidate: Path, kind: str,
     rc = qpdf_check(qpdf, candidate)
     if rc:
         raise RuntimeError(f"qpdf check failed (rc={rc})")
-    gray = kind == "text_gray" or kind.startswith("text_scan_jpeg_")
-    exact = not kind.startswith("text_scan_jpeg_")
+    gray = kind == "text_gray" or kind.startswith("text_scan_")
+    exact = not kind.startswith("text_scan_")
     with fitz.open(source) as src, fitz.open(candidate) as dst:
         if src.is_repaired or dst.is_repaired:
             raise RuntimeError("text candidate required PDF repair")

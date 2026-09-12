@@ -1,0 +1,7 @@
+{
+  "suite": "pdf-compile",
+  "command": "uv run --project pdf-shrink python -m compileall -q pdf-shrink/src pdf-shrink/tests",
+  "started_utc": "2026-09-10T06:41:54.1477869Z",
+  "elapsed_seconds": 0.1185677,
+  "exit_code": 0
+}

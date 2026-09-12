@@ -1,0 +1,7 @@
+{
+  "suite": "video",
+  "command": "uv run --project video-shrink python -m pytest -q video-shrink/tests",
+  "started_utc": "2026-09-10T06:41:27.4865539Z",
+  "elapsed_seconds": 3.0973484,
+  "exit_code": 0
+}

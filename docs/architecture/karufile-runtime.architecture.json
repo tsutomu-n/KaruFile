@@ -7,7 +7,7 @@
     "quality_profile": "showcase",
     "repository": {
       "url": "https://github.com/tsutomu-n/KaruFile",
-      "revision": "9469ce72d0679880c60f8d5b106e49eca64789de"
+      "revision": "ce7f4bdca6ec36f8ebc8df5c9eee97b5ba426e36"
     },
     "legend": {
       "mode": "auto",
@@ -54,7 +54,7 @@
       "type": "backend",
       "label": "orchestrator",
       "sublabel": "事前検査・順次実行・結果照合",
-      "tag": "PDF → 画像 → 動画",
+      "tag": "PDF → 画像 → Excel → 動画",
       "pos": [
         385,
         401
@@ -74,7 +74,7 @@
       "id": "input",
       "type": "external",
       "label": "入力フォルダー",
-      "sublabel": "PDF・画像・対応動画",
+      "sublabel": "PDF・画像・指定Excel・compact動画",
       "tag": "開始・終了時にSHA照合",
       "pos": [
         390,
@@ -107,7 +107,8 @@
           "path": "pdf-shrink/src/pdf_shrink/worker.py",
           "label": "1 PDF処理"
         }
-      ]
+      ],
+      "tag": "PyMuPDF・qpdf・任意jpegtran"
     },
     {
       "id": "image",
@@ -138,7 +139,7 @@
       "type": "backend",
       "label": "video-shrink",
       "sublabel": "compact対応動画をAV1化",
-      "tag": "複雑動画は原本コピー",
+      "tag": "厳格判定・無音化は任意",
       "pos": [
         650,
         590
@@ -146,35 +147,6 @@
       "size": [
         190,
         82
-      ]
-    },
-    {
-      "id": "pdf_engines",
-      "type": "external",
-      "label": "PDF・JPEG処理エンジン",
-      "sublabel": "PyMuPDF・qpdf・任意jpegtran",
-      "tag": "任意jpegtran 3.2.0・手動準備",
-      "pos": [
-        900,
-        150
-      ],
-      "size": [
-        215,
-        82
-      ],
-      "sources": [
-        {
-          "path": "pdf-shrink/pyproject.toml",
-          "label": "PyMuPDF"
-        },
-        {
-          "path": "pdf-shrink/src/pdf_shrink/qpdf.py",
-          "label": "qpdf"
-        },
-        {
-          "path": "pdf-shrink/src/pdf_shrink/lossless_jpeg.py",
-          "label": "JPEG可逆"
-        }
       ]
     },
     {
@@ -220,7 +192,7 @@
       "id": "output",
       "type": "external",
       "label": "出力フォルダー",
-      "sublabel": "PDF・JPEG・動画を別ツリーへ",
+      "sublabel": "完成ファイルを別ツリーへ",
       "tag": "相対構造を維持",
       "pos": [
         1140,
@@ -234,8 +206,8 @@
     {
       "id": "media_state",
       "type": "database",
-      "label": "画像・動画の補助情報",
-      "sublabel": "画像manifest/CSV・video state/report",
+      "label": "画像・Excel・動画の補助情報",
+      "sublabel": "画像manifest・Excel report・動画state",
       "pos": [
         1140,
         580
@@ -265,6 +237,21 @@
       "id": "pdf_preview",
       "type": "database",
       "tag": "原本・完成出力・追加DPI"
+    },
+    {
+      "id": "excel",
+      "type": "backend",
+      "label": "excel-shrink",
+      "sublabel": "指定xlsxの過剰な画像画素を縮小",
+      "tag": "配置・共有参照・Windows GDI",
+      "pos": [
+        900,
+        150
+      ],
+      "size": [
+        205,
+        82
+      ]
     }
   ],
   "boundaries": [
@@ -276,7 +263,8 @@
         "orchestrator",
         "pdf",
         "image",
-        "video"
+        "video",
+        "excel"
       ],
       "pad": 24
     }
@@ -318,7 +306,7 @@
       "to": "pdf",
       "label": "1. PDF処理",
       "labelAt": [
-        610,
+        680,
         325
       ],
       "fromSide": "right",
@@ -350,7 +338,7 @@
       "id": "run_video_third",
       "from": "orchestrator",
       "to": "video",
-      "label": "3. compact動画処理",
+      "label": "4. compact動画処理",
       "labelAt": [
         610,
         555
@@ -368,16 +356,6 @@
         ]
       ],
       "variant": "emphasis"
-    },
-    {
-      "id": "pdf_uses_engines",
-      "from": "pdf",
-      "to": "pdf_engines",
-      "label": "候補生成・構造検証",
-      "labelAt": [
-        975,
-        245
-      ]
     },
     {
       "id": "video_uses_engines",
@@ -515,6 +493,55 @@
       "id": "pdf_writes_preview",
       "fromSide": "top",
       "toSide": "bottom"
+    },
+    {
+      "id": "run_excel_third",
+      "from": "orchestrator",
+      "to": "excel",
+      "label": "3. 明示指定時にExcel処理",
+      "variant": "emphasis",
+      "fromSide": "right",
+      "toSide": "top",
+      "via": [
+        [
+          595,
+          442
+        ],
+        [
+          595,
+          0
+        ],
+        [
+          1002.5,
+          0
+        ]
+      ],
+      "labelAt": [
+        1045,
+        90
+      ]
+    },
+    {
+      "id": "excel_publishes",
+      "from": "excel",
+      "to": "output",
+      "label": "検証済みxlsxを公開",
+      "fromSide": "right",
+      "toSide": "right",
+      "via": [
+        [
+          1390,
+          191
+        ],
+        [
+          1390,
+          438
+        ]
+      ],
+      "labelAt": [
+        1270,
+        160
+      ]
     }
   ],
   "cards": [
@@ -523,7 +550,7 @@
       "title": "主要経路",
       "items": [
         "利用者 → karufile.py → orchestrator",
-        "PDF、画像、compact動画を順に処理",
+        "PDF、画像、指定Excel、compact動画を順に処理",
         "現在実行の結果を照合して終了コードを返す"
       ]
     },
@@ -538,10 +565,10 @@
     },
     {
       "dot": "amber",
-      "title": "PDFの保護と比較",
+      "title": "Excelの明示選択",
       "items": [
-        "未許可の図・画像PDFは候補を作らず原本保護",
-        "文章は最小の検証済み候補、写真DPIは150〜300",
+        "両presetで長辺800px・JPEG品質72",
+        "画像以外の内部ファイルは展開後のバイト一致",
         "未commit変更を含む。ソースリンクは基準commit"
       ]
     }

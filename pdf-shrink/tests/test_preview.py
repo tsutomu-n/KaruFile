@@ -3,6 +3,7 @@ from dataclasses import replace
 import json
 from pathlib import Path
 import random
+import re
 import shutil
 import time
 
@@ -38,7 +39,7 @@ def case(tmp_path):
         output_size=source.size, output_sha256=source.sha256, saved_bytes=0, saved_percent=0,
         page_count=1, scan_page_ratio=0, error_message=None, pymupdf_version="test", qpdf_version="test",
         processed_at="now", profile="photo", photo_dpi=200, decision_reason="candidate_not_smaller",
-        classification="photo", requested_policy="photo", permission_basis="explicit_photo", processing_schema=5,
+        classification="photo", requested_policy="photo", permission_basis="explicit_photo", processing_schema=6,
     )
     cfg = RunConfig(input_dir=inputs, output_dir=outputs, photo_patterns=("*.pdf",), preview=True)
     return cfg, source, record
@@ -223,3 +224,98 @@ def test_page_limit_is_checked_before_full_inspection(case, monkeypatch):
     monkeypatch.setattr(preview, "inspect_file", lambda *a, **kw: pytest.fail("late page limit"))
     assert not generate(case)
     assert read_manifest(case[0])["items"][0]["reason"] == "preview_page_limit"
+
+
+def font_case(case, *, status="ADOPTED_LOSSY", changed=True):
+    cfg, source, record = case
+    cfg = replace(cfg, photo_patterns=(), font_replace_patterns=("*.pdf",),
+                  font_replace_path=Path("installed-font.ttc"), font_replace_sha256="a" * 64,
+                  preview_dpis=(180, 150))
+    target = source.output_path(cfg.output_dir)
+    if status != "PRESERVED_ORIGINAL":
+        # A distinct completed PDF exposes the old false "protected" classification.
+        with fitz.open(source.path) as document:
+            document.set_metadata({"subject": "completed font trial fixture"})
+            document.save(target)
+    protected = status == "PRESERVED_ORIGINAL"
+    kind = "font_replace" if status == "ADOPTED_LOSSY" else "lossless"
+    record = replace(record, profile="font_replace", requested_policy="font_replace", photo_dpi=None,
+                     classification="protected" if protected else "font_replace",
+                     permission_basis="explicit_font_replace", status=status,
+                     preservation_reason="font_replace_unsupported" if protected else "",
+                     output_size=target.stat().st_size, output_sha256=preview.sha256_file(target),
+                     font_replacement_requested=True, replacement_font="Meiryo Regular",
+                     replacement_font_sha256="a" * 64, text_extraction_changed=changed,
+                     candidate_details=() if protected else (CandidateResult(kind, selected=True,
+                                                                             text_extraction_changed=changed),))
+    return cfg, source, record
+
+
+@pytest.mark.parametrize(("status", "changed"), [
+    ("ADOPTED_LOSSY", True), ("ADOPTED_LOSSY", False),
+    ("ADOPTED_LOSSLESS", False), ("PRESERVED_ORIGINAL", False),
+])
+def test_font_preview_renders_completed_result_and_carries_diagnostics(case, monkeypatch, status, changed):
+    cfg, source, record = font_case(case, status=status, changed=changed)
+    monkeypatch.setattr(preview, "classify", lambda *a: pytest.fail("ordinary text classifier for font profile"))
+    monkeypatch.setattr(preview.worker, "_evaluate_candidate", lambda *a: pytest.fail("non-photo preview candidate"))
+    assert generate((cfg, source, record))
+    data = read_manifest(cfg)
+    item = data["items"][0]
+    assert item["status"] == "READY" and item["pdf_status"] == status
+    assert item["font_replacement_requested"] is True
+    assert item["replacement_font"] == "Meiryo Regular"
+    assert item["text_extraction_changed"] is changed
+    assert [variant["key"] for variant in item["variants"]] == ["original", "output"]
+    html = Path(data["index_path"]).read_text(encoding="utf-8")
+    embedded = json.loads(re.search(r'<script type="application/json" id="preview-data">(.*?)</script>', html, re.S)[1])
+    assert embedded["items"][0] == item
+    assert preview.sha256_file(source.path) == source.sha256
+    assert preview.sha256_file(source.output_path(cfg.output_dir)) == record.output_sha256
+
+
+@pytest.mark.parametrize(("field", "value"), [
+    ("classification", "protected"), ("permission_basis", "explicit_photo"),
+    ("font_replacement_requested", False), ("replacement_font_sha256", "b" * 64),
+    ("replacement_font", "Yu Mincho"), ("text_extraction_changed", "false"),
+    ("source_sha256", "b" * 64), ("processing_schema", 5),
+])
+def test_font_preview_rejects_inconsistent_processing_state(case, field, value):
+    cfg, source, record = font_case(case)
+    assert not generate((cfg, source, replace(record, **{field: value})))
+    data = read_manifest(cfg)
+    assert data["status"] == "ERROR"
+    assert data["items"][0]["reason"] == "font preview processing state mismatch"
+    assert preview.sha256_file(source.output_path(cfg.output_dir)) == record.output_sha256
+
+
+def test_font_preview_requires_selected_family(case):
+    cfg, source, record = font_case(case, changed=False)
+    cfg = replace(cfg, font_family="yu-gothic")
+    with pytest.raises(RuntimeError, match="font preview processing state mismatch"):
+        preview._font_preview_decision(source, record, cfg)
+    record = replace(record, replacement_font="Yu Gothic Regular")
+    assert preview._font_preview_decision(source, record, cfg).classification == "font_replace"
+
+
+def test_font_preview_dry_run_carries_request_without_html_or_render(case, monkeypatch):
+    cfg, source, record = font_case(case, changed=False)
+    cfg = replace(cfg, dry_run=True)
+    record = replace(record, status="DRY_RUN_LOSSY", output_size=None, output_sha256=None, candidate_details=())
+    monkeypatch.setattr(preview, "_document", lambda *a: pytest.fail("font dry-run render"))
+    assert generate((cfg, source, record))
+    data = read_manifest(cfg)
+    item = data["items"][0]
+    assert item["font_replacement_requested"] is True and item["replacement_font"] == "Meiryo Regular"
+    assert item["text_extraction_changed"] is False
+    assert data["index_path"] is None
+    assert not (cfg.output_dir.parent / "pdf-preview").exists()
+
+
+def test_font_preview_preserves_separate_page_limit(case, monkeypatch):
+    cfg, source, record = font_case(case)
+    monkeypatch.setattr(preview, "MAX_PAGES", 0)
+    monkeypatch.setattr(preview, "_font_preview_decision", lambda *a: pytest.fail("late font page limit"))
+    assert not generate((cfg, source, record))
+    assert read_manifest(cfg)["items"][0]["reason"] == "preview_page_limit"
+    assert preview.sha256_file(source.output_path(cfg.output_dir)) == record.output_sha256

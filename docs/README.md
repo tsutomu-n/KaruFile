@@ -21,7 +21,7 @@ ExecPlanは当時の判断と検証を残す履歴であり、現行仕様の正
 | 文書 | 用途 | 更新する契機 |
 |---|---|---|
 | [利用者マニュアル](../MANUAL.md) | 利用者向けの基本手順、安全条件、結果確認 | CLI、保存先、終了コード、対応形式の変更 |
-| [KaruFileで何ができるの？](KARUFILE_GUIDE.html) | 事務の仕事の例と図で、用途・原本の扱い・結果確認を説明する入門ガイド | 利用者に見える処理対象・既定動作・注意事項の変更 |
+| [KaruFileで何ができるの？](KARUFILE_GUIDE.html) | 事務の仕事の例と図で、用途・原本の扱い・字体統一の使いどころ・結果確認を説明する入門ガイド | 利用者に見える処理対象・既定動作・明示指定機能・注意事項の変更 |
 | [ルートREADME](../README.md) | リポジトリの入口と最短手順 | 正本や主要入口の変更 |
 | [技術リファレンス](REFERENCE.md) | 数値、status、保存先、再利用条件、個別CLI | 製品契約または固定値の変更 |
 | [PDF処理の流れと判断基準](PDF_PROCESSING.md) | PDFの保護判定から候補生成・検証・出力・比較までの説明 | PDFの処理順序、判定、候補、採用条件の変更 |
@@ -30,6 +30,7 @@ ExecPlanは当時の判断と検証を残す履歴であり、現行仕様の正
 | [media-shrink-tool README](../media-shrink-tool/README.md) | 画像個別CLIと内部契約 | 画像recipe、再利用、警告、エラーCSVの変更 |
 | [画像圧縮の内部仕様](image-processing.html) | media-shrink-toolの画像処理ロジックを実装に基づき詳述 | 画像変換、再利用、レポート、安全検査の変更 |
 | [video-shrink README](../video-shrink/README.md) | 動画個別CLIと内部契約 | 動画適格性、品質gate、状態、レポート、FFmpeg境界の変更 |
+| [excel-shrink README](../excel-shrink/README.md) | 明示選択xlsxの個別CLIと内部契約 | 画像配置の対応範囲、保護、候補検証、レポート、一時領域の変更 |
 | [orchestrator README](../orchestrator/README.md) | 統合CLIと保存先 | 実行順序、集計、環境変数の変更 |
 | [orchestrator設計](../orchestrator/docs/shrink_orchestrator_design.md) | 内部責務、安全性検査、結果照合 | `orchestrator/shrink_all.py` の境界変更 |
 | [文書ガイド](README.md) | 文書の正本順序、現行性、監査結果 | 文書の追加、役割、保存方針の変更 |
@@ -39,9 +40,16 @@ ExecPlanは当時の判断と検証を残す履歴であり、現行仕様の正
 
 Archify生成HTMLは直接編集しません。Architecture JSONを更新し、Archifyのvalidate、deliver、
 visual-checkを実行してから、light/darkの画像を確認します。
+Excel追加時の図は未コミットの実装を含む作業ツリーに基づきます。
+図中の既存ソースリンクは基準commitを指し、未コミットのExcelソースを架空のGitHubリンクにはしません。
+照合時のローカルパス・SHA-256は[作業ツリーの根拠](architecture/karufile-runtime.compact.worktree.json)に記録しています。
+この記録は取得時点のsnapshotで、後のソース編集に合わせて再取得が必要です。
+[Excel経路追加時の確認記録](architecture/karufile-runtime.compact.review.md)には、生成・検証と明暗画像の目視結果を記載しています。
 
 入門ガイドの本文・埋込図の再生成手順と表示確認の証拠は [guide/README.md](guide/README.md)にあります。
 ガイドは概要説明であり、操作と安全情報の正本は引き続き `MANUAL.md` です。
+ガイド第4節には動画の圧縮・音声除去・任意の厳格判定の使い分けと、共有前の確認を掲載しています。
+第5節にはExcel画像の明示選択、初版で縮小できない配置、原本保護とエラー、表示・印刷の確認を掲載しています。
 
 ## 2026-08-16 コード基準監査
 
@@ -68,6 +76,15 @@ visual-checkを実行してから、light/darkの画像を確認します。
 リンクを更新せずに削除できません。
 
 ## 履歴資料
+
+PDFの通常圧縮では字体を変更しません。置換対象は明示指定、置換先はメイリオが既定です。
+
+PDFフォント置換の現行手順は[マニュアル](../MANUAL.md#日本語英語のpdfをメイリオへ統一する)、
+実装・試験の経緯と次の担当者向けの現在地は[PDF圧縮の引継ぎ](handoffs/2026-09-09-pdf-font-compression.md)を参照してください。
+
+Windowsフォント置換の[2026-09-10検証記録](validation/2026-09-10-windows-font-replacement.md)は、
+通常CLIによる1冊の採用、再開・dry-run・原本保持、全ページ描画と代表部分の視覚確認を記録しています。
+字体・太さとコピー/検索時の推定空白は変化し得ます。
 
 写真DPI選択・比較HTMLの[2026-09-09検証記録](validation/2026-09-09-photo-preview.md)は、実資料の結果と
 表示確認の証拠です。数値はその検証時点の結果であり、他資料の削減率や画質を保証しません。

@@ -1,0 +1,7 @@
+{
+  "suite": "image-compile",
+  "command": "uv run --project media-shrink-tool python -m compileall -q media-shrink-tool/src media-shrink-tool/tests",
+  "started_utc": "2026-09-10T06:41:54.6364615Z",
+  "elapsed_seconds": 0.1068163,
+  "exit_code": 0
+}

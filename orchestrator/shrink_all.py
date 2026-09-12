@@ -2,12 +2,12 @@
 # requires-python = ">=3.11"
 # dependencies = []
 # ///
-"""KaruFile の PDF・画像・動画オーケストレータ。
+"""KaruFile の PDF・画像・Excel・動画オーケストレータ。
 
 サードパーティ依存を持たない単一ファイルスクリプト（PEP 723）。`pdf-shrink` と
-`media-shrink-tool` と `video-shrink` を `uv run --project` 経由でサブプロセス実行し、
-混在するPDF・画像・動画フォルダーをまとめて軽量化する。動画はcompact presetだけで
-対象にする。実行環境には uv と各プロジェクトの
+`media-shrink-tool`・`excel-shrink`・`video-shrink` を `uv run --project` 経由でサブプロセス実行し、
+混在するフォルダーをまとめて軽量化する。Excelは明示選択だけ、動画はcompact presetだけで
+対象にする。実行環境には uv と有効な各プロジェクトの
 `.venv` が必要。
 
 使用例:
@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import argparse
 from collections import deque
+from contextlib import contextmanager
 import codecs
 import csv
 from fnmatch import fnmatchcase
@@ -29,10 +30,14 @@ import queue
 import re
 import signal
 import stat
+import struct
 import subprocess
 import sys
 import threading
 import time
+import zipfile
+import xml.etree.ElementTree as ET
+from urllib.parse import unquote
 from pathlib import Path, PureWindowsPath
 from typing import Any
 
@@ -43,6 +48,7 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 PDF_SHRINK_DIR = Path(os.environ.get("PDF_SHRINK_ROOT", REPO_ROOT / "pdf-shrink"))
 MEDIA_SHRINK_DIR = Path(os.environ.get("MEDIA_SHRINK_ROOT", REPO_ROOT / "media-shrink-tool"))
 VIDEO_SHRINK_DIR = Path(os.environ.get("VIDEO_SHRINK_ROOT", REPO_ROOT / "video-shrink"))
+EXCEL_SHRINK_DIR = Path(os.environ.get("EXCEL_SHRINK_ROOT", REPO_ROOT / "excel-shrink"))
 
 PDF_EXTENSIONS = {".pdf"}
 IMAGE_EXTENSIONS = {
@@ -50,6 +56,16 @@ IMAGE_EXTENSIONS = {
 }
 JPEG_EXTENSIONS = {".jpg", ".jpeg"}
 VIDEO_EXTENSIONS = {".mp4", ".m4v", ".mkv", ".webm"}
+EXCEL_EXTENSIONS = {".xlsx"}
+EXCEL_REPORT_COLUMNS = frozenset({
+    "schema_version", "source_path", "relative_path", "output_path", "source_size",
+    "output_size", "source_sha256", "output_sha256", "status", "dpi", "images_total",
+    "images_changed", "changed_parts", "reason", "max_side", "jpeg_quality",
+    "recipe_version", "analysis_complete", "diagnostics_complete", "image_diagnostics",
+})
+EXCEL_STATUSES = frozenset({
+    "ADOPTED_LOSSY", "PRESERVED_ORIGINAL", "ERROR", "DRY_RUN", "DRY_RUN_PRESERVED",
+})
 
 IMAGE_SUMMARY_RE = re.compile(r"Resized\s+(\d+)\s+images\s+\((\d+)\s+errors\)")
 IMAGE_SIZE_RE = re.compile(
@@ -96,6 +112,7 @@ PDF_REPORT_REQUIRED_COLUMNS = frozenset(
     {
         "requested_policy", "classification", "permission_basis", "preservation_reason", "processing_schema",
         "lossless_jpeg_requested",
+        "font_replacement_requested", "replacement_font", "replacement_font_sha256", "text_extraction_changed",
         "photo_dpi",
         "source_path",
         "source_size",
@@ -137,6 +154,8 @@ PDF_COPY_STATUSES = frozenset(
 )
 VIDEO_REPORT_REQUIRED_COLUMNS = frozenset(
     {
+        "safe",
+        "remove_audio",
         "source_path",
         "source_size",
         "output_size",
@@ -466,7 +485,7 @@ def _pdf_photo_pattern(value: str) -> str:
         raise argparse.ArgumentTypeError("must be a nonempty input-relative pattern without '..'")
     normalized = "/".join(part for part in parts if part not in {"", "."})
     if not normalized:
-        raise argparse.ArgumentTypeError("must name an input-relative PDF pattern")
+        raise argparse.ArgumentTypeError("must name an input-relative file pattern")
     return normalized
 
 
@@ -479,9 +498,31 @@ def _pdf_photo_dpi(value: str) -> int:
     return parsed
 
 
+def _excel_max_side(value: str) -> int:
+    if not re.fullmatch(r"[0-9]+", value) or not 100 <= int(value) <= 10000:
+        raise argparse.ArgumentTypeError("must be an integer between 100 and 10000")
+    return int(value)
+
+
+def _excel_jpeg_quality(value: str) -> int:
+    if not re.fullmatch(r"[0-9]+", value) or not 40 <= int(value) <= 95:
+        raise argparse.ArgumentTypeError("must be an integer between 40 and 95")
+    return int(value)
+
+
 class _ArgumentParser(argparse.ArgumentParser):
     def parse_args(self, args=None, namespace=None):
         parsed = super().parse_args(args, namespace)
+        if parsed.excel_dpi is not None and not parsed.excel_pattern:
+            self.error("--excel-dpi requires --excel-pattern")
+        if (parsed.excel_max_side is not None or parsed.excel_jpeg_quality is not None) and not parsed.excel_pattern:
+            self.error("--excel-max-side/--excel-jpeg-quality require --excel-pattern")
+        if parsed.excel_max_side is not None and parsed.excel_dpi is not None:
+            self.error("--excel-max-side excludes --excel-dpi")
+        if parsed.excel_dpi is None and parsed.excel_max_side is None:
+            parsed.excel_max_side = 800
+        if parsed.excel_jpeg_quality is None:
+            parsed.excel_jpeg_quality = 72 if parsed.excel_max_side is not None else 85
         if parsed.pdf_photo_dpi is not None and not parsed.pdf_photo_pattern:
             self.error("--pdf-photo-dpi requires --pdf-photo-pattern")
         if parsed.pdf_preview_dpi and not parsed.pdf_preview:
@@ -495,12 +536,15 @@ class _ArgumentParser(argparse.ArgumentParser):
 
 
 def _pdf_profile(relative: Path, preset: str, photo_patterns: list[str],
-                 preserve_patterns=(), text_patterns=(), text_scan_patterns=()) -> str:
+                 preserve_patterns=(), text_patterns=(), text_scan_patterns=(), text_scan_bilevel_patterns=(),
+                 font_replace_patterns=()) -> str:
     path = relative.as_posix().casefold()
     if any(fnmatchcase(path, p.casefold()) for p in preserve_patterns):
         return "preserve"
     matches = [name for name, patterns in (("photo", photo_patterns), ("text", text_patterns),
-                                           ("text_scan", text_scan_patterns))
+                                           ("text_scan", text_scan_patterns),
+                                           ("text_scan_bilevel", text_scan_bilevel_patterns),
+                                           ("font_replace", font_replace_patterns))
                if any(fnmatchcase(path, p.casefold()) for p in patterns)]
     if len(matches) > 1:
         raise ValueError(f"conflicting PDF permissions: {relative}: {', '.join(matches)}")
@@ -513,6 +557,18 @@ def _is_within(path: Path, parent: Path) -> bool:
     except ValueError:
         return False
     return True
+
+
+def collect_excel_files(input_dir: Path, patterns: list[str]) -> list[Path]:
+    """Excel is strictly opt-in; Office lock files are never workbook inputs."""
+    if not patterns:
+        return []
+    return [
+        path for path in collect_files(input_dir, EXCEL_EXTENSIONS)
+        if not path.name.startswith("~$")
+        and any(fnmatchcase(path.relative_to(input_dir).as_posix().casefold(), pattern.casefold())
+                for pattern in patterns)
+    ]
 
 
 def _has_link_component(root: Path, candidate: Path) -> bool:
@@ -630,6 +686,7 @@ def validate_planned_destinations(
     pdf_files: list[Path],
     image_files: list[Path],
     video_files: list[Path] | None = None,
+    excel_files: list[Path] | None = None,
 ) -> None:
     """全processorの予定出力が、link解決後も安全な出力root内か確認する。"""
 
@@ -651,8 +708,11 @@ def validate_planned_destinations(
     for source in video_files or []:
         relative = source.resolve(strict=True).relative_to(input_root)
         planned.append(("video", source, output_dir / relative))
+    for source in excel_files or []:
+        relative = source.resolve(strict=True).relative_to(input_root)
+        planned.append(("excel", source, output_dir / relative))
 
-    protected_sources = tuple([*pdf_files, *image_files, *(video_files or [])])
+    protected_sources = tuple([*pdf_files, *image_files, *(video_files or []), *(excel_files or [])])
 
     for _processor, source, destination in planned:
         resolved_source = source.resolve(strict=True)
@@ -732,6 +792,7 @@ def validate_derived_write_paths(
     video_files: list[Path] | None = None,
     *,
     pdf_preview: bool = False,
+    excel_files: list[Path] | None = None,
 ) -> None:
     """processorが出力mirror外へ書く状態・reportパスの衝突を拒否する。"""
 
@@ -798,7 +859,14 @@ def validate_derived_write_paths(
             for source in video_files
         )
 
-    protected_sources = tuple([*pdf_files, *image_files, *(video_files or [])])
+    if excel_files:
+        derived.extend([
+            ("Excel temporary directory", Path(f"{output_dir}.excel-work")),
+            ("Excel report", Path(f"{output_dir}.excel-report.csv")),
+            ("Excel dry-run report", Path(f"{output_dir}.excel-report.dry-run.csv")),
+        ])
+
+    protected_sources = tuple([*pdf_files, *image_files, *(video_files or []), *(excel_files or [])])
 
     for label, candidate in derived:
         candidate_lexical = Path(os.path.abspath(candidate))
@@ -1034,6 +1102,7 @@ def validate_pdf_preview_manifest(
             if not {
                 "source_path", "relative_path", "source_sha256", "output_path",
                 "output_sha256", "pdf_status", "status", "reason",
+                "font_replacement_requested", "replacement_font", "text_extraction_changed",
             }.issubset(item):
                 return None
             source_name = item.get("source_path")
@@ -1052,6 +1121,11 @@ def validate_pdf_preview_manifest(
                 or item.get("output_sha256") != (row["output_sha256"] or None)
                 or item.get("pdf_status") != row["status"]
                 or not isinstance(item.get("reason"), str)
+                or type(item.get("font_replacement_requested")) is not bool
+                or item["font_replacement_requested"] is not row.get("font_replacement_requested")
+                or item.get("replacement_font") != row.get("replacement_font")
+                or type(item.get("text_extraction_changed")) is not bool
+                or item["text_extraction_changed"] is not row.get("text_extraction_changed")
             ):
                 return None
             item_status = item.get("status")
@@ -1101,6 +1175,26 @@ def validate_pdf_preview_manifest(
         return data
     except (OSError, RuntimeError, TypeError, ValueError, KeyError):
         return None
+
+
+def _valid_pdf_font_metadata(row: dict[str, Any]) -> bool:
+    """Bind the requested installed font and extraction diagnostics to the PDF profile."""
+    requested = row.get("profile") == "font_replace"
+    if row.get("font_replacement_requested") is not requested:
+        return False
+    changed = row.get("text_extraction_changed")
+    if type(changed) is not bool:
+        return False
+    if changed and (not requested or row.get("status") != "ADOPTED_LOSSY"):
+        return False
+    if requested:
+        digest = row.get("replacement_font_sha256")
+        return (
+            row.get("replacement_font") in {"Yu Gothic Regular", "Meiryo Regular"}
+            and isinstance(digest, str)
+            and re.fullmatch(r"[0-9a-f]{64}", digest) is not None
+        )
+    return row.get("replacement_font") == "" and row.get("replacement_font_sha256") == ""
 
 
 def parse_pdf_report(report_path: Path) -> dict[str, Any]:
@@ -1168,10 +1262,19 @@ def parse_pdf_report(report_path: Path) -> dict[str, Any]:
                 lossless_jpeg_requested = row.get("lossless_jpeg_requested")
                 if lossless_jpeg_requested not in {"true", "false"}:
                     raise ValueError("PDF report lossless_jpeg_requested must be true or false")
-                if profile not in {"standard", "compact", "photo", "preserve", "text", "text_scan"}:
+                if profile not in {"standard", "compact", "photo", "preserve", "text", "text_scan", "text_scan_bilevel", "font_replace"}:
                     raise ValueError(f"unknown PDF report profile: {profile!r}")
-                if row.get("processing_schema") != "5" or row.get("requested_policy") != profile:
+                if row.get("processing_schema") != "6" or row.get("requested_policy") != profile:
                     raise ValueError("PDF report policy schema mismatch")
+                font_metadata = {name: row.get(name) for name in (
+                    "font_replacement_requested", "replacement_font", "replacement_font_sha256", "text_extraction_changed",
+                )}
+                for name in ("font_replacement_requested", "text_extraction_changed"):
+                    if font_metadata[name] not in {"true", "false"}:
+                        raise ValueError(f"PDF report {name} must be true or false")
+                    font_metadata[name] = font_metadata[name] == "true"
+                if not _valid_pdf_font_metadata({"profile": profile, "status": status, **font_metadata}):
+                    raise ValueError("PDF report font replacement metadata mismatch")
                 raw_photo_dpi = row.get("photo_dpi")
                 if profile == "photo":
                     photo_dpi = _pdf_photo_dpi(raw_photo_dpi)
@@ -1204,6 +1307,7 @@ def parse_pdf_report(report_path: Path) -> dict[str, Any]:
                         **{name: row[name] for name in ("requested_policy", "classification", "permission_basis", "preservation_reason", "processing_schema")},
                         "photo_dpi": photo_dpi,
                         "lossless_jpeg_requested": lossless_jpeg_requested == "true",
+                        **font_metadata,
                     }
                 )
     except Exception as exc:
@@ -1236,6 +1340,9 @@ def pdf_report_matches_inputs(
     preserve_patterns: list[str] | None = None,
     text_patterns: list[str] | None = None,
     text_scan_patterns: list[str] | None = None,
+    text_scan_bilevel_patterns: list[str] | None = None,
+    font_replace_patterns: list[str] | None = None,
+    font_family: str = "meiryo",
 ) -> bool:
     """Verify PDF report rows against current source and output bytes."""
 
@@ -1245,6 +1352,7 @@ def pdf_report_matches_inputs(
     if not isinstance(rows, list) or len(rows) != len(pdf_files):
         return False
     verified_outputs: list[tuple[Path, int, str]] = []
+    replacement_font_sha256: str | None = None
     try:
         input_root = input_dir.resolve(strict=True)
         expected_sources = {
@@ -1276,10 +1384,20 @@ def pdf_report_matches_inputs(
             if row.get("lossless_jpeg_requested") is not lossless_jpeg_requested:
                 return False
             if row["profile"] != _pdf_profile(relative, preset, photo_patterns or [],
-                                              preserve_patterns or [], text_patterns or [], text_scan_patterns or []):
+                                              preserve_patterns or [], text_patterns or [], text_scan_patterns or [],
+                                              text_scan_bilevel_patterns or [], font_replace_patterns or []):
                 return False
-            if str(row.get("processing_schema")) != "5" or row.get("requested_policy") != row["profile"]:
+            if str(row.get("processing_schema")) != "6" or row.get("requested_policy") != row["profile"]:
                 return False
+            if not _valid_pdf_font_metadata(row):
+                return False
+            if row["font_replacement_requested"]:
+                if row["replacement_font"] != {"yu-gothic": "Yu Gothic Regular", "meiryo": "Meiryo Regular"}.get(font_family):
+                    return False
+                digest = row["replacement_font_sha256"]
+                if replacement_font_sha256 is not None and replacement_font_sha256 != digest:
+                    return False
+                replacement_font_sha256 = digest
             classification = row.get("classification")
             basis = "automatic_text_only" if row["profile"] in {"standard", "compact"} else f"explicit_{row['profile']}"
             if row["status"] != "ERROR":
@@ -1290,7 +1408,7 @@ def pdf_report_matches_inputs(
                     return False
                 if row["profile"] == "preserve" and (not protected or row.get("preservation_reason") != "explicit_preserve"):
                     return False
-                expected_class = {"standard": "text", "compact": "text", "text": "text_table", "text_scan": "text_scan", "photo": "photo"}
+                expected_class = {"standard": "text", "compact": "text", "text": "text_table", "text_scan": "text_scan", "text_scan_bilevel": "text_scan", "photo": "photo", "font_replace": "font_replace"}
                 if not protected and classification != expected_class.get(row["profile"]):
                     return False
             expected_dpi = photo_dpi if row["profile"] == "photo" else None
@@ -1367,12 +1485,12 @@ def pdf_report_matches_inputs(
                 if output_size != source_size or output_sha256 != source_sha256:
                     return False
             elif status == "ADOPTED_LOSSLESS":
-                text_result = classification in {"text", "text_table", "text_scan"}
+                text_result = classification in {"text", "text_table", "text_scan", "font_replace"}
                 if output_size <= 0 or saved_bytes <= 0 or (not text_result and (saved_bytes < 16 * 1024 or saved_percent < 0.02)):
                     return False
             elif status == "ADOPTED_LOSSY":
                 min_saved_bytes = (64 if row["profile"] == "photo" else 256) * 1024
-                text_result = classification in {"text", "text_table", "text_scan"}
+                text_result = classification in {"text", "text_table", "text_scan", "font_replace"}
                 if output_size <= 0 or saved_bytes <= 0 or (not text_result and (saved_bytes < min_saved_bytes or saved_percent < 0.05)):
                     return False
             else:
@@ -1419,6 +1537,494 @@ def _parse_optional_video_float(
     if below_minimum or (maximum is not None and value > maximum):
         raise ValueError(f"video report {field} is outside its valid range")
     return value
+
+
+def _excel_changed_part_name(name: object) -> bool:
+    return (
+        isinstance(name, str)
+        and name.startswith("xl/media/")
+        and not any(part in {"", ".", ".."} for part in name.split("/"))
+        and "\\" not in name
+        and ":" not in name
+        and "%" not in name
+        and not any(ord(character) < 32 for character in name)
+        and name.lower().endswith((".jpg", ".jpeg", ".png"))
+    )
+
+
+def _excel_diagnostics_valid(row: dict[str, Any]) -> bool:
+    if row.get("recipe_version") != "grid2-pixel-jpeg-v2":
+        return False
+    if any(type(row.get(key)) is not bool for key in ("analysis_complete", "diagnostics_complete")):
+        return False
+    records = row.get("image_diagnostics")
+    total = row.get("images_total")
+    if not isinstance(records, list) or len(records) > 1000 or len(records) > (total or 0):
+        return False
+    if row["analysis_complete"] and total is None:
+        return False
+    if row["diagnostics_complete"] and (not row["analysis_complete"] or len(records) != total):
+        return False
+    seen: set[str] = set()
+    adopted: set[str] = set()
+    def dimensions(value):
+        return value is None or (isinstance(value, list) and len(value) == 2
+                                and all(type(n) is int and 0 < n <= 10**12 for n in value))
+    for record in records:
+        if not isinstance(record, dict) or set(record) != {
+            "part", "format", "size", "placements", "required_pixels", "geometry_basis", "reasons", "outcome"
+        }:
+            return False
+        name = record["part"]
+        if (not isinstance(name, str) or not name or name.startswith("/") or "\\" in name
+                or ":" in name or "%" in name or any(ord(c) < 32 for c in name)
+                or any(p in {"", ".", ".."} for p in name.split("/")) or name in seen):
+            return False
+        seen.add(name)
+        if (record["format"] not in {"JPEG", "PNG", "UNKNOWN"}
+                or not dimensions(record["size"]) or not dimensions(record["required_pixels"])
+                or type(record["placements"]) is not int or not 0 <= record["placements"] <= 1000000
+                or not isinstance(record["geometry_basis"], str)
+                or not re.fullmatch(r"unresolved|pixel_cap|(?:validated_anchor|grid_iso_calibri11|grid_gdi96_regular11:[0-9a-f]{64})(?:,(?:validated_anchor|grid_iso_calibri11|grid_gdi96_regular11:[0-9a-f]{64})){0,2}", record["geometry_basis"])
+                or record["outcome"] not in {"planned", "preserved", "adopted", "rejected"}
+                or not isinstance(record["reasons"], list) or len(record["reasons"]) > 16
+                or any(not isinstance(r, str) or not r or len(r) > 1024 for r in record["reasons"])):
+            return False
+        if (record["required_pixels"] is not None) != (record["geometry_basis"] != "unresolved"):
+            return False
+        if record["required_pixels"] is not None:
+            if (record["geometry_basis"] == "pixel_cap") != (row["max_side"] is not None):
+                return False
+            if row["max_side"] is not None:
+                size = record["size"]
+                if size is None:
+                    return False
+                longest = max(size)
+                expected = size if longest <= row["max_side"] else [max(1, (n * row["max_side"] + longest // 2) // longest) for n in size]
+                if record["required_pixels"] != expected:
+                    return False
+        if record["outcome"] in {"planned", "adopted"} and (not record["placements"] or record["required_pixels"] is None or record["size"] is None):
+            return False
+        if record["outcome"] == "adopted":
+            adopted.add(name)
+    if row.get("status") == "ADOPTED_LOSSY":
+        if not row["analysis_complete"] or not adopted.issubset(set(row.get("changed_parts", []))):
+            return False
+        if row["diagnostics_complete"] and adopted != set(row.get("changed_parts", [])):
+            return False
+    try:
+        return len(json.dumps(records, ensure_ascii=False, separators=(",", ":")).encode("utf-8")) <= 2 * 1024 * 1024
+    except (TypeError, ValueError, RecursionError):
+        return False
+
+
+@contextmanager
+def _excel_csv_limit():
+    previous = csv.field_size_limit(2 * 1024 * 1024)
+    try:
+        yield
+    finally:
+        csv.field_size_limit(previous)
+
+
+def _excel_json(value: str):
+    if not isinstance(value, str) or len(value.encode("utf-8")) > 2 * 1024 * 1024:
+        raise ValueError("Excel JSON field exceeds limit")
+    depth, quoted, escape = 0, False, False
+    for char in value:
+        if escape:
+            escape = False
+        elif quoted and char == "\\":
+            escape = True
+        elif char == '"':
+            quoted = not quoted
+        elif not quoted:
+            depth += (char in "[{") - (char in "]}")
+            if depth > 8:
+                raise ValueError("Excel JSON nesting exceeds limit")
+    def unique(pairs):
+        result = {}
+        for key, item in pairs:
+            if key in result:
+                raise ValueError("Duplicate Excel JSON key")
+            result[key] = item
+        return result
+    return json.loads(value, object_pairs_hook=unique)
+
+
+def _excel_row_is_valid(row: dict[str, Any]) -> bool:
+    if set(row) != EXCEL_REPORT_COLUMNS or row.get("schema_version") != "3":
+        return False
+    for name in ("source_path", "relative_path", "output_path", "reason"):
+        if not isinstance(row.get(name), str) or not row[name].strip():
+            return False
+    for name in ("source_size", "images_changed"):
+        if type(row.get(name)) is not int or row[name] < 0:
+            return False
+    if row["images_total"] is not None and (type(row["images_total"]) is not int or row["images_total"] < 0):
+        return False
+    if row["max_side"] is None:
+        if type(row["dpi"]) is not int or not 150 <= row["dpi"] <= 300:
+            return False
+    elif row["dpi"] is not None or type(row["max_side"]) is not int or not 100 <= row["max_side"] <= 10000:
+        return False
+    if type(row["jpeg_quality"]) is not int or not 40 <= row["jpeg_quality"] <= 95:
+        return False
+    if row["images_changed"] > (row["images_total"] or 0):
+        return False
+    parts = row.get("changed_parts")
+    if (not isinstance(parts, list) or any(not _excel_changed_part_name(p) for p in parts)
+            or len(parts) != len(set(parts)) or row["images_changed"] != len(parts)):
+        return False
+    if not isinstance(row.get("source_sha256"), str) or not re.fullmatch(r"[0-9a-f]{64}", row["source_sha256"]):
+        return False
+    if row.get("status") not in EXCEL_STATUSES:
+        return False
+    if not _excel_diagnostics_valid(row):
+        return False
+    if row["status"] in {"DRY_RUN", "DRY_RUN_PRESERVED", "ERROR"}:
+        return row.get("output_size") is None and row.get("output_sha256") == "" and not parts
+    if (type(row.get("output_size")) is not int or row["output_size"] < 0
+            or not isinstance(row.get("output_sha256"), str)
+            or not re.fullmatch(r"[0-9a-f]{64}", row["output_sha256"])):
+        return False
+    if row["status"] == "PRESERVED_ORIGINAL":
+        return (not parts and row["output_size"] == row["source_size"]
+                and row["output_sha256"] == row["source_sha256"])
+    return bool(parts) and 0 < row["output_size"] < row["source_size"]
+
+
+def _excel_report_totals(rows: list[dict[str, Any]]) -> dict[str, Any]:
+    original = sum(row["source_size"] for row in rows)
+    completed = (sum(row["output_size"] for row in rows)
+                 if all(row["output_size"] is not None for row in rows) else None)
+    return {"count": len(rows), "errors": sum(row["status"] == "ERROR" for row in rows),
+            "orig_size": original, "new_size": completed,
+            "saved": original - completed if completed is not None else None, "rows": rows}
+
+
+def parse_excel_report(report_path: Path) -> dict[str, Any]:
+    """Parse the versioned Excel CSV, rejecting incomplete and unstable reports."""
+    try:
+        signature = _file_signature(report_path)
+        if (signature is None or signature[-2] > 32 * 1024 * 1024
+                or not _is_safe_result_file(report_path, [])
+                or _has_link_component(Path(report_path.anchor), report_path)):
+            return {}
+        rows: list[dict[str, Any]] = []
+        with _excel_csv_limit(), report_path.open("r", encoding="utf-8-sig", newline="") as stream:
+            reader = csv.DictReader(stream)
+            if (reader.fieldnames is None or set(reader.fieldnames) != EXCEL_REPORT_COLUMNS
+                    or len(reader.fieldnames) != len(EXCEL_REPORT_COLUMNS)):
+                raise ValueError("Excel report columns are missing, duplicated or unknown")
+            for raw in reader:
+                if set(raw) != EXCEL_REPORT_COLUMNS:
+                    raise ValueError("Excel report row has unexpected columns")
+                if any(not isinstance(value, str) or len(value.encode("utf-8")) > 2 * 1024 * 1024 for value in raw.values()):
+                    raise ValueError("Excel report field exceeds limit")
+                row: dict[str, Any] = dict(raw)
+                for name in ("source_size", "output_size", "dpi", "max_side", "jpeg_quality", "images_total", "images_changed"):
+                    value = raw[name]
+                    if name in {"output_size", "images_total", "dpi", "max_side"} and value == "":
+                        row[name] = None
+                    elif not isinstance(value, str) or not re.fullmatch(r"0|[1-9][0-9]*", value):
+                        raise ValueError(f"Excel report {name} must be a nonnegative integer")
+                    else:
+                        row[name] = int(value)
+                row["changed_parts"] = _excel_json(raw["changed_parts"])
+                row["image_diagnostics"] = _excel_json(raw["image_diagnostics"])
+                for name in ("analysis_complete", "diagnostics_complete"):
+                    if raw[name] not in {"true", "false"}:
+                        raise ValueError("Excel report Boolean must be true/false")
+                    row[name] = raw[name] == "true"
+                if not _excel_row_is_valid(row):
+                    raise ValueError("Excel report row is inconsistent")
+                rows.append(row)
+        if signature != _file_signature(report_path) or not _is_safe_result_file(report_path, []):
+            raise OSError("Excel report changed while reading")
+        return _excel_report_totals(rows)
+    except (OSError, RuntimeError, ValueError, TypeError, KeyError, csv.Error, RecursionError) as exc:
+        logging.warning("Failed to parse Excel report %s: %s", report_path, exc)
+        return {}
+
+
+def _excel_preflight_directory(path: Path) -> None:
+    """Bound central-directory bytes and actual entry count before ZipInfo allocation."""
+    with path.open("rb") as stream:
+        stream.seek(0, os.SEEK_END)
+        size = stream.tell()
+        # Include the optional ZIP64 locator immediately before the end record.
+        tail_size = min(size, 65535 + 22 + 20)
+        stream.seek(size - tail_size)
+        tail = stream.read(tail_size)
+        last_signature = position = tail.rfind(b"PK\x05\x06")
+        while position >= 0:
+            if (len(tail) - position >= 22
+                    and position + 22 + struct.unpack_from("<H", tail, position + 20)[0] == len(tail)):
+                break
+            position = tail.rfind(b"PK\x05\x06", 0, position)
+        if position < 0:
+            raise ValueError("missing Excel ZIP end record")
+        if position != last_signature:
+            raise ValueError("unsupported ambiguous Excel ZIP comment/end record")
+        (_signature, disk, directory_disk, disk_entries, total_entries,
+         directory_size, directory_offset, comment_size) = struct.unpack_from("<4s4H2LH", tail, position)
+        if position + 22 + comment_size != len(tail):
+            raise ValueError("invalid Excel ZIP comment/end record")
+        if (disk or directory_disk or disk_entries != total_entries
+                or total_entries == 65535 or directory_size == 0xFFFFFFFF or directory_offset == 0xFFFFFFFF
+                or (position >= 20 and tail[position - 20:position - 16] == b"PK\x06\x07")):
+            raise ValueError("unsupported Excel multi-disk or ZIP64 directory")
+        if total_entries > 4096 or directory_size > 4 * 1024 * 1024:
+            raise ValueError("Excel ZIP central-directory budget exceeded")
+        if directory_offset + directory_size != size - tail_size + position:
+            raise ValueError("unsupported Excel ZIP directory layout")
+        stream.seek(directory_offset)
+        directory = stream.read(directory_size)
+        if len(directory) != directory_size:
+            raise ValueError("truncated Excel ZIP directory")
+    cursor = 0
+    entries = 0
+    while cursor < len(directory):
+        if len(directory) - cursor < 46 or directory[cursor:cursor + 4] != b"PK\x01\x02":
+            raise ValueError("invalid Excel ZIP central-directory record")
+        name_size, extra_size, entry_comment_size = struct.unpack_from("<3H", directory, cursor + 28)
+        cursor += 46 + name_size + extra_size + entry_comment_size
+        entries += 1
+        if cursor > len(directory) or entries > total_entries or entries > 4096:
+            raise ValueError("Excel ZIP central-directory entry count/size mismatch")
+    if entries != total_entries:
+        raise ValueError("Excel ZIP central-directory entry count mismatch")
+
+
+def _excel_zip_index(archive: zipfile.ZipFile, *, inventory_only: bool = False) -> dict[str, zipfile.ZipInfo]:
+    infos = archive.infolist()
+    if len(infos) > 4096 or sum(info.file_size for info in infos) > 256 * 1024 * 1024:
+        raise ValueError("Excel ZIP expansion budget exceeded")
+    indexed: dict[str, zipfile.ZipInfo] = {}
+    folded: set[str] = set()
+    for info in infos:
+        name = info.filename
+        key = name.rstrip("/").casefold()
+        if (info.orig_filename != name or not name or name.startswith("/") or "\\" in name or ":" in name or "%" in name
+                or any(ord(character) < 32 for character in name)
+                or any(part in {"", ".", ".."} for part in name.rstrip("/").split("/"))
+                or key in folded or info.flag_bits & 1
+                or info.file_size > 64 * 1024 * 1024
+                or (not inventory_only and name.lower().endswith((".xml", ".rels")) and info.file_size > 8 * 1024 * 1024)
+                or info.compress_type not in {zipfile.ZIP_STORED, zipfile.ZIP_DEFLATED}
+                or stat.S_ISLNK(info.external_attr >> 16)):
+            raise ValueError("Unsafe or unsupported Excel ZIP entry")
+        folded.add(key)
+        indexed[name] = info
+    return indexed
+
+
+def _excel_image_dimensions(data: bytes) -> tuple[str, int, int]:
+    """Read bounded PNG/JPEG headers independently of the image processor."""
+    if data.startswith(b"\x89PNG\r\n\x1a\n") and len(data) >= 33 and data[12:16] == b"IHDR":
+        width, height = int.from_bytes(data[16:20], "big"), int.from_bytes(data[20:24], "big")
+        kind = "PNG"
+    elif data.startswith(b"\xff\xd8"):
+        position = 2
+        while position < len(data):
+            if data[position] != 0xFF:
+                raise ValueError("Invalid JPEG marker")
+            while position < len(data) and data[position] == 0xFF:
+                position += 1
+            if position >= len(data):
+                raise ValueError("Truncated JPEG marker")
+            marker = data[position]
+            position += 1
+            if marker in {0x01, *range(0xD0, 0xD8)}:
+                continue
+            if marker in {0xD8, 0xD9, 0xDA} or position + 2 > len(data):
+                raise ValueError("JPEG frame header missing")
+            size = int.from_bytes(data[position:position + 2], "big")
+            if size < 2 or position + size > len(data):
+                raise ValueError("Invalid JPEG segment size")
+            if marker in {0xC0, 0xC1, 0xC2}:
+                if size < 8 or data[position + 2] != 8:
+                    raise ValueError("Unsupported JPEG precision")
+                height = int.from_bytes(data[position + 3:position + 5], "big")
+                width = int.from_bytes(data[position + 5:position + 7], "big")
+                kind = "JPEG"
+                break
+            position += size
+        else:
+            raise ValueError("JPEG frame header missing")
+    else:
+        raise ValueError("Changed Excel part is not a PNG or JPEG")
+    if not 0 < width * height <= 32_000_000 or width <= 0 or height <= 0:
+        raise ValueError("Excel image dimensions exceed budget")
+    return kind, width, height
+
+
+def _excel_image_inventory(archive: zipfile.ZipFile, entries: dict[str, zipfile.ZipInfo]) -> set[str]:
+    info = entries.get("[Content_Types].xml")
+    if info is None or info.file_size > 8 * 1024 * 1024:
+        raise ValueError("Missing or oversized Excel content types")
+    raw = archive.read(info)
+    text = raw.decode("utf-16" if raw.startswith((b"\xff\xfe", b"\xfe\xff")) else "utf-8-sig")
+    if "\x00" in text or re.search(r"<!\s*(?:DOCTYPE|ENTITY)\b", text, re.I):
+        raise ValueError("Unsafe Excel content types")
+    root = ET.fromstring(text)
+    ns = "{http://schemas.openxmlformats.org/package/2006/content-types}"
+    if root.tag != ns + "Types":
+        raise ValueError("Invalid Excel content types")
+    defaults, overrides = {}, {}
+    for item in root:
+        kind = item.get("ContentType", "")
+        if not kind:
+            raise ValueError("Missing Excel content type")
+        if item.tag == ns + "Default":
+            key = item.get("Extension", "").lower()
+            if not key or "/" in key or key in defaults:
+                raise ValueError("Invalid Excel default content type")
+            defaults[key] = kind
+        elif item.tag == ns + "Override":
+            name = item.get("PartName", "")
+            key = unquote(name[1:], errors="strict")
+            if not name.startswith("/") or key not in entries or key in overrides:
+                raise ValueError("Invalid Excel override content type")
+            overrides[key] = kind
+        else:
+            raise ValueError("Unknown Excel content type")
+    images = set()
+    for name in entries:
+        if name.endswith("/") or name == "[Content_Types].xml":
+            continue
+        kind = overrides.get(name, defaults.get(name.rsplit(".", 1)[-1].lower(), ""))
+        if not kind:
+            raise ValueError("Excel part has no content type")
+        if kind.startswith("image/"):
+            images.add(name)
+    return images
+
+
+def _excel_adopted_package_matches(source: Path, output: Path, changed_parts: list[str], *, max_side: int | None = None) -> bool:
+    """Only declared downsizing or requested same-size JPEG recompression may differ."""
+    if max(source.stat().st_size, output.stat().st_size) > 128 * 1024 * 1024:
+        return False
+    _excel_preflight_directory(source)
+    _excel_preflight_directory(output)
+    changed: set[str] = set()
+    pixels = 0
+    deadline = time.monotonic() + 300
+    with zipfile.ZipFile(source) as original, zipfile.ZipFile(output) as completed:
+        source_entries, output_entries = _excel_zip_index(original), _excel_zip_index(completed)
+        if source_entries.keys() != output_entries.keys() or original.comment != completed.comment:
+            return False
+        inventory = _excel_image_inventory(original, source_entries)
+        if len(inventory) > 1000 or not set(changed_parts).issubset(inventory):
+            return False
+        for name, source_info in source_entries.items():
+            if time.monotonic() > deadline:
+                return False
+            output_info = output_entries[name]
+            with original.open(source_info) as stream:
+                before = stream.read(source_info.file_size + 1)
+            with completed.open(output_info) as stream:
+                after = stream.read(output_info.file_size + 1)
+            if len(before) != source_info.file_size or len(after) != output_info.file_size:
+                return False
+            if before == after:
+                continue
+            if name not in changed_parts or not _excel_changed_part_name(name):
+                return False
+            before_type, before_width, before_height = _excel_image_dimensions(before)
+            after_type, after_width, after_height = _excel_image_dimensions(after)
+            pixels += before_width * before_height + after_width * after_height
+            expected_type = "PNG" if name.lower().endswith(".png") else "JPEG"
+            if (before_type != expected_type or before_type != after_type or pixels > 200_000_000
+                    or after_width > before_width or after_height > before_height
+                    or (len(after) >= len(before))
+                    or ((before_width, before_height) == (after_width, after_height)
+                        and not (max_side is not None and after_type == "JPEG"))):
+                return False
+            if max_side is not None:
+                longest = max(before_width, before_height)
+                expected = ((before_width, before_height) if longest <= max_side else
+                            tuple(max(1, (n * max_side + longest // 2) // longest) for n in (before_width, before_height)))
+                if (after_width, after_height) != expected:
+                    return False
+            changed.add(name)
+    return changed == set(changed_parts) and time.monotonic() <= deadline
+
+
+def excel_report_matches_inputs(
+    report_result: dict[str, Any], excel_files: list[Path], *, input_dir: Path,
+    output_dir: Path, dpi: int | None, dry_run: bool, protected_sources: list[Path] | None = None,
+    max_side: int | None = None, jpeg_quality: int = 85,
+) -> bool:
+    """Bind reports to the exact current selected sources and validated ZIP outputs."""
+    try:
+        rows = report_result.get("rows")
+        if not isinstance(rows, list) or len(rows) != len(excel_files):
+            return False
+        if any(not isinstance(row, dict) or not _excel_row_is_valid(row) for row in rows):
+            return False
+        totals = _excel_report_totals(rows)
+        if any(report_result.get(key) != totals[key] for key in totals if key != "rows"):
+            return False
+        input_root, output_root = input_dir.resolve(strict=True), output_dir.resolve(strict=False)
+        expected = {str(path.resolve(strict=True)).casefold(): path.resolve(strict=True) for path in excel_files}
+        if len(expected) != len(excel_files):
+            return False
+        observed: set[str] = set()
+        signatures: list[tuple[Path, tuple[int, int, int, int, int, int]]] = []
+        protected = protected_sources if protected_sources is not None else excel_files
+        for row in rows:
+            source = expected.get(row["source_path"].casefold())
+            if (source is None or str(source).casefold() in observed or row["dpi"] != dpi
+                    or row["max_side"] != max_side or row["jpeg_quality"] != jpeg_quality):
+                return False
+            observed.add(str(source).casefold())
+            relative = source.relative_to(input_root)
+            output = output_root / relative
+            if (row["relative_path"] != relative.as_posix()
+                    or row["output_path"].casefold() != str(output).casefold()
+                    or source.suffix.casefold() != ".xlsx" or source.name.startswith("~$")
+                    or _has_link_component(input_root, source)
+                    or _has_link_component(output_root, output)):
+                return False
+            source_signature = _file_signature(source)
+            if source_signature is None or _stable_file_size_and_sha256(source) != (row["source_size"], row["source_sha256"]):
+                return False
+            signatures.append((source, source_signature))
+            if row["status"] == "ADOPTED_LOSSY":
+                if not _is_safe_result_file(output, protected):
+                    return False
+                _excel_preflight_directory(source)
+                _excel_preflight_directory(output)
+            if row["images_total"] is not None:
+                if source_signature[-2] > 128 * 1024 * 1024:
+                    return False
+                _excel_preflight_directory(source)
+                with zipfile.ZipFile(source) as archive:
+                    inventory = _excel_image_inventory(archive, _excel_zip_index(archive, inventory_only=True))
+                if len(inventory) != row["images_total"] or not {r["part"] for r in row["image_diagnostics"]}.issubset(inventory):
+                    return False
+            status = row["status"]
+            if status == "ERROR":
+                continue
+            if dry_run:
+                if status not in {"DRY_RUN", "DRY_RUN_PRESERVED"}:
+                    return False
+                continue
+            if status not in {"ADOPTED_LOSSY", "PRESERVED_ORIGINAL"} or not _is_safe_result_file(output, protected):
+                return False
+            output_signature = _file_signature(output)
+            if output_signature is None or _stable_file_size_and_sha256(output) != (row["output_size"], row["output_sha256"]):
+                return False
+            signatures.append((output, output_signature))
+            if status == "ADOPTED_LOSSY" and not _excel_adopted_package_matches(source, output, row["changed_parts"], max_side=max_side):
+                return False
+            if not _is_safe_result_file(output, protected):
+                return False
+        return observed == set(expected) and all(_file_signature(path) == signature for path, signature in signatures)
+    except (OSError, RuntimeError, ValueError, TypeError, KeyError, ET.ParseError, zipfile.BadZipFile, NotImplementedError):
+        return False
 
 
 def parse_video_report(report_path: Path) -> dict[str, Any]:
@@ -1520,6 +2126,8 @@ def parse_video_report(report_path: Path) -> dict[str, Any]:
                     minimum_inclusive=True,
                 )
                 ffmpeg_version = row.get("ffmpeg_version") or ""
+                if any(row.get(key) not in {"true", "false"} for key in ("safe", "remove_audio")):
+                    raise ValueError("video report policy flags are missing or invalid")
                 rows.append(
                     {
                         "source_path": source_path,
@@ -1543,6 +2151,8 @@ def parse_video_report(report_path: Path) -> dict[str, Any]:
                         "vmaf_mean": vmaf_mean,
                         "vmaf_p5": vmaf_p5,
                         "ffmpeg_version": ffmpeg_version,
+                        "safe": row["safe"] == "true",
+                        "remove_audio": row["remove_audio"] == "true",
                     }
                 )
                 count += 1
@@ -1641,6 +2251,8 @@ def video_report_matches_inputs(
     output_dir: Path,
     preset: str,
     dry_run: bool,
+    safe: bool = False,
+    remove_audio: bool = False,
 ) -> bool:
     """Validate every reported source, planned output, size, and content identity."""
 
@@ -1669,6 +2281,13 @@ def video_report_matches_inputs(
         for row in rows:
             if not isinstance(row, dict):
                 return False
+            if row.get("safe") is not safe or row.get("remove_audio") is not remove_audio:
+                return False
+            if remove_audio and not dry_run and row.get("status") != "ERROR":
+                if row.get("audio_codec") or row.get("status") not in {"ADOPTED", "SKIPPED_COMPLETE"}:
+                    return False
+                if row.get("status") == "SKIPPED_COMPLETE" and row.get("reason") != "reused ADOPTED":
+                    return False
             if not _video_metadata_ranges_are_valid(row):
                 return False
             source_key = str(Path(row["source_path"]).resolve(strict=False)).casefold()
@@ -2150,7 +2769,7 @@ def parse_image_summary(lines: list[str]) -> dict[str, Any] | None:
 def build_parser() -> argparse.ArgumentParser:
     parser = _ArgumentParser(
         prog="karufile",
-        description="PDF・画像・対応動画を、原本を変更せず別フォルダーへ軽量化する",
+        description="PDF・画像・明示選択Excel・対応動画を、原本を変更せず別フォルダーへ軽量化する",
     )
     parser.add_argument("-i", "--input", required=True, help="入力ディレクトリ")
     parser.add_argument(
@@ -2175,9 +2794,13 @@ def build_parser() -> argparse.ArgumentParser:
         default="standard",
         help="圧縮プリセット（デフォルト standard）",
     )
+    parser.add_argument("--pdf-font-family", choices=("yu-gothic", "meiryo"), default=None,
+                        help="置換字体（既定meiryo、--pdf-font-replace-pattern必須）")
     for name, explanation in (("preserve", "原本保護（すべての許可より優先）"),
                               ("text", "文章と単純な罫線表を許可"),
-                              ("text-scan", "文章スキャンの300 DPIグレーJPEG候補を許可")):
+                              ("text-scan", "文章スキャンの300 DPIグレーJPEG候補を許可"),
+                              ("text-scan-bilevel", "白黒書類スキャンに二値化候補を追加（色・階調が失われる）"),
+                              ("font-replace", "日本語・英語をWindowsのメイリオへ統一する候補を許可（字形・検索/コピーの空白が変わる場合あり）")):
         parser.add_argument(f"--pdf-{name}-pattern", action="append", type=_pdf_photo_pattern,
                             default=[], metavar="PATTERN", help=f"{explanation}。入力相対glob、反復可")
     parser.add_argument(
@@ -2206,6 +2829,20 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--pdf-lossless-jpeg", action="store_true", help="jpegtran 3.2.0のJPEG可逆候補を追加（既定OFF、手動準備）")
     parser.add_argument("--pdf-jpegtran-path", help="PDFで使うjpegtran実行ファイル。指定だけでは有効化しない")
     parser.add_argument(
+        "--excel-pattern", action="append", type=_pdf_photo_pattern, default=[], metavar="PATTERN",
+        help="指定xlsxの貼り付け画像の縮小を許可（画質劣化あり）。入力相対glob、反復可、既定OFF",
+    )
+    parser.add_argument(
+        "--excel-dpi", type=_pdf_photo_dpi, metavar="DPI",
+        help="Excel画像を固定pxの代わりに配置DPIで縮小（150〜300、--excel-pattern必須）",
+    )
+    parser.add_argument("--excel-max-side", type=_excel_max_side, metavar="PX",
+                        help="Excel画像の長辺上限（100〜10000、既定800、--excel-dpiと排他）")
+    parser.add_argument("--excel-jpeg-quality", type=_excel_jpeg_quality, metavar="QUALITY",
+                        help="Excel JPEG品質（40〜95、既定72、DPI指定時85）")
+    parser.add_argument("--video-safe", action="store_true", help="動画のprogressive/SAR/CFR情報を厳格判定（compactのみ）")
+    parser.add_argument("--video-remove-audio", action="store_true", help="動画を音声除去して圧縮（compactのみ、有音コピーにfallbackしない）")
+    parser.add_argument(
         "--ffmpeg-path",
         help="compact動画で使うffmpeg実行ファイル（未指定時はPATH）",
     )
@@ -2215,7 +2852,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "-n", "--dry-run", action="store_true",
-        help="完成PDF・画像・動画を作らず判定を確認（状態・レポートは更新される場合あり）",
+        help="完成PDF・画像・Excel・動画を作らず判定を確認（状態・レポートは更新される場合あり）",
     )
     parser.add_argument("-v", "--verbose", action="store_true", help="詳細ログ")
     return parser
@@ -2223,7 +2860,12 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main(argv: list[str] | None = None) -> int:
     _configure_console_output()
-    args = build_parser().parse_args(argv)
+    parser = build_parser()
+    args = parser.parse_args(argv)
+    if args.pdf_font_family is not None and not args.pdf_font_replace_pattern:
+        parser.error("--pdf-font-family requires --pdf-font-replace-pattern")
+    if args.preset != "compact" and (args.video_safe or args.video_remove_audio):
+        parser.error("--video-safe and --video-remove-audio require --preset compact")
 
     setup_logging(args.verbose)
 
@@ -2237,22 +2879,25 @@ def main(argv: list[str] | None = None) -> int:
         pdf_files = collect_files(input_dir, PDF_EXTENSIONS)
         for path in pdf_files:
             _pdf_profile(path.relative_to(input_dir), args.preset, args.pdf_photo_pattern,
-                         args.pdf_preserve_pattern, args.pdf_text_pattern, args.pdf_text_scan_pattern)
+                         args.pdf_preserve_pattern, args.pdf_text_pattern, args.pdf_text_scan_pattern,
+                         args.pdf_text_scan_bilevel_pattern, args.pdf_font_replace_pattern)
         image_files = collect_files(input_dir, IMAGE_EXTENSIONS)
+        excel_files = collect_excel_files(input_dir, args.excel_pattern)
         video_files = (
             collect_files(input_dir, VIDEO_EXTENSIONS)
             if args.preset == "compact"
             else []
         )
         validate_planned_destinations(
-            input_dir, output_dir, pdf_files, image_files, video_files
+            input_dir, output_dir, pdf_files, image_files, video_files, excel_files
         )
         validate_derived_write_paths(
             input_dir, output_dir, pdf_files, image_files, video_files,
             pdf_preview=args.pdf_preview,
+            excel_files=excel_files,
         )
         source_baseline = _capture_source_baseline(
-            [*pdf_files, *image_files, *video_files]
+            [*pdf_files, *image_files, *video_files, *excel_files]
         )
     except (OSError, RuntimeError, ValueError) as exc:
         logging.error("%s", exc)
@@ -2262,11 +2907,12 @@ def main(argv: list[str] | None = None) -> int:
         try:
             output_dir.mkdir(parents=True, exist_ok=True)
             validate_planned_destinations(
-                input_dir, output_dir, pdf_files, image_files, video_files
+                input_dir, output_dir, pdf_files, image_files, video_files, excel_files
             )
             validate_derived_write_paths(
                 input_dir, output_dir, pdf_files, image_files, video_files,
                 pdf_preview=args.pdf_preview,
+                excel_files=excel_files,
             )
         except OSError as exc:
             logging.error("出力ディレクトリを作成できません: %s", exc)
@@ -2283,6 +2929,7 @@ def main(argv: list[str] | None = None) -> int:
     print()
     print(f"PDF    : {len(pdf_files)}")
     print(f"Images : {len(image_files)}")
+    print(f"Excel  : {len(excel_files)}")
     print(f"Videos : {len(video_files)}")
     print()
     print("Source files : keep")
@@ -2314,6 +2961,10 @@ def main(argv: list[str] | None = None) -> int:
         else f"{output_dir}.video-report.csv"
     )
     video_report_before = _file_signature(video_report_path)
+    excel_report_path = Path(
+        f"{output_dir}.excel-report.dry-run.csv" if args.dry_run else f"{output_dir}.excel-report.csv"
+    )
+    excel_report_before = _file_signature(excel_report_path) if excel_files else None
 
     # 1. PDF 軽量化
     pdf_exit = 0
@@ -2327,8 +2978,10 @@ def main(argv: list[str] | None = None) -> int:
             "--preset", args.preset,
         ]
         pdf_args.extend(f"--photo-pattern={pattern}" for pattern in args.pdf_photo_pattern)
-        for name in ("preserve", "text", "text-scan"):
+        for name in ("preserve", "text", "text-scan", "text-scan-bilevel", "font-replace"):
             pdf_args.extend(f"--{name}-pattern={pattern}" for pattern in getattr(args, f"pdf_{name.replace('-', '_')}_pattern"))
+        if args.pdf_font_family is not None:
+            pdf_args.extend(["--font-family", args.pdf_font_family])
         if args.pdf_photo_pattern:
             pdf_args.extend(["--photo-dpi", str(args.pdf_photo_dpi)])
         if args.pdf_preview:
@@ -2359,6 +3012,9 @@ def main(argv: list[str] | None = None) -> int:
                 preserve_patterns=args.pdf_preserve_pattern,
                 text_patterns=args.pdf_text_pattern,
                 text_scan_patterns=args.pdf_text_scan_pattern,
+                text_scan_bilevel_patterns=args.pdf_text_scan_bilevel_pattern,
+                font_replace_patterns=args.pdf_font_replace_pattern,
+                font_family=args.pdf_font_family or "meiryo",
                 lossless_jpeg_requested=args.pdf_lossless_jpeg,
                 photo_dpi=args.pdf_photo_dpi,
             ):
@@ -2446,7 +3102,39 @@ def main(argv: list[str] | None = None) -> int:
         logging.error("Image manifest was not updated by this run: %s", image_manifest_path)
         image_exit = image_exit or 1
 
-    # 3. compact動画軽量化。standardでは既存v1互換のため動画を探索・起動しない。
+    # 3. 明示選択したxlsxのみ。CSVとZIP partを独立に検証して集計する。
+    excel_exit = 0
+    excel_result = _empty_result()
+    excel_report_updated = False
+    if excel_files:
+        excel_args = [
+            "excel-shrink", "run", "--input", str(input_dir), "--output", str(output_dir),
+            *( ["--max-side", str(args.excel_max_side)] if args.excel_max_side is not None else ["--dpi", str(args.excel_dpi)] ),
+            "--jpeg-quality", str(args.excel_jpeg_quality),
+            *(f"--pattern={pattern}" for pattern in args.excel_pattern),
+        ]
+        if args.dry_run:
+            excel_args.append("--dry-run")
+        excel_exit, _excel_lines, _excel_elapsed = run_command(
+            "excel-shrink", EXCEL_SHRINK_DIR, excel_args
+        )
+        excel_report_updated = _was_updated(excel_report_path, excel_report_before)
+        parsed_excel = parse_excel_report(excel_report_path) if excel_report_updated else {}
+        if parsed_excel and excel_report_matches_inputs(
+            parsed_excel, excel_files, input_dir=input_dir, output_dir=output_dir,
+            dpi=args.excel_dpi, dry_run=args.dry_run,
+            max_side=args.excel_max_side, jpeg_quality=args.excel_jpeg_quality,
+            protected_sources=[*pdf_files, *image_files, *video_files, *excel_files],
+        ):
+            excel_result = parsed_excel
+            if parsed_excel.get("errors", 0) > 0:
+                excel_exit = excel_exit or 1
+        else:
+            logging.error("Excel report is missing, stale, unsafe, or inconsistent: %s", excel_report_path)
+            excel_result = _unavailable_result()
+            excel_exit = excel_exit or 1
+
+    # 4. compact動画軽量化。standardでは既存v1互換のため動画を探索・起動しない。
     video_exit = 0
     video_result = _empty_result()
     video_report_updated = False
@@ -2460,6 +3148,10 @@ def main(argv: list[str] | None = None) -> int:
         ]
         if args.dry_run:
             video_args.append("--dry-run")
+        if args.video_safe:
+            video_args.append("--safe")
+        if args.video_remove_audio:
+            video_args.append("--remove-audio")
         if args.ffmpeg_path:
             video_args.extend(["--ffmpeg-path", args.ffmpeg_path])
         if args.ffprobe_path:
@@ -2480,6 +3172,8 @@ def main(argv: list[str] | None = None) -> int:
                 output_dir=output_dir,
                 preset=args.preset,
                 dry_run=args.dry_run,
+                safe=args.video_safe,
+                remove_audio=args.video_remove_audio,
             ):
                 video_result = parsed_video
                 if parsed_video.get("errors", 0) > 0:
@@ -2496,7 +3190,7 @@ def main(argv: list[str] | None = None) -> int:
             video_result = _unavailable_result()
             video_exit = video_exit or 1
 
-    # 4. 結果集計。画像はstdoutではなく検証済みmanifestのexact totalsを使う。
+    # 5. 結果集計。stdoutではなく検証済みreport/manifestのexact totalsを使う。
     source_integrity_ok = _source_baseline_matches(source_baseline)
     source_exit = 0
     if not source_integrity_ok:
@@ -2505,6 +3199,7 @@ def main(argv: list[str] | None = None) -> int:
         pdf_result = _unavailable_result()
         image_result = _unavailable_result()
         video_result = _unavailable_result()
+        excel_result = _unavailable_result()
     elapsed = time.perf_counter() - start
 
     # 5. 統合サマリー
@@ -2519,11 +3214,14 @@ def main(argv: list[str] | None = None) -> int:
     video_orig = video_result.get("orig_size", 0)
     video_new = video_result.get("new_size", 0)
     video_errors = video_result.get("errors", 0)
+    excel_orig = excel_result.get("orig_size", 0)
+    excel_new = excel_result.get("new_size", 0)
+    excel_errors = excel_result.get("errors", 0)
 
-    original_known = all(isinstance(value, int) for value in (pdf_orig, img_orig, video_orig))
-    output_known = all(isinstance(value, int) for value in (pdf_new, img_new, video_new))
-    total_orig = pdf_orig + img_orig + video_orig if original_known else None
-    total_new = pdf_new + img_new + video_new if output_known else None
+    original_known = all(isinstance(value, int) for value in (pdf_orig, img_orig, video_orig, excel_orig))
+    output_known = all(isinstance(value, int) for value in (pdf_new, img_new, video_new, excel_new))
+    total_orig = pdf_orig + img_orig + video_orig + excel_orig if original_known else None
+    total_new = pdf_new + img_new + video_new + excel_new if output_known else None
     totals_known = total_orig is not None and total_new is not None
     total_saved = total_orig - total_new if totals_known else None
     reduction = (
@@ -2537,6 +3235,7 @@ def main(argv: list[str] | None = None) -> int:
     print()
     print(f"PDF errors   : {pdf_errors if pdf_errors is not None else 'unknown'}")
     print(f"Image errors : {img_errors if img_errors is not None else 'unknown'}")
+    print(f"Excel errors : {excel_errors if excel_errors is not None else 'unknown'}")
     print(f"Video errors : {video_errors if video_errors is not None else 'unknown'}")
     print()
     if args.dry_run:
@@ -2561,6 +3260,9 @@ def main(argv: list[str] | None = None) -> int:
         print(image_error_report)
     else:
         print(f"{image_error_report} (not updated this run)")
+    if excel_files:
+        print("Excel report:")
+        print(excel_report_path if excel_report_updated else f"{excel_report_path} (not updated this run)")
     if video_files:
         print("Video report:")
         if video_report_updated:
@@ -2572,11 +3274,12 @@ def main(argv: list[str] | None = None) -> int:
         print(f"PDF preview: {pdf_preview_index}")
 
     if args.dry_run:
-        print("\n[DRY-RUN] PDF・画像・動画出力は作成しません。状態とレポートは更新される場合があります。")
+        print("\n[DRY-RUN] PDF・画像・Excel・動画出力は作成しません。状態とレポートは更新される場合があります。")
 
     return 0 if (
         pdf_exit == 0
         and image_exit == 0
+        and excel_exit == 0
         and video_exit == 0
         and source_exit == 0
     ) else 1

@@ -1,0 +1,188 @@
+{
+  "status": "REVIEWED_SELECTED_REGIONS_NO_OBVIOUS_LAYOUT_FAILURE",
+  "reviewed_at": "2026-09-10T09:04:44.201091+09:00",
+  "reviewer": "Codex independent visual review agent",
+  "source": {
+    "path": "C:\\Users\\tn\\Downloads\\群馬県建設工事必携（R5年版）_軽量化\\font-replacement-cli-pilot\\input\\Ⅱ-7_群馬県土木工事写真管理要領（R7.10改定）【最新版】.pdf",
+    "bytes": 7436386,
+    "sha256": "c30a37d01d88358956753bb206ba3aa005be8644a9a52446468d29b722e878f8"
+  },
+  "candidate": {
+    "path": "C:\\Users\\tn\\Downloads\\群馬県建設工事必携（R5年版）_軽量化\\font-replacement-cli-pilot\\output\\Ⅱ-7_群馬県土木工事写真管理要領（R7.10改定）【最新版】.pdf",
+    "bytes": 4265318,
+    "sha256": "edcc4f3d7caedb3d8adf6e9cc1871cb26171ca054ccfdeb776ab400d76efb132"
+  },
+  "method": {
+    "renderer": "PyMuPDF",
+    "version": "1.28.2",
+    "color": "RGB",
+    "alpha": false,
+    "overview_dpi": 144,
+    "detail_dpi": 300,
+    "inspection": "Every listed source/candidate PNG opened with view_image; detailed regions inspected at original image resolution.",
+    "poppler": "pdftoppm was not found on PATH; the existing PyMuPDF renderer was used.",
+    "comparison": "Same page coordinates and DPI for source and candidate; no image difference threshold or image equality claim."
+  },
+  "scope": {
+    "page_numbers_one_based": [
+      27,
+      49,
+      91,
+      92
+    ],
+    "whole_page_overviews": 4,
+    "detail_regions": 4,
+    "source_candidate_png_count": 16,
+    "not_full_document_visual_review": true
+  },
+  "pages": [
+    {
+      "page": 27,
+      "detail_clip_pdf_points": [
+        165,
+        535,
+        542,
+        684
+      ],
+      "observations_ja": [
+        "赤字・下線の修正欄を比較。表罫線、改行位置、赤色、下線が対応し、確認範囲で文字欠け・罫線越え・重なりは見当たらない。",
+        "明朝から游ゴシックへ字形が変化し、自然な字面幅と括弧・数字の見え方が異なる。"
+      ],
+      "images": [
+        {
+          "filename": "p027-source-overview144.png",
+          "sha256": "b5071b2aeac4dfc1e68691997dd7cce80ed84f3a6f74a185988cbc8970ecefbf",
+          "bytes": 220185
+        },
+        {
+          "filename": "p027-source-detail300.png",
+          "sha256": "27693b2db2302f2cf552189b2b3f8255db6279c0543b3107e8d56586f4a505ba",
+          "bytes": 92695
+        },
+        {
+          "filename": "p027-candidate-overview144.png",
+          "sha256": "fb542c0c28a1984992e0098a2a16c82a31ad0e66f033d95f8cf2a43658c99570",
+          "bytes": 214334
+        },
+        {
+          "filename": "p027-candidate-detail300.png",
+          "sha256": "657fe46d161716673463f731ab4c127692816766e310c8b8bebabbce3f7b0072",
+          "bytes": 89292
+        }
+      ]
+    },
+    {
+      "page": 49,
+      "detail_clip_pdf_points": [
+        165,
+        610,
+        540,
+        760
+      ],
+      "observations_ja": [
+        "最下段の工種説明、撮影項目、撮影頻度、狭い摘要欄を比較。元の行分割を維持し、確認範囲で隣セルへの文字のはみ出し・欠けは見当たらない。",
+        "摘要欄の字間が広い配置は原本由来で、候補でも残っている。"
+      ],
+      "images": [
+        {
+          "filename": "p049-source-overview144.png",
+          "sha256": "0bddc7270f0bc1da0c767776e8668cb1ca94069d857ce1fcc02f6a2693bfd74e",
+          "bytes": 244063
+        },
+        {
+          "filename": "p049-source-detail300.png",
+          "sha256": "ba60b168dadd9fb5f7a0bafa3294b9ba53ae76ba0a44689aa04c27cd974c5925",
+          "bytes": 99141
+        },
+        {
+          "filename": "p049-candidate-overview144.png",
+          "sha256": "2da6b7ef167bce4704a798b46b706398fcade04d1262cdf649220476891164d2",
+          "bytes": 236678
+        },
+        {
+          "filename": "p049-candidate-detail300.png",
+          "sha256": "9ff4f60205e54d53efd99fb648ce201c467d933723385e1a10252db58a76cbae",
+          "bytes": 96880
+        }
+      ]
+    },
+    {
+      "page": 91,
+      "detail_clip_pdf_points": [
+        57,
+        154,
+        540,
+        279
+      ],
+      "observations_ja": [
+        "表上部の見出し・着工前・完成・施工状況と長い頻度説明を比較。各文字を読み取れ、行と罫線の関係に明白な破綻は見当たらない。",
+        "原本の太い本文と見出しが細くなり、強調の程度が低下している。太さの同等性は保たれていない。"
+      ],
+      "images": [
+        {
+          "filename": "p091-source-overview144.png",
+          "sha256": "8c17e3b6f7c9df149ff2c2898fe7a8ce7fd3ce79a55a6913fd81a4d0ba79e070",
+          "bytes": 254619
+        },
+        {
+          "filename": "p091-source-detail300.png",
+          "sha256": "56283a3f1615c19ebe8324b736b35c144c5cf82c0f179aa84f64cc68a5e4e38e",
+          "bytes": 104297
+        },
+        {
+          "filename": "p091-candidate-overview144.png",
+          "sha256": "748ca9afc1e2578349ef4600263eb487e2da23fc770c1a9ebb780e2009f3c603",
+          "bytes": 261080
+        },
+        {
+          "filename": "p091-candidate-detail300.png",
+          "sha256": "1c434e40993b545366b5df72ce60bdb304cc54cdf79772e24254fd55f84886ca",
+          "bytes": 119899
+        }
+      ]
+    },
+    {
+      "page": 92,
+      "detail_clip_pdf_points": [
+        107,
+        247,
+        508,
+        434
+      ],
+      "observations_ja": [
+        "薬剤散布の高木・中木・低木・寄植・芝、50本/10箇所/100mの数字と括弧を比較。確認範囲で文字欠け、重なり、表枠からのはみ出しは見当たらない。",
+        "原本の太いゴシック文字が細い游ゴシックに変わり、本文の視覚的な強さは低下している。"
+      ],
+      "images": [
+        {
+          "filename": "p092-source-overview144.png",
+          "sha256": "41fe474188241b1c5bc151170d624bd2d0210c1ad9e7242d418849ff3bd6e5f7",
+          "bytes": 143501
+        },
+        {
+          "filename": "p092-source-detail300.png",
+          "sha256": "0d4cdb60ada9f5fbd769978b456560497130569c7adadd8322f6104a5debebc8",
+          "bytes": 123571
+        },
+        {
+          "filename": "p092-candidate-overview144.png",
+          "sha256": "c3ac4cbce507a5b26204ad1978c251ba1d20e0e4898900c38058f4a240c40938",
+          "bytes": 144461
+        },
+        {
+          "filename": "p092-candidate-detail300.png",
+          "sha256": "8e30a6d2e0ebe2629c7e6cc562270b64cbd0a92c28db787b2a0c43c20ab9a009",
+          "bytes": 149173
+        }
+      ]
+    }
+  ],
+  "concerns": [
+    "字体・字面幅が変わる。特に91/92ページの原本の太い文字は細くなり、強調の程度が変わる。",
+    "確認した領域では明白な欠け・重なり・枠越えを認めなかったが、全101ページの300 DPI目視、実機印刷、小さい表示倍率の読みやすさを保証しない。",
+    "この記録はレンダー画像の目視確認のみであり、検索・コピー時の空白・改行同等性を保証しない。"
+  ],
+  "runtime_modified": false,
+  "pdfs_modified": false,
+  "candidate_sha256_confirmed_after_render": true
+}

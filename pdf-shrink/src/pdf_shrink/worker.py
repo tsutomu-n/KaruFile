@@ -193,11 +193,24 @@ def process_one_file(
             classification=decision.classification,
             permission_basis=decision.permission_basis,
             preservation_reason=decision.preservation_reason,
+            font_replacement_requested=profile == "font_replace",
+            replacement_font=cfg.replacement_font if profile == "font_replace" else "",
+            replacement_font_sha256=cfg.font_replace_sha256 if profile == "font_replace" else "",
+            text_extraction_changed=any(c.selected and c.kind == "font_replace" and c.text_extraction_changed
+                                        for c in candidates),
         )
 
     try:
         discovery.assert_source_unchanged(source, cfg.input_dir)
-        decision = policy.classify(source.path, profile)
+        if profile == "font_replace":
+            from . import font_replace
+            if cfg.font_replace_path is None or not cfg.font_replace_sha256:
+                raise RuntimeError("Windows replacement font was not prepared")
+            reason = font_replace.preflight(source.path, cfg.font_replace_path,
+                                           cfg.font_replace_sha256, processing_started + 300)
+            decision = policy.Decision("protected" if reason else "font_replace", "explicit_font_replace", reason)
+        else:
+            decision = policy.classify(source.path, profile)
         discovery.assert_source_unchanged(source, cfg.input_dir)
         if decision.protected:
             if not cfg.dry_run:
@@ -211,7 +224,8 @@ def process_one_file(
                 reason=decision.preservation_reason,
             )
         text_processing = decision.classification in {"text", "text_table", "text_scan"}
-        if text_processing:
+        font_processing = decision.classification == "font_replace"
+        if text_processing or font_processing:
             cfg = replace(cfg, reduction=ReductionOptions(0, 0, 0, 0, 0))
         if source.size < cfg.reduction.skip_below_bytes:
             if not cfg.dry_run:
@@ -230,7 +244,7 @@ def process_one_file(
                 reason="source_too_small",
             )
 
-        if text_processing:
+        if text_processing or font_processing:
             import pymupdf as fitz
             with fitz.open(source.path) as doc:
                 inspection = InspectionResult(True, None, doc.page_count, 0.0,
@@ -280,13 +294,18 @@ def process_one_file(
             kinds = ["lossless"]
             if decision.classification == "text_scan":
                 kinds.extend([f"text_scan_jpeg_{quality}" for quality in (92, 85, 80)])
+                if profile == "text_scan_bilevel":
+                    kinds.append("text_scan_bilevel")
             else:
                 kinds.append("text_subset")
                 if not cfg.safe:
                     kinds.append("text_gray")
-            modes = [OptimizationMode.LOSSY if k == "text_gray" or k.startswith("text_scan_jpeg_")
+            modes = [OptimizationMode.LOSSY if k == "text_gray" or k.startswith("text_scan_")
                      else OptimizationMode.LOSSLESS for k in kinds]
-        if cfg.lossless_jpeg and not text_processing:
+        if font_processing:
+            kinds = ["lossless", "font_replace"]
+            modes = [OptimizationMode.LOSSLESS, OptimizationMode.LOSSY]
+        if cfg.lossless_jpeg and not (text_processing or font_processing):
             modes.extend([OptimizationMode.LOSSLESS] * 2)
             kinds.extend(["jpeg_lossless_baseline", "jpeg_lossless_progressive"])
         jpeg_deadline = None
@@ -298,7 +317,10 @@ def process_one_file(
             os.close(descriptor)
             path = Path(temp_name)
             temp_paths.append(path)
-            if text_processing:
+            if font_processing:
+                from .font_pipeline import evaluate
+                candidate = evaluate(source, path, jpeg_kind, cfg, qpdf_exe, processing_started + 300)
+            elif text_processing:
                 candidate = CandidateResult(kind=jpeg_kind)
                 try:
                     changed = text_optimize.generate(source.path, path, jpeg_kind, cfg, qpdf_exe, text_budget)
@@ -326,7 +348,8 @@ def process_one_file(
         eligible = [index for index, c in enumerate(candidates) if c.reason == "eligible"]
         if eligible:
             priorities = {"lossless": 0, "text_subset": 1, "jpeg_lossless_baseline": 1, "jpeg_lossless_progressive": 2,
-                          "text_gray": 3, "text_scan_jpeg_92": 4, "text_scan_jpeg_85": 5, "text_scan_jpeg_80": 6}
+                          "text_gray": 3, "text_scan_jpeg_92": 4, "text_scan_jpeg_85": 5, "text_scan_jpeg_80": 6,
+                          "text_scan_bilevel": 7}
             chosen = min(eligible, key=lambda i: (candidates[i].size, priorities.get(candidates[i].kind, 3)))
             candidate = candidates[chosen]
             candidate_size = candidate.size
@@ -352,7 +375,7 @@ def process_one_file(
                 output_size=candidate_size,
                 saved_bytes=saved_bytes,
                 reason=(
-                    f"adopted_{candidate.kind}" if text_processing or candidate.kind.startswith("jpeg_lossless_")
+                    f"adopted_{candidate.kind}" if text_processing or font_processing or candidate.kind.startswith("jpeg_lossless_")
                     else "fallback_lossless" if chosen else str(status).lower()
                 ),
                 selected_mode=modes[chosen],

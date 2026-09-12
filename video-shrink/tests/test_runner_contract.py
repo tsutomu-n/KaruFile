@@ -301,7 +301,7 @@ def test_unknown_progressive_or_sar_is_copied_as_complex(
     tools = ToolInfo(Path("ffmpeg"), Path("ffprobe"), "ffmpeg test", "ffprobe test")
     monkeypatch.setattr(runner, "prepare_tools", lambda *args: tools)
     monkeypatch.setattr(runner, "probe_media", lambda *args: source_info)
-    outcome = runner.run(VideoConfig(source, output, preset=Preset.COMPACT))
+    outcome = runner.run(VideoConfig(source, output, preset=Preset.COMPACT, safe=True))
     assert outcome.exit_code == 0
     assert outcome.results[0].status is ProcessStatus.SKIPPED_COMPLEX
     assert (output / "clip.mp4").read_bytes() == b"original"

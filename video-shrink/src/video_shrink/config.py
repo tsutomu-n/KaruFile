@@ -110,14 +110,20 @@ class VideoConfig:
     ffmpeg_path: Path | None = None
     ffprobe_path: Path | None = None
     recipe: CompactRecipe = CompactRecipe()
+    safe: bool = False
+    remove_audio: bool = False
 
     def __post_init__(self) -> None:
         if self.workers < 1:
             raise ValueError("--workers must be at least 1")
+        if self.preset is not Preset.COMPACT and (self.safe or self.remove_audio):
+            raise ValueError("--safe and --remove-audio require --preset compact")
 
     def processing_hash(self, tools: ToolInfo | None) -> str:
         relevant = {
-            "algorithm": "video-shrink-v1",
+            "algorithm": "video-shrink-v2",
+            "safe": self.safe,
+            "remove_audio": self.remove_audio,
             "output_dir": str(self.output_dir),
             "preset": self.preset.value,
             "dry_run": self.dry_run,

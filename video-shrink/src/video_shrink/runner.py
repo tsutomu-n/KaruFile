@@ -4,7 +4,7 @@ from __future__ import annotations
 import logging
 import os
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Sequence
 
@@ -182,6 +182,8 @@ def _base_result(
         vmaf_p5=vmaf_p5,
         ffmpeg_version=tools.ffmpeg_version if tools else "",
         output_identity=output_identity,
+        safe=config.safe,
+        remove_audio=config.remove_audio,
     )
 
 
@@ -199,6 +201,8 @@ def _copy_result(
     vmaf_mean: float | None = None,
     vmaf_p5: float | None = None,
 ) -> ProcessResult:
+    if config.remove_audio:
+        raise ToolError(f"audio removal could not be completed: {reason}")
     size, digest = atomic_copy(
         source.path,
         destination,
@@ -239,7 +243,7 @@ def _error_result(
     output_size: int | None = None
     output_hash = ""
     output_identity = None
-    if not config.dry_run and not destination.exists() and discovery.source_is_unchanged(source):
+    if not config.remove_audio and not config.dry_run and not destination.exists() and discovery.source_is_unchanged(source):
         try:
             output_size, output_hash = atomic_copy(
                 source.path,
@@ -301,16 +305,21 @@ def _process_one(
         source_info = probe_media(tools, source.path, config.recipe)
         if not discovery.source_is_unchanged(source):
             raise OSError("source changed during inspection")
-        eligibility = inspect_eligibility(source_info, config.recipe)
+        eligibility = inspect_eligibility(
+            source_info, config.recipe, safe=config.safe, remove_audio=config.remove_audio,
+        )
         if not eligibility.eligible:
             if config.dry_run:
+                planned_status = (
+                    "ERROR (audio removal unavailable)" if config.remove_audio
+                    else eligibility.status.value if eligibility.status else "skip"
+                )
                 return _base_result(
                     source,
                     destination,
                     config,
                     ProcessStatus.DRY_RUN,
-                    reason=f"would {eligibility.status.value if eligibility.status else 'skip'}: "
-                    f"{eligibility.reason}",
+                    reason=f"would {planned_status}: {eligibility.reason}",
                     eligibility=eligibility,
                     source_info=source_info,
                     tools=tools,
@@ -335,6 +344,7 @@ def _process_one(
                 reason=(
                     f"would try CRF ladder {config.recipe.crf_ladder} at "
                     f"{eligibility.target_width}x{eligibility.target_height}"
+                    f"; safe={config.safe}; remove_audio={config.remove_audio}"
                 ),
                 eligibility=eligibility,
                 source_info=source_info,
@@ -472,8 +482,13 @@ def _validate_final_results(
             result.source_size != source.size
             or result.source_sha256.casefold() != source.sha256.casefold()
             or result.preset is not config.preset
+            or result.safe is not config.safe
+            or result.remove_audio is not config.remove_audio
         ):
             raise ValueError("video result source metadata does not match its snapshot")
+        if config.remove_audio and not config.dry_run and result.status is not ProcessStatus.ERROR:
+            if result.audio_codec or result.status not in {ProcessStatus.ADOPTED, ProcessStatus.SKIPPED_COMPLETE}:
+                raise ValueError("audio removal result is not a silent compressed output")
         source_sha256, source_identity = stable_sha256_file(
             source.path,
             expected_identity=source.identity,
@@ -541,6 +556,8 @@ def run(config: VideoConfig) -> RunOutcome:
             ffmpeg_path=config.ffmpeg_path,
             ffprobe_path=config.ffprobe_path,
             recipe=config.recipe,
+            safe=config.safe,
+            remove_audio=config.remove_audio,
         )
         files = discovery.collect_videos(config.input_dir)
         sources = [discovery.snapshot(path, config.input_dir) for path in files]
@@ -601,7 +618,10 @@ def run(config: VideoConfig) -> RunOutcome:
                 dry_run=config.dry_run,
             )
             if reused is not None:
-                results.append(reused)
+                if config.remove_audio and (reused.audio_codec or reused.reason != "reused ADOPTED"):
+                    pending.append(source)
+                else:
+                    results.append(replace(reused, safe=config.safe, remove_audio=config.remove_audio))
             else:
                 pending.append(source)
 

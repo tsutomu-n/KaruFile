@@ -12,6 +12,9 @@ uv run --project video-shrink python -m video_shrink run `
   --workers 1
 ```
 
+音声除去＋圧縮は上記に `--remove-audio`、厳格な入力形式判定は `--safe` を追加します。
+統合CLIではそれぞれ `--video-remove-audio`、`--video-safe` です。どちらも既定OFFです。
+
 ## CLI
 
 ```text
@@ -19,6 +22,8 @@ run --input PATH --output PATH
     --preset {standard,compact}
     --workers N
     [--dry-run]
+    [--safe]
+    [--remove-audio]
     [--ffmpeg-path PATH]
     [--ffprobe-path PATH]
     [-v|--verbose]
@@ -35,14 +40,23 @@ run --input PATH --output PATH
 対象拡張子は `.mp4`, `.m4v`, `.mkv`, `.webm` です。次を満たす入力だけを変換します。
 
 - 非attached映像が1本
-- 8-bit SDRのYUV 4:2:0で、ffprobeがprogressive、SAR 1:1、CFRを明示
+- 8-bit SDRのYUV 4:2:0。通常はfield_order/SAR情報の欠落とVFRを許容
 - 音声は0本または1本、1～2 channel
 - 字幕、data、attachment、chapterを含まない
 - 回転は0/90/180/270度のみ
 
+`--safe` で従来の厳格なprogressive/SAR 1:1/CFR明示判定を有効にします（既定OFF）。
+`--remove-audio` は全音声を除去して圧縮します（既定OFF）。この場合、音声数とchannel数の
+入力制限は適用しません。両オプションは併用可能でcompact専用、standardでは引数エラーです。
+HDR、既知interlace、非正方SAR、字幕・複数映像等への対応は追加していません。
+通常時も原本保護、保存先検査、出力構造・全decode・VMAF・削減条件は維持します。
+VFRは公称fpsと平均fpsの大きい方を上限30fpsでCFR化し、フレームの複製・間引きがあります。
+欠落SARは1:1として扱います。
+
 映像は拡大せず1280x720以内、30fpsを超える場合だけ30fpsへ下げ、`libsvtav1`で
-符号化します。MP4/M4Vの音声はAAC、MKV/WebMはOpusです。複雑または未対応の入力は
-内容を落とさず原本をコピーします。
+符号化します。表示方向の幅1280px・高さ720pxが上限で、縦1080x1920は404x720になります。
+音声を残す場合、MP4/M4Vの音声はAAC、MKV/WebMはOpusです。複雑または未対応の入力は
+音声除去なしなら原本をコピーし、音声除去指定時はERRORとします。
 
 初期recipeはCRF 38→35→32、SVT-AV1 `preset=8` / `tune=0`です。音声はmono 64 kbps、
 stereo 96 kbpsとし、AACは入力以下かつ最大48 kHz、Opusは48 kHzへします。VMAF
@@ -65,7 +79,9 @@ stereo 96 kbpsとし、AACは入力以下かつ最大48 kHz、Opusは48 kHzへ�
 
 レポートは現在の入力集合を1ファイル1行で原子的に更新します。`ERROR`が1件でもあれば
 終了コード1です。FFmpeg/ffprobeの不足、encoder/filter不足、変換失敗を成功扱いしません。
-出力が未作成の失敗では原本の回復コピーを試みますが、その場合も`ERROR`のままです。
+音声除去なしで出力が未作成の失敗では原本の回復コピーを試みますが、その場合も`ERROR`のままです。
+`--remove-audio` 時は未対応・品質不合格・削減不足も`ERROR`とし、有音コピーは作りません。
+失敗時は既存出力を維持します。既存の有音ファイルが残っても無音化の成功ではありません。
 
 statusは次の意味です。
 
@@ -80,7 +96,8 @@ statusは次の意味です。
 
 CSVには少なくとも`source_path, source_size, output_size, saved_bytes, status,
 error_message, preset`を含みます。状態の再利用判定にはsource/output SHA-256、設定hash、
-FFmpeg/ffprobeのversionを使います。
+FFmpeg/ffprobeのversionを使います。CSVは`safe`と`remove_audio`をtrue/falseで記録し、
+両設定をprocessing hashに含めます。旧DBは保持し、旧hashの結果は再利用しません。
 `SKIPPED_COMPLETE` の再利用時はfull decodeとVMAFを再実行しません。state/reportは利用者の
 ローカル管理下にある信頼済みcacheとして扱います。手動編集または破損が疑われる場合は、
 `<output>.video-state` を別名へ退避してから再実行してください。
@@ -94,7 +111,7 @@ license条件は、そのbuildで有効なcodec/libraryとconfigure optionに依
 
 ## 初版で残る判定上の制約
 
-CFRはffprobeが報告する`r_frame_rate == avg_frame_rate`を保守的な入口条件にしています。
+safe時のCFRはffprobeが報告する`r_frame_rate == avg_frame_rate`を保守的な入口条件にしています。
 これは全frame timestampの均一性を数学的に証明するものではありません。既知のHDR/Dolby
 Vision metadataは拒否しますが、metadataが欠けた入力のSDR性までは証明しません。またVMAFは
 映像の平均値と5 percentileだけを検査します。音声channel数と予定sample rateは構造検査しますが、

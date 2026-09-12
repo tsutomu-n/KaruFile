@@ -1,0 +1,54 @@
+KaruFile
+
+Input  : C:\Users\tn\AppData\Local\Temp\karufile-excel-root-smoke-ikxe2e99\input
+Output : C:\Users\tn\AppData\Local\Temp\karufile-excel-root-smoke-ikxe2e99\output
+Preset : standard
+
+PDF    : 0
+Images : 0
+Excel  : 2
+Videos : 0
+
+Source files : keep
+Files deleted: 0
+
+Starting...
+15:39:37 [INFO] [media-shrink] Starting: uv run --project C:\Users\tn\c_projects\KaruFile\media-shrink-tool python -m media_shrink resize -i C:\Users\tn\AppData\Local\Temp\karufile-excel-root-smoke-ikxe2e99\input -o C:\Users\tn\AppData\Local\Temp\karufile-excel-root-smoke-ikxe2e99\output -j 4 --preset standard
+15:39:38 [INFO] Image error report: C:\Users\tn\AppData\Local\Temp\karufile-excel-root-smoke-ikxe2e99\output.image-errors.csv
+
+15:39:38 [INFO] Image result manifest: C:\Users\tn\AppData\Local\Temp\karufile-excel-root-smoke-ikxe2e99\output.image-manifest.csv
+
+Resized 0 images (0 errors)
+
+  0.00 B -> 0.00 B
+
+15:39:38 [INFO] [media-shrink] Finished in 0.26s (exit code: 0)
+15:39:38 [INFO] [excel-shrink] Starting: uv run --project C:\Users\tn\c_projects\KaruFile\excel-shrink excel-shrink run --input C:\Users\tn\AppData\Local\Temp\karufile-excel-root-smoke-ikxe2e99\input --output C:\Users\tn\AppData\Local\Temp\karufile-excel-root-smoke-ikxe2e99\output --dpi 220 --pattern=errors/*.xlsx
+ERROR: C:\Users\tn\AppData\Local\Temp\karufile-excel-root-smoke-ikxe2e99\input\errors\broken.xlsx: File is not a zip file
+
+Excel: 2 workbooks, 1 per-file errors
+
+Excel report: C:\Users\tn\AppData\Local\Temp\karufile-excel-root-smoke-ikxe2e99\output.excel-report.csv
+
+15:39:38 [INFO] [excel-shrink] Finished in 0.32s (exit code: 1)
+
+KaruFile completed
+
+PDF errors   : 0
+Image errors : 0
+Excel errors : 1
+Video errors : 0
+
+Original size : 52.00 B
+Output size   : unknown
+Saved         : unknown
+Reduction     : unknown
+
+Source files changed: NO
+Files deleted       : 0
+
+Image error report:
+C:\Users\tn\AppData\Local\Temp\karufile-excel-root-smoke-ikxe2e99\output.image-errors.csv
+Excel report:
+C:\Users\tn\AppData\Local\Temp\karufile-excel-root-smoke-ikxe2e99\output.excel-report.csv
+Elapsed: 0.59s

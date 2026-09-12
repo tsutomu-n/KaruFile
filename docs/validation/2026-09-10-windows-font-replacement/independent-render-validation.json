@@ -1,0 +1,26 @@
+{
+  "candidate_sha256": "edcc4f3d7caedb3d8adf6e9cc1871cb26171ca054ccfdeb776ab400d76efb132",
+  "pages": 101,
+  "pdfium_version": "5.13.0",
+  "pymupdf_version": "1.28.2",
+  "dpi": 144,
+  "pdfium_whitespace_changed_pages": [
+    4,
+    17,
+    18,
+    20,
+    21,
+    48,
+    60,
+    88,
+    89,
+    91,
+    92
+  ],
+  "mupdf_pixels_differ_from_prior_trial_pages": [],
+  "max_nonwhitespace_origin_delta_pt": 3.0517578125e-05,
+  "nonwhitespace_characters": 41835,
+  "status": "INDEPENDENT_RENDER_AND_NONWHITESPACE_CHECK_PASS",
+  "elapsed_seconds": 5.800075299979653,
+  "visual_review": "Primary agent reviewed pages 4,12,48; separate agent review recorded separately"
+}

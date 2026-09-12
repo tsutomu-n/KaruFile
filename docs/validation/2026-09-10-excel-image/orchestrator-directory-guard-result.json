@@ -1,0 +1,8 @@
+{
+  "suite": "orchestrator-directory-guard",
+  "command": "uv run --with pytest python -m pytest -q",
+  "workdir": "C:/Users/tn/c_projects/KaruFile/orchestrator",
+  "started_utc": "2026-09-10T06:50:18.9234901Z",
+  "elapsed_seconds": 11.971683,
+  "exit_code": 0
+}

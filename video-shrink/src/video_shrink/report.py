@@ -38,6 +38,8 @@ FIELDNAMES = (
     "vmaf_mean",
     "vmaf_p5",
     "ffmpeg_version",
+    "safe",
+    "remove_audio",
 )
 
 

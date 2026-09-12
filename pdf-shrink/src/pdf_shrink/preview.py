@@ -16,7 +16,7 @@ import pymupdf as fitz
 
 from . import discovery, output, worker
 from .config import RunConfig, config_for_path, photo_lossy_options, profile_for_path
-from .policy import classify
+from .policy import Decision, classify
 from .inspect_pdf import inspect_file
 from .models import OptimizationMode, ProcessStatus, SourceSnapshot
 from .state import Record
@@ -186,6 +186,25 @@ def _render(paths: dict[str, Path], views: list[dict], folder: Path, run_dir: Pa
                 view["images"][kind] = target.relative_to(run_dir).as_posix()
 
 
+def _font_preview_decision(source: SourceSnapshot, record: Record, cfg: RunConfig) -> Decision:
+    """Use verified processing state; the ordinary text classifier cannot classify font PDFs."""
+    protected = record.status == ProcessStatus.PRESERVED_ORIGINAL
+    if (
+        record.profile != "font_replace" or record.requested_policy != "font_replace"
+        or record.processing_schema != 6 or record.source_sha256 != source.sha256
+        or record.permission_basis != "explicit_font_replace"
+        or record.font_replacement_requested is not True
+        or record.replacement_font != cfg.replacement_font
+        or not cfg.font_replace_sha256 or record.replacement_font_sha256 != cfg.font_replace_sha256
+        or type(record.text_extraction_changed) is not bool
+        or (record.text_extraction_changed and record.status != ProcessStatus.ADOPTED_LOSSY)
+        or protected != bool(record.preservation_reason)
+        or record.classification != ("protected" if protected else "font_replace")
+    ):
+        raise RuntimeError("font preview processing state mismatch")
+    return Decision(record.classification, record.permission_basis, record.preservation_reason)
+
+
 def _document(source: SourceSnapshot, record: Record, item: dict, cfg: RunConfig,
               run_dir: Path, qpdf_exe: Path | None, protected: tuple[Path, ...]) -> None:
     started = time.monotonic()
@@ -193,7 +212,11 @@ def _document(source: SourceSnapshot, record: Record, item: dict, cfg: RunConfig
     _check_completed(source, record, cfg, protected)
     views = _views(source.path, budget)
     options = config_for_path(cfg, source.relative_path)
-    decision = classify(source.path, profile_for_path(cfg, source.relative_path))
+    profile = profile_for_path(cfg, source.relative_path)
+    # The source/output SHA checks above and below bind the font classification
+    # to the actual completed result. No extra font candidates are generated.
+    decision = (_font_preview_decision(source, record, cfg) if profile == "font_replace"
+                else classify(source.path, profile))
     if decision.protected and record.output_sha256 != source.sha256:
         raise RuntimeError("protected preview output must equal original")
     budget.check()
@@ -286,6 +309,9 @@ def generate(cfg: RunConfig, sources: list[SourceSnapshot], records: list[Record
                               "classification": record.classification,
                               "permission_basis": record.permission_basis,
                               "preservation_reason": record.preservation_reason,
+                              "font_replacement_requested": record.font_replacement_requested,
+                              "replacement_font": record.replacement_font,
+                              "text_extraction_changed": record.text_extraction_changed,
                               "selected_kind": next((d.kind for d in record.candidate_details if d.selected), "original"),
                               "variants": [], "views": []})
     protected = tuple(protected_sources) + tuple(source.output_path(cfg.output_dir) for source in sources

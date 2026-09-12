@@ -22,26 +22,26 @@
     {
       "name": "pdf-choices",
       "specification": {
-        "sha256": "bfe918b4bf4df16c73066a22482e1f3f4495a31f6088d1cdeb1bfeca91f56345",
-        "bytes": 2572
+        "sha256": "d6b00025fb60c81b3dd163e5ce2d7b20164d37ebd4e47035e9ab6953e45ebcb5",
+        "bytes": 3505
       },
       "artifact": {
-        "sha256": "182a505e37feca7bba99c4b7b8ea53a79144b3b2b7e60cb7796c01cbcf64d1d3",
-        "bytes": 639788
+        "sha256": "dd6793c5d8336e7437ccd458963159701e75bb1bdab52827842ef09e226751ba",
+        "bytes": 642725
       },
       "export": {
-        "sha256": "35bc5fe4a31621f18b029b00359c462c725975e7cda8a9b3bac38a12d491cda8",
-        "bytes": 243772,
+        "sha256": "cae2faa86a0063c140393a94b6cbc4987a5b38142edca93f479f963e53c75388",
+        "bytes": 320177,
         "canonical": true,
         "theme": "light",
-        "width": 2080,
-        "height": 1136
+        "width": 2400,
+        "height": 1280
       }
     }
   ],
   "html": {
     "file": "../KARUFILE_GUIDE.html",
-    "sha256": "8875820fd8dcf7b399879128c6e7ff192640ca719a52449975b9d168af6fa6c9",
-    "bytes": 687015
+    "sha256": "b1494aa1a3aac48d548cbcaf1349285333d74f5b422fb6a92d5edfbdfd444639",
+    "bytes": 797070
   }
 }

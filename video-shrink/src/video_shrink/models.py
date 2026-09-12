@@ -151,6 +151,8 @@ class ProcessResult:
     vmaf_p5: float | None = None
     ffmpeg_version: str = ""
     output_identity: FileIdentity | None = None
+    safe: bool = False
+    remove_audio: bool = False
 
     def as_csv_row(self) -> dict[str, object]:
         return {
@@ -175,4 +177,6 @@ class ProcessResult:
             "vmaf_mean": "" if self.vmaf_mean is None else f"{self.vmaf_mean:.6f}",
             "vmaf_p5": "" if self.vmaf_p5 is None else f"{self.vmaf_p5:.6f}",
             "ffmpeg_version": self.ffmpeg_version,
+            "safe": str(self.safe).lower(),
+            "remove_audio": str(self.remove_audio).lower(),
         }

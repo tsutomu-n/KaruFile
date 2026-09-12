@@ -1,0 +1,7 @@
+{
+  "suite": "pdf",
+  "command": "uv run --project pdf-shrink python -m pytest -q pdf-shrink/tests",
+  "started_utc": "2026-09-10T06:41:26.6820618Z",
+  "elapsed_seconds": 42.6776612,
+  "exit_code": 0
+}

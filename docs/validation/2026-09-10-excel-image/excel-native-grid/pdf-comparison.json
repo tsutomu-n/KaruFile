@@ -1,0 +1,10 @@
+[
+  {
+    "case": "grid",
+    "pages": 1,
+    "text_and_geometry_equal": true,
+    "image_placements_equal": true,
+    "changed_pixels_144_dpi": 34870,
+    "changed_pixels_outside_images": 0
+  }
+]

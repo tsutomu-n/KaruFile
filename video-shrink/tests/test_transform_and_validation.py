@@ -224,10 +224,23 @@ def test_candidate_structure_requires_explicit_geometry_audio_plan_and_durations
     validate.validate_structure(candidate, source, eligibility, config)
 
 
+def test_av1_missing_field_order_and_muted_duration_follow_video_plan(tmp_path: Path) -> None:
+    source, candidate, eligibility, config = _structure_fixture(tmp_path)
+    # A longer audio tail must not prevent a valid silent video from being published.
+    source = replace(source, duration=20.0)
+    video = replace(candidate.video_streams[0], field_order="")
+    silent = replace(candidate, streams=(video,))
+    plan = replace(eligibility, audio=None)
+    mute = replace(config, remove_audio=True)
+    validate.validate_structure(silent, source, plan, mute)
+    with pytest.raises(ToolError, match="audio stream count"):
+        validate.validate_structure(candidate, source, plan, mute)
+
+
 @pytest.mark.parametrize(
     ("change", "message"),
     [
-        ({"field_order": ""}, "progressive"),
+        ({"field_order": "tt"}, "progressive"),
         ({"sample_aspect_ratio": "N/A"}, "sample aspect ratio"),
         ({"tags": {"rotate": "90"}}, "rotation"),
         ({"duration": 8.0}, "video stream duration"),

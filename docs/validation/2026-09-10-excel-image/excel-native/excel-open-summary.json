@@ -1,0 +1,134 @@
+﻿[
+    {
+        "relative_path":  "good/jpeg.xlsx",
+        "side":  "source",
+        "excel_version":  "16.0",
+        "opened_read_only":  true,
+        "worksheet_count":  1,
+        "formula_a1":  "=1+2",
+        "value_a1":  3,
+        "shapes":  [
+                       {
+                           "name":  "Photograph",
+                           "width_points":  72,
+                           "height_points":  54,
+                           "left_points":  0,
+                           "top_points":  51,
+                           "type":  13
+                       }
+                   ],
+        "exported_pdf":  "C:\\Users\\tn\\c_projects\\KaruFile\\docs\\validation\\2026-09-10-excel-image\\excel-native\\jpeg-source.pdf",
+        "sha256_before":  "C0B0B030BA491D11CAE3EF483C800ED62EE64D4D15BFB9FB5B7993B867197780",
+        "sha256_after":  "C0B0B030BA491D11CAE3EF483C800ED62EE64D4D15BFB9FB5B7993B867197780"
+    },
+    {
+        "relative_path":  "good/jpeg.xlsx",
+        "side":  "output",
+        "excel_version":  "16.0",
+        "opened_read_only":  true,
+        "worksheet_count":  1,
+        "formula_a1":  "=1+2",
+        "value_a1":  3,
+        "shapes":  [
+                       {
+                           "name":  "Photograph",
+                           "width_points":  72,
+                           "height_points":  54,
+                           "left_points":  0,
+                           "top_points":  51,
+                           "type":  13
+                       }
+                   ],
+        "exported_pdf":  "C:\\Users\\tn\\c_projects\\KaruFile\\docs\\validation\\2026-09-10-excel-image\\excel-native\\jpeg-output.pdf",
+        "sha256_before":  "8C71A56BA6A15C53AB555E50F5E54FE5ED0A407A7FDAC2CB61D5D878F8FA94C1",
+        "sha256_after":  "8C71A56BA6A15C53AB555E50F5E54FE5ED0A407A7FDAC2CB61D5D878F8FA94C1"
+    },
+    {
+        "relative_path":  "good/png.xlsx",
+        "side":  "source",
+        "excel_version":  "16.0",
+        "opened_read_only":  true,
+        "worksheet_count":  1,
+        "formula_a1":  "=1+2",
+        "value_a1":  3,
+        "shapes":  [
+                       {
+                           "name":  "Photograph",
+                           "width_points":  72,
+                           "height_points":  54,
+                           "left_points":  0,
+                           "top_points":  51,
+                           "type":  13
+                       }
+                   ],
+        "exported_pdf":  "C:\\Users\\tn\\c_projects\\KaruFile\\docs\\validation\\2026-09-10-excel-image\\excel-native\\png-source.pdf",
+        "sha256_before":  "8E8B72E4C7391980DC3827A43CE093F519D2C1E67578C679BC6346C6FA1B19AB",
+        "sha256_after":  "8E8B72E4C7391980DC3827A43CE093F519D2C1E67578C679BC6346C6FA1B19AB"
+    },
+    {
+        "relative_path":  "good/png.xlsx",
+        "side":  "output",
+        "excel_version":  "16.0",
+        "opened_read_only":  true,
+        "worksheet_count":  1,
+        "formula_a1":  "=1+2",
+        "value_a1":  3,
+        "shapes":  [
+                       {
+                           "name":  "Photograph",
+                           "width_points":  72,
+                           "height_points":  54,
+                           "left_points":  0,
+                           "top_points":  51,
+                           "type":  13
+                       }
+                   ],
+        "exported_pdf":  "C:\\Users\\tn\\c_projects\\KaruFile\\docs\\validation\\2026-09-10-excel-image\\excel-native\\png-output.pdf",
+        "sha256_before":  "2ACCF2FD9136B27FFAB97560BA9B88E69EB727A86CA236FB3F03F21701B3B43F",
+        "sha256_after":  "2ACCF2FD9136B27FFAB97560BA9B88E69EB727A86CA236FB3F03F21701B3B43F"
+    },
+    {
+        "relative_path":  "good/small.xlsx",
+        "side":  "source",
+        "excel_version":  "16.0",
+        "opened_read_only":  true,
+        "worksheet_count":  1,
+        "formula_a1":  "=1+2",
+        "value_a1":  3,
+        "shapes":  [
+                       {
+                           "name":  "Photograph",
+                           "width_points":  72,
+                           "height_points":  54,
+                           "left_points":  0,
+                           "top_points":  51,
+                           "type":  13
+                       }
+                   ],
+        "exported_pdf":  "C:\\Users\\tn\\c_projects\\KaruFile\\docs\\validation\\2026-09-10-excel-image\\excel-native\\small-source.pdf",
+        "sha256_before":  "0C495DA6DEFADB1374AE70328A8D640C93FE8E290DDFC5AD6CA1E2C1192287FD",
+        "sha256_after":  "0C495DA6DEFADB1374AE70328A8D640C93FE8E290DDFC5AD6CA1E2C1192287FD"
+    },
+    {
+        "relative_path":  "good/small.xlsx",
+        "side":  "output",
+        "excel_version":  "16.0",
+        "opened_read_only":  true,
+        "worksheet_count":  1,
+        "formula_a1":  "=1+2",
+        "value_a1":  3,
+        "shapes":  [
+                       {
+                           "name":  "Photograph",
+                           "width_points":  72,
+                           "height_points":  54,
+                           "left_points":  0,
+                           "top_points":  51,
+                           "type":  13
+                       }
+                   ],
+        "exported_pdf":  "C:\\Users\\tn\\c_projects\\KaruFile\\docs\\validation\\2026-09-10-excel-image\\excel-native\\small-output.pdf",
+        "sha256_before":  "0C495DA6DEFADB1374AE70328A8D640C93FE8E290DDFC5AD6CA1E2C1192287FD",
+        "sha256_after":  "0C495DA6DEFADB1374AE70328A8D640C93FE8E290DDFC5AD6CA1E2C1192287FD"
+    }
+]

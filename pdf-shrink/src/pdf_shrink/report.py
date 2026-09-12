@@ -41,6 +41,7 @@ REPORT_COLUMNS = [
     "lossless_jpeg_requested",
     "photo_dpi",
     "requested_policy", "classification", "permission_basis", "preservation_reason", "processing_schema",
+    "font_replacement_requested", "replacement_font", "replacement_font_sha256", "text_extraction_changed",
 ]
 
 UNCHANGED_REASON_LABELS = {
@@ -225,6 +226,10 @@ def staged_csv(
                     "permission_basis": r.permission_basis,
                     "preservation_reason": r.preservation_reason,
                     "processing_schema": r.processing_schema,
+                    "font_replacement_requested": "true" if r.font_replacement_requested else "false",
+                    "replacement_font": r.replacement_font,
+                    "replacement_font_sha256": r.replacement_font_sha256,
+                    "text_extraction_changed": "true" if r.text_extraction_changed else "false",
                 })
         yield temp_path
     finally:

@@ -75,6 +75,7 @@ class CandidateResult:
     reason: str = ""
     validation_reason: str = ""
     selected: bool = False
+    text_extraction_changed: bool = False
 
 
 @dataclass(frozen=True)
@@ -101,4 +102,8 @@ class ProcessResult:
     classification: str = ""
     permission_basis: str = ""
     preservation_reason: str = ""
-    processing_schema: int = 5
+    processing_schema: int = 6
+    font_replacement_requested: bool = False
+    replacement_font: str = ""
+    replacement_font_sha256: str = ""
+    text_extraction_changed: bool = False

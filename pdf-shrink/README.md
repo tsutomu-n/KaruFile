@@ -1,6 +1,8 @@
 # pdf-shrink
 
-KaruFileのPDF専用処理コンポーネントです。入力フォルダーを再帰的に調べ、PyMuPDFまたはqpdfで
+**フォント置換の実行には対象の明示指定が必要です。置換先の字体はメイリオが既定なので、字体名の指定は不要です。通常のPDF圧縮ではフォントを変更しません。**
+
+KaruFileのPDF専用処理コンポーネントです。入力フォルダーを再帰的に調べ、PyMuPDF・qpdf等で
 圧縮候補を作ります。候補を検証し、既定の削減条件を満たす場合だけ採用します。
 採用しない場合や安全上圧縮しない場合は、原本を出力へコピーします。
 
@@ -23,6 +25,8 @@ uv sync --project pdf-shrink --dev
 通常実行ではqpdfを、明示したパス、`PATH`、ローカルキャッシュの順で探索します。
 見つからない場合は、qpdf 12.3.2のWindows向け配布ZIPをGitHub Releasesから取得します。
 dry-runではqpdfを探索、実行、自動取得しません。
+字体統一を明示する場合はWindowsにインストール済みの選択字体（既定はメイリオRegular）も必要です。
+フォントを同梱・取得する機能はありません。fontTools・pikepdfはこのコンポーネントのPython依存です。
 
 ## 個別CLI
 
@@ -41,6 +45,9 @@ uv run --project pdf-shrink pdf-shrink run `
 | `--preserve-pattern PATTERN` | 最優先の原本保護。反復可 |
 | `--text-pattern PATTERN` | 文章と単純罫線表を許可。反復可 |
 | `--text-scan-pattern PATTERN` | 文章スキャンを許可。反復可 |
+| `--text-scan-bilevel-pattern PATTERN` | 白黒書類スキャンに二値化候補を追加。反復可、色・階調を失う |
+| `--font-replace-pattern PATTERN` | 日本語・英語をWindowsメイリオRegularへ統一。反復可、字形・検索/コピーの推定空白が変わる場合あり |
+| `--font-family {yu-gothic,meiryo}` | 置換字体を選択。既定meiryo、明示指定にはfont-replace-patternが必須 |
 | `--photo-pattern PATTERN` | 一致するPDFだけphoto profileにする入力相対パターン。反復可 |
 | `--photo-dpi DPI` | photoの目標DPI。150〜300の整数、既定200。photo-pattern必須 |
 | `--preview` | 原本と実際の完成出力を比べるローカルHTMLを作成。既定OFF |
@@ -55,7 +62,7 @@ uv run --project pdf-shrink pdf-shrink run `
 | `-v`, `--verbose` | 詳細ログ |
 
 入力と出力に、同じフォルダーや互いに親子となるフォルダーは指定できません。
-`--safe`は`--preset compact`、`--text-scan-pattern`および`--photo-pattern`と同時指定できず、
+`--safe`は`--preset compact`、`--text-scan-pattern`、`--text-scan-bilevel-pattern`、`--photo-pattern`、`--font-replace-pattern`と同時指定できず、
 終了コード `2` になります。
 
 写真PDFの閲覧用候補を明示的に選ぶ場合:
@@ -90,8 +97,9 @@ dry-runでも状態DBと `report.dry-run.csv` を更新する場合がありま�
 新しい内容を誤って処理済みと記録せず、次回に再処理します。ただし、処理中の入力自体は
 ロックしません。
 プリセットの画像処理値、写真選択パターン、`photo_dpi`とphoto recipeは再開判定用の設定ハッシュに
-含みます。現行版は`processing_schema=5`を含むため、以前のstateも一度再処理します。
-状態DBは`photo_dpi`などの列追加で移行し、既存行は削除しません。
+含みます。字体統一パターン、WindowsフォントファイルのSHA-256、固定レシピ、fontTools・pikepdfの版も含みます。
+現行版は`processing_schema=6`を含むため、以前のstateも一度再処理します。
+状態DBは`photo_dpi`や字体統一の要求・字体名・SHA・抽出差などの列追加で移行し、既存行は削除しません。
 `preview`・`preview_dpis`は通常処理のhashから除外し、比較資料だけの変更では正常PDFを再処理しません。
 
 ## 任意のPDF比較
@@ -127,21 +135,29 @@ standard/compactとも、図・写真・その他の画像を含む未許可PDF�
 | `--preserve-pattern` | 必ず原本保護。すべての許可に優先 |
 | `--text-pattern` | 文章と水平・垂直の直線・枠線だけの罫線表を許可 |
 | `--text-scan-pattern` | 明示した文章だけのスキャンを許可 |
+| `--text-scan-bilevel-pattern` | 明示した白黒書類スキャンに二値化候補を追加 |
+| `--font-replace-pattern` | 明示したPDFの字体をWindowsメイリオRegularへ統一する候補を許可 |
 | `--photo-pattern` | 既存の写真用150〜300 DPI候補を許可 |
 
 上表はPDF個別CLIの名前です。統合CLIでは`--text-pattern`を`--pdf-text-pattern`とするように`pdf-`を付けます。すべて反復可能な入力相対globで、
 大小文字を無視し、区切りを正規化、`*`はディレクトリ区切りにも一致します。空・絶対path・
 `..`は禁止です。保護されていないPDFが複数の処理許可に一致すると処理開始前にエラーになります。
-罫線表の意味や画像の内容を自動推測しません。曲線、塗り、斜線、特殊な描画は保護します。
+罫線表の意味や画像の内容を自動推測しません。文章・罫線表の許可では曲線、塗り、斜線、特殊な描画は保護します。
 暗号化、署名、フォーム、添付、修復済みPDFなどの除外を維持し、検査失敗は`ERROR`として原本復旧します。
 
 文章・罫線表は原本から独立に、qpdf単独、フォントサブセット化・整理圧縮＋qpdf、
 グレー化＋同じ整理圧縮＋qpdfを作ります。PyMuPDF `recolor(components=1)`と
 `subset_fonts(fallback=False)`を使用し、文字の画像化・再配置・代替フォント・OCR・scrubは行いません。
-`--safe`はグレー化を無効にし、文章スキャン指定・写真指定・compactとの併用は引数エラーです。
+字体置換は後述の`font_replace`を明示したPDFだけの別処理です。
+`--safe`はグレー化を無効にし、文章スキャン指定・写真指定・字体統一指定・compactとの併用は引数エラーです。
 
 文章スキャンは単純な8-bit DeviceRGB/DeviceGray画像だけを対象に、300 DPI・グレーJPEG品質92/85/80を
 独立比較し、qpdf単独候補も残します。既存OCR文字層は保持し、新しいOCRはしません。
+`--text-scan-bilevel-pattern`では同じ候補に1-bit DeviceGray・Flate候補を追加します。
+グレー画素値220未満を黒、220以上を白にし、dither・文字認識・字形の置換は行いません。
+同サイズではJPEG候補を二値化より優先します。採用時は`ADOPTED_LOSSY`、候補kindと理由は
+`text_scan_bilevel`と`adopted_text_scan_bilevel`です。色・階調・薄い筆画の保持は保証しません。
+スキャン画像の`Length`は直接整数と間接参照整数に対応し、復号前に圧縮stream上限を確認します。
 配置transformから共有xrefの各軸の最小DPIを求め、300 DPI超の軸だけをceilで縮小します。
 低DPI軸は拡大せず、低DPI画像もグレーJPEG候補にはできます。マスク、特殊Decode/DecodeParms、
 複雑な色空間、inline画像、曖昧な画像参照・配置は文書全体を保護します。
@@ -157,6 +173,42 @@ qpdf検査、ページ形状・抽出文字・文字位置・罫線と画像の�
 最大32×32 pixel局所差20%を超える候補を棄却します。可読性やOCR精度の保証ではありません。
 
 写真レシピ・候補検証・採用条件の正確な値は[技術リファレンス](../docs/REFERENCE.md#写真用profileの明示選択)を参照してください。
+
+## Windowsフォントへの明示置換
+
+通常CLIに実装済みです。既定はOFFで、PDF個別CLIでは次のように指定します。
+統合CLIからの操作は[利用者マニュアル](../MANUAL.md#日本語英語のpdfをメイリオへ統一する)を参照してください。
+
+```powershell
+uv run --project pdf-shrink pdf-shrink run --input "C:\作業\PDF" --output "C:\作業\字体統一\files" --font-replace-pattern "報告書.pdf" --dry-run
+uv run --project pdf-shrink pdf-shrink run --input "C:\作業\PDF" --output "C:\作業\字体統一\files" --font-replace-pattern "報告書.pdf"
+```
+
+`--font-replace-pattern`は字体置換の対象選択であり、一致しないPDFも既存ルールで処理します。
+1冊だけ試す場合はそのコピーだけを置いた入力フォルダーを使います。上の例の通常レポートは
+`C:\作業\字体統一\report.csv`です。`ADOPTED_LOSSY`かつ`adopted_font_replace`で置換採用を確認できます。
+
+`font_replace` profileはWindowsの`meiryo.ttc` face 0（`Meiryo Regular`、既定）または
+`--font-family yu-gothic`で`YuGothR.ttc` face 0（`Yu Gothic Regular`）を使い、日本語・英語の
+横書きで対応可能な文字だけをサブセット埋め込みします。フォント名・埋め込み権限・SHAを確認し、
+字体の輪郭や文字幅自体は改変せず、PDF側の字間を調整します。画像として焼き込まれた文字は対象外です。
+無指定のPDFでは字体を変えません。必要なWindowsフォントの準備失敗は開始前エラーですが、
+preserve優先の適用後にfont_replace対象が0件ならフォントを要求しません。
+
+qpdf単独と字体置換＋qpdfを原本から独立に比較し、検証済みで原本より小さい候補だけを採用します。
+タグ構造と空のAcroFormは保持して独立検証します。空AcroFormはFieldsなし/空配列で、
+キーをFields/DR/DA/NeedAppearancesに限定します。注釈・入力欄・XFA・署名は対応外です。
+同寸法8bit DeviceGrayの単層SMask付き画像を保持でき、XMPのPDFVersionも自動書換えしません。
+同サイズならqpdfを優先し、字体置換の採用は`ADOPTED_LOSSY`です。`--lossless-jpeg`を併用しても
+このprofileの候補は増やさず、要求フラグは記録します。欠字・未対応構造は文書全体を保護し、
+構造検査・ツール・I/O失敗は復旧コピー後も`ERROR`です。dry-runはフォント・構造の読取りだけです。
+
+表示文字・順序・位置、図表・画像等の保持を独立検証しますが、字形と検索・コピー時の推定空白は
+変わり得ます。Regular化で元の太字の強調が弱まる場合もあります。
+MuPDFでの抽出差は採用時に`text_extraction_changed`へ記録し、全閲覧ソフトの一致は
+保証しません。対応構造、検証方法、上限の正確な契約は
+[Windowsフォントへの明示置換](../docs/REFERENCE.md#windowsフォントへの明示置換)を参照してください。
+比較HTMLの100ページ上限は通常PDF処理と別であり、font_replaceにも適用されます。
 
 ## レポートのstatus
 
@@ -192,20 +244,24 @@ qpdf検査、ページ形状・抽出文字・文字位置・罫線と画像の�
 レポート列:
 
 ```text
-source_path,source_size,source_sha256,output_path,output_size,output_sha256,saved_bytes,saved_percent,preset,mode,status,page_count,scan_page_ratio,error_message,profile,decision_reason,candidate_size,candidate_saved_bytes,candidate_saved_percent,images_changed,candidate_details,lossless_jpeg_requested,photo_dpi,requested_policy,classification,permission_basis,preservation_reason,processing_schema
+source_path,source_size,source_sha256,output_path,output_size,output_sha256,saved_bytes,saved_percent,preset,mode,status,page_count,scan_page_ratio,error_message,profile,decision_reason,candidate_size,candidate_saved_bytes,candidate_saved_percent,images_changed,candidate_details,lossless_jpeg_requested,photo_dpi,requested_policy,classification,permission_basis,preservation_reason,processing_schema,font_replacement_requested,replacement_font,replacement_font_sha256,text_extraction_changed
 ```
 
-`profile`はファイルに適用した`standard`・`compact`・`photo`・`text`・`text_scan`・`preserve`です。`preset`は起動時の値を維持します。
+`profile`はファイルに適用した`standard`・`compact`・`photo`・`text`・`text_scan`・`text_scan_bilevel`・`font_replace`・`preserve`です。`preset`は起動時の値を維持します。
 `photo_dpi`はphoto行の要求目標DPIで、それ以外はCSVで空欄、DBで`NULL`です。原本・可逆候補を
 採用しても要求値を維持します。統合CLIは旧CSVでの列欠落、不正値、指定不一致を拒否します。
 `candidate_*`と`images_changed`は一次候補の診断値です。photoでは非可逆候補を試した場合はそれを一次とし、文章向けはqpdfを一次とします。
 可逆候補を後から採用しても記録を置き換えません。`candidate_saved_percent`と`saved_percent`は
 0.05が5%の割合です。候補未生成のサイズは空欄であり、0 byteとは異なります。
 
-`candidate_details`は`kind`、`size`、`images_changed`、`reason`、`validation_reason`、`selected`を
+`candidate_details`は`kind`、`size`、`images_changed`、`reason`、`validation_reason`、`selected`、`text_extraction_changed`を
 持つJSON配列です。`kind`は非可逆候補でprofile名、可逆候補で`lossless`、
 `jpeg_lossless_baseline`、`jpeg_lossless_progressive`を記録します。
 `lossless_jpeg_requested`は全行`true`/`false`で保存し、統合CLIが指定と照合します。
+`font_replacement_requested`はfont_replace行だけ`true`で、`replacement_font`は選択した`Yu Gothic Regular`または`Meiryo Regular`、
+`replacement_font_sha256`はWindowsフォントファイル全体の64桁小文字SHA-256です。他profileは要求`false`・
+字体名/SHAは空欄です。保護・dry-run・qpdf候補採用でも要求を記録します。`text_extraction_changed`は
+採用した字体置換候補にMuPDF抽出の空白・改行差がある場合だけ`true`、他は`false`です。
 DBは旧行を保持した列追加移行。hashには採用下限、JPEG有効状態、固定recipe/検証、tool version/SHA-256を含めます。
 採用候補だけ`selected=true`で、原本採用時は全て`false`です。最終理由と
 一次候補だけで判断せず、後続候補の経緯も確認できます。各理由の意味は
@@ -223,6 +279,8 @@ DBは旧行を保持した列追加移行。hashには採用下限、JPEG有効�
 | `worker.py` | 1ファイルの検査、候補生成、検証、採否判断 |
 | `policy.py` | 候補生成前の文書全体の保護・許可判定、文章スキャン画像の事前検査 |
 | `text_optimize.py` | 文章・罫線表・文章スキャン候補、内容・配置・描画検証、文書予算 |
+| `font_replace.py` / `font_replace_parse.py` | Windows字体の準備、字体置換の有界な事前検査・サブセット・PDF文字送り変換 |
+| `font_validate.py` / `font_pipeline.py` | 字体・文字・非文字構造の独立検証／qpdf単独と字体置換候補の評価 |
 | `inspect_pdf.py` | 写真処理等の安全性検査と画像配置の実効DPI判定 |
 | `transform.py` | 写真向け等の可逆・非可逆候補の生成 |
 | `lossless_jpeg.py` | 任意jpegtran検出、JPEG可逆stream生成、原寸画素・完全描画検査 |

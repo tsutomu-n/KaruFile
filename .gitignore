@@ -18,6 +18,7 @@ htmlcov/
 *_軽量化/
 *_resized/
 # Custom --output directories should be added to .git/info/exclude locally.
+# Runtime names below apply at any depth: reports can sit outside output trees.
 
 # PDF runtime state, reports, and interrupted report publication
 .pdf-shrink/
@@ -27,6 +28,14 @@ report.dry-run.csv
 .report.csv.*.backup
 .report.dry-run.csv.*.tmp
 .report.dry-run.csv.*.backup
+
+# PDF comparison bundles, manifests, and interrupted manifest publication
+# These are runtime outputs, not the versioned diagrams/guide under docs/.
+pdf-preview/
+pdf-preview.json
+pdf-preview.dry-run.json
+.pdf-preview.json-*.tmp
+.pdf-preview.dry-run.json-*.tmp
 
 # Standalone image reports, including dry-run manifests
 *.image-errors.csv
@@ -43,8 +52,20 @@ report.dry-run.csv
 .*.video-report.csv.*.tmp
 .*.video-report.dry-run.csv.*.tmp
 
+# Excel reports and temporary workspace; source xlsx fixtures stay versioned.
+*.excel-report.csv
+*.excel-report.dry-run.csv
+*.excel-work/
+.*.excel-report.csv.*.tmp
+.*.excel-report.dry-run.csv.*.tmp
+
 # Keep uv.lock, .python-version, ExecPlans, and architecture/visual-check artifacts.
 # Do not ignore media extensions: source fixtures may be versioned.
+# Do not add blanket *.json, *.csv, *.html, *.tmp, or docs/ exclusions.
+
+# Windows Explorer-generated files
+Thumbs.db
+desktop.ini
 
 # Local Devin CLI overrides
 .devin/config.local.json

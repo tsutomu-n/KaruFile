@@ -83,6 +83,7 @@ def _image_manifest_row(
 PDF_REPORT_FIELDS = (
     "requested_policy", "classification", "permission_basis", "preservation_reason", "processing_schema",
     "lossless_jpeg_requested",
+    "font_replacement_requested", "replacement_font", "replacement_font_sha256", "text_extraction_changed",
     "photo_dpi",
     "source_path",
     "source_size",
@@ -109,19 +110,25 @@ def _write_pdf_report(path: Path, rows: list[dict[str, object]]) -> None:
         writer = csv.DictWriter(stream, fieldnames=PDF_REPORT_FIELDS)
         writer.writeheader()
         writer.writerows({
-            "processing_schema": 5,
+            "processing_schema": 6,
             "requested_policy": row.get("profile", row.get("preset")),
-            "classification": {"standard": "text", "compact": "text", "photo": "photo", "text": "text_table", "text_scan": "text_scan", "preserve": "protected"}.get(row.get("profile", row.get("preset")), "text"),
+            "classification": {"standard": "text", "compact": "text", "photo": "photo", "text": "text_table", "text_scan": "text_scan", "text_scan_bilevel": "text_scan", "font_replace": "font_replace", "preserve": "protected"}.get(row.get("profile", row.get("preset")), "text"),
             "permission_basis": "automatic_text_only" if row.get("profile", row.get("preset")) in {"standard", "compact"} else "explicit_" + str(row.get("profile")),
             "preservation_reason": "",
             "profile": row.get("preset"),
             "lossless_jpeg_requested": "false",
+            "font_replacement_requested": "true" if row.get("profile") == "font_replace" else "false",
+            "replacement_font": "Yu Gothic Regular" if row.get("profile") == "font_replace" else "",
+            "replacement_font_sha256": "a" * 64 if row.get("profile") == "font_replace" else "",
+            "text_extraction_changed": "false",
             "photo_dpi": 200 if row.get("profile") == "photo" else "",
             **row,
         } for row in rows)
 
 
 VIDEO_REPORT_FIELDNAMES = (
+    "safe",
+    "remove_audio",
     "source_path",
     "source_size",
     "output_path",
@@ -149,6 +156,8 @@ VIDEO_REPORT_FIELDNAMES = (
 def _video_metadata(*, adopted: bool = False, audio_codec: str = "aac") -> dict[str, object]:
     if adopted:
         return {
+            "safe": False,
+            "remove_audio": False,
             "reason": "adopted test candidate",
             "video_codec": "av1",
             "audio_codec": audio_codec,
@@ -162,6 +171,8 @@ def _video_metadata(*, adopted: bool = False, audio_codec: str = "aac") -> dict[
         }
     return {
         "reason": "copied original",
+        "safe": False,
+        "remove_audio": False,
         "video_codec": "",
         "audio_codec": "",
         "width": None,
@@ -183,7 +194,11 @@ def _write_video_report(
     with path.open("w", encoding="utf-8", newline="") as stream:
         writer = csv.DictWriter(stream, fieldnames=fieldnames, extrasaction="ignore")
         writer.writeheader()
-        writer.writerow(row)
+        serialized = dict(row)
+        for flag in ("safe", "remove_audio"):
+            if isinstance(serialized.get(flag), bool):
+                serialized[flag] = str(serialized[flag]).lower()
+        writer.writerow(serialized)
 
 
 def _make_directory_link(link: Path, target: Path) -> None:
@@ -902,7 +917,8 @@ def test_standard_keeps_v1_behavior_and_does_not_start_video(tmp_path: Path, mon
     assert calls == ["media-shrink"]
 
 
-def test_compact_runs_video_and_validates_atomic_report(tmp_path: Path, monkeypatch):
+@pytest.mark.parametrize("safe,remove_audio", [(False, False), (True, True)])
+def test_compact_runs_video_and_validates_atomic_report(tmp_path: Path, monkeypatch, safe, remove_audio):
     input_dir = tmp_path / "input"
     output_dir = tmp_path / "output"
     input_dir.mkdir()
@@ -921,6 +937,8 @@ def test_compact_runs_video_and_validates_atomic_report(tmp_path: Path, monkeypa
             _write_image_manifest(Path(f"{output_dir}.image-manifest.csv"))
             return 0, ["Resized 0 images (0 errors)", "0.00 B -> 0.00 B"], 0.01
         assert name == "video-shrink"
+        assert ("--safe" in args) is safe
+        assert ("--remove-audio" in args) is remove_audio
         output = output_dir / "clip.mp4"
         output.write_bytes(b"tiny")
         saved = len(source_bytes) - 4
@@ -941,7 +959,9 @@ def test_compact_runs_video_and_validates_atomic_report(tmp_path: Path, monkeypa
                 "preset": "compact",
                 "source_sha256": source_hash,
                 "output_sha256": output_hash,
-                **_video_metadata(adopted=True),
+                **_video_metadata(adopted=True, audio_codec="" if remove_audio else "aac"),
+                "safe": safe,
+                "remove_audio": remove_audio,
             },
         )
         return 0, [], 0.01
@@ -950,8 +970,21 @@ def test_compact_runs_video_and_validates_atomic_report(tmp_path: Path, monkeypa
 
     assert shrink_all.main(
         ["-i", str(input_dir), "-o", str(output_dir), "--preset", "compact"]
+        + (["--video-safe"] if safe else [])
+        + (["--video-remove-audio"] if remove_audio else [])
     ) == 0
     assert calls == ["media-shrink", "video-shrink"]
+    parsed = shrink_all.parse_video_report(video_report)
+    assert not shrink_all.video_report_matches_inputs(
+        parsed, [source], input_dir=input_dir, output_dir=output_dir,
+        preset="compact", dry_run=False, safe=not safe, remove_audio=remove_audio,
+    )
+    if remove_audio:
+        parsed["rows"][0]["audio_codec"] = "aac"
+        assert not shrink_all.video_report_matches_inputs(
+            parsed, [source], input_dir=input_dir, output_dir=output_dir,
+            preset="compact", dry_run=False, safe=safe, remove_audio=True,
+        )
 
 
 def test_compact_rejects_video_state_hardlink_before_processors(

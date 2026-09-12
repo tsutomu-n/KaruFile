@@ -104,7 +104,7 @@ def test_video_complexity_and_unsupported_signals_are_skipped(
 ) -> None:
     base = media_factory(tmp_path / "clip.mp4").video_streams[0]
     media = media_factory(tmp_path / "clip.mp4", video=replace(base, **change))
-    eligibility = inspect_eligibility(media, CompactRecipe())
+    eligibility = inspect_eligibility(media, CompactRecipe(), safe=True)
     assert not eligibility.eligible
     assert eligibility.status is expected_status
 

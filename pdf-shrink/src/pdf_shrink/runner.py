@@ -296,6 +296,9 @@ def _worker_crash_result(
         decision_reason="processing_error",
         lossless_jpeg_requested=cfg.lossless_jpeg,
         photo_dpi=cfg.photo_dpi if profile == "photo" else None,
+        font_replacement_requested=profile == "font_replace",
+        replacement_font=cfg.replacement_font if profile == "font_replace" else "",
+        replacement_font_sha256=cfg.font_replace_sha256 if profile == "font_replace" else "",
     )
 
 
@@ -373,6 +376,13 @@ def run(cfg: RunConfig) -> int:
                 protected_sources=protected_sources,
             )
         _validate_workspace_paths(cfg, paths, sources, protected_sources)
+        if any(profile_for_path(cfg, source.relative_path) == "font_replace" for source in sources):
+            from .font_replace import prepare_font
+            font_path, font_sha256 = prepare_font() if cfg.font_family == "meiryo" else prepare_font(cfg.font_family)
+            cfg = replace(cfg, font_replace_path=font_path, font_replace_sha256=font_sha256)
+            logger.warning(
+                "Font replacement requested: %s. Typeface and search/copy whitespace may change.", cfg.replacement_font
+            )
     except (OSError, RuntimeError, ValueError) as exc:
         logger.error("PDF preflight failed: %s", exc)
         return 1

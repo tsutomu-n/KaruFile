@@ -199,7 +199,9 @@ def target_dimensions(width: int, height: int, recipe: CompactRecipe) -> tuple[i
     return target_width, target_height
 
 
-def inspect_eligibility(media: MediaInfo, recipe: CompactRecipe) -> Eligibility:
+def inspect_eligibility(
+    media: MediaInfo, recipe: CompactRecipe, *, safe: bool = False, remove_audio: bool = False,
+) -> Eligibility:
     suffix = media.path.suffix.lower()
     expected = _EXPECTED_FORMATS.get(suffix)
     if expected is None or not any(name in media.format_name.casefold() for name in expected):
@@ -217,9 +219,9 @@ def inspect_eligibility(media: MediaInfo, recipe: CompactRecipe) -> Eligibility:
     video = media.video_streams[0]
     if video.disposition.get("attached_pic", 0):
         return Eligibility(False, ProcessStatus.SKIPPED_COMPLEX, "video stream is attached artwork")
-    if len(media.audio_streams) > 1:
+    if not remove_audio and len(media.audio_streams) > 1:
         return Eligibility(False, ProcessStatus.SKIPPED_COMPLEX, "multiple audio streams are present")
-    audio = media.audio_streams[0] if media.audio_streams else None
+    audio = media.audio_streams[0] if media.audio_streams and not remove_audio else None
     if audio is not None and (audio.channels is None or audio.channels not in {1, 2}):
         return Eligibility(False, ProcessStatus.SKIPPED_COMPLEX, "audio must have one or two channels")
     if video.pix_fmt.casefold() not in _SDR_420_FORMATS:
@@ -228,13 +230,15 @@ def inspect_eligibility(media: MediaInfo, recipe: CompactRecipe) -> Eligibility:
         return Eligibility(False, ProcessStatus.SKIPPED_UNSUPPORTED, "video bit depth is not 8-bit")
     if _has_hdr_metadata(video):
         return Eligibility(False, ProcessStatus.SKIPPED_COMPLEX, "HDR or Dolby Vision metadata is present")
-    if video.field_order.casefold() != "progressive":
+    allowed_field_orders = {"progressive"} if safe else {"progressive", "", "unknown"}
+    if video.field_order.casefold() not in allowed_field_orders:
         return Eligibility(
             False,
             ProcessStatus.SKIPPED_COMPLEX,
             "progressive field order is not explicitly reported",
         )
-    if video.sample_aspect_ratio != "1:1":
+    allowed_sars = {"1:1"} if safe else {"1:1", "", "N/A", "0:1"}
+    if video.sample_aspect_ratio not in allowed_sars:
         return Eligibility(
             False,
             ProcessStatus.SKIPPED_COMPLEX,
@@ -244,7 +248,7 @@ def inspect_eligibility(media: MediaInfo, recipe: CompactRecipe) -> Eligibility:
         return Eligibility(False, ProcessStatus.SKIPPED_UNSUPPORTED, "video dimensions are invalid")
     if video.r_frame_rate is None or video.avg_frame_rate is None:
         return Eligibility(False, ProcessStatus.SKIPPED_COMPLEX, "frame rate is unavailable")
-    if video.r_frame_rate != video.avg_frame_rate:
+    if safe and video.r_frame_rate != video.avg_frame_rate:
         return Eligibility(False, ProcessStatus.SKIPPED_COMPLEX, "variable frame rate is not supported")
     rotation = display_rotation(video)
     if rotation is None:
@@ -253,7 +257,7 @@ def inspect_eligibility(media: MediaInfo, recipe: CompactRecipe) -> Eligibility:
     if rotation in {90, 270}:
         display_width, display_height = display_height, display_width
     width, height = target_dimensions(display_width, display_height, recipe)
-    source_fps = video.avg_frame_rate
+    source_fps = video.avg_frame_rate if safe else max(video.r_frame_rate, video.avg_frame_rate)
     target_fps = min(source_fps, Fraction(recipe.max_fps, 1))
     return Eligibility(
         True,
