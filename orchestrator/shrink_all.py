@@ -421,10 +421,20 @@ def _is_link_or_junction(path: Path) -> bool:
     return bool(attributes & getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0))
 
 
+def _relative_input(path: Path, root: Path) -> Path:
+    if root.is_file():
+        if path != root:
+            raise ValueError("Single-file input must match the requested PDF")
+        return Path(path.name)
+    return path.relative_to(root)
+
+
 def collect_files(input_dir: Path, extensions: set[str]) -> list[Path]:
     """Collect regular files without following symlinks or Windows junctions."""
 
     input_root = input_dir.resolve(strict=True)
+    if input_root.is_file():
+        return [input_root] if input_root.suffix.casefold() in extensions else []
     found: list[Path] = []
     pending = [input_root]
     while pending:
@@ -588,7 +598,7 @@ def _has_link_component(root: Path, candidate: Path) -> bool:
 
 def validate_directories(input_dir: Path, output_dir: Path) -> None:
     """processor 起動前に危険な入出力関係を拒否する。"""
-    if not input_dir.is_dir():
+    if not input_dir.is_dir() and not (input_dir.is_file() and input_dir.suffix.casefold() == ".pdf"):
         raise ValueError(f"入力ディレクトリが存在しません: {input_dir}")
     if output_dir.exists() and not output_dir.is_dir():
         raise ValueError(f"出力先がディレクトリではありません: {output_dir}")
@@ -610,7 +620,7 @@ def _plan_image_destinations(
     base: list[tuple[Path, Path, Path]] = []
     groups: dict[str, list[int]] = {}
     for source in image_files:
-        relative_source = source.resolve(strict=True).relative_to(input_root)
+        relative_source = _relative_input(source.resolve(strict=True), input_root)
         relative_output = relative_source
         if relative_output.suffix.lower() not in JPEG_EXTENSIONS:
             relative_output = relative_output.with_name(f"{relative_output.name}.jpg")
@@ -694,7 +704,7 @@ def validate_planned_destinations(
     output_root = output_dir.resolve(strict=False)
     planned: list[tuple[str, Path, Path]] = []
     for source in pdf_files:
-        relative = source.resolve(strict=True).relative_to(input_root)
+        relative = _relative_input(source.resolve(strict=True), input_root)
         planned.append(("pdf", source, output_dir / relative))
 
     planned.extend(
@@ -706,10 +716,10 @@ def validate_planned_destinations(
         )
     )
     for source in video_files or []:
-        relative = source.resolve(strict=True).relative_to(input_root)
+        relative = _relative_input(source.resolve(strict=True), input_root)
         planned.append(("video", source, output_dir / relative))
     for source in excel_files or []:
-        relative = source.resolve(strict=True).relative_to(input_root)
+        relative = _relative_input(source.resolve(strict=True), input_root)
         planned.append(("excel", source, output_dir / relative))
 
     protected_sources = tuple([*pdf_files, *image_files, *(video_files or []), *(excel_files or [])])
@@ -823,7 +833,7 @@ def validate_derived_write_paths(
         derived.extend(
             (
                 "PDF per-source temporary directory",
-                temp_root / source.resolve(strict=True).relative_to(input_root).parent,
+                temp_root / _relative_input(source.resolve(strict=True), input_root).parent,
             )
             for source in pdf_files
         )
@@ -854,7 +864,7 @@ def validate_derived_write_paths(
         derived.extend(
             (
                 "Video per-source temporary directory",
-                video_temp_root / source.resolve(strict=True).relative_to(input_root).parent,
+                video_temp_root / _relative_input(source.resolve(strict=True), input_root).parent,
             )
             for source in video_files
         )
@@ -1113,7 +1123,7 @@ def validate_pdf_preview_manifest(
                 return None
             seen.add(key)
             row = expected_rows[key]
-            relative = Path(row["source_path"]).relative_to(input_dir).as_posix()
+            relative = _relative_input(Path(row["source_path"]), input_dir).as_posix()
             if (
                 item.get("relative_path") != relative
                 or item.get("source_sha256") != row["source_sha256"]
@@ -1373,7 +1383,7 @@ def pdf_report_matches_inputs(
             source = expected_sources[
                 str(Path(row["source_path"]).resolve(strict=False)).casefold()
             ]
-            relative = source.relative_to(input_root)
+            relative = _relative_input(source, input_root)
             expected_output = output_dir / relative
             if Path(row["output_path"]).resolve(strict=False) != expected_output.resolve(
                 strict=False
@@ -1400,6 +1410,9 @@ def pdf_report_matches_inputs(
                 replacement_font_sha256 = digest
             classification = row.get("classification")
             basis = "automatic_text_only" if row["profile"] in {"standard", "compact"} else f"explicit_{row['profile']}"
+            raster = row["profile"] in {"standard", "compact"} and row.get("permission_basis") == "automatic_scan_raster"
+            if raster:
+                basis = "automatic_scan_raster"
             if row["status"] != "ERROR":
                 if row.get("permission_basis") != basis:
                     return False
@@ -1409,7 +1422,7 @@ def pdf_report_matches_inputs(
                 if row["profile"] == "preserve" and (not protected or row.get("preservation_reason") != "explicit_preserve"):
                     return False
                 expected_class = {"standard": "text", "compact": "text", "text": "text_table", "text_scan": "text_scan", "text_scan_bilevel": "text_scan", "photo": "photo", "font_replace": "font_replace"}
-                if not protected and classification != expected_class.get(row["profile"]):
+                if not protected and classification != ("raster_scan" if raster else expected_class.get(row["profile"])):
                     return False
             expected_dpi = photo_dpi if row["profile"] == "photo" else None
             if row.get("photo_dpi") != expected_dpi or (
@@ -1485,12 +1498,12 @@ def pdf_report_matches_inputs(
                 if output_size != source_size or output_sha256 != source_sha256:
                     return False
             elif status == "ADOPTED_LOSSLESS":
-                text_result = classification in {"text", "text_table", "text_scan", "font_replace"}
+                text_result = classification in {"text", "text_table", "text_scan", "font_replace", "raster_scan"}
                 if output_size <= 0 or saved_bytes <= 0 or (not text_result and (saved_bytes < 16 * 1024 or saved_percent < 0.02)):
                     return False
             elif status == "ADOPTED_LOSSY":
                 min_saved_bytes = (64 if row["profile"] == "photo" else 256) * 1024
-                text_result = classification in {"text", "text_table", "text_scan", "font_replace"}
+                text_result = classification in {"text", "text_table", "text_scan", "font_replace", "raster_scan"}
                 if output_size <= 0 or saved_bytes <= 0 or (not text_result and (saved_bytes < min_saved_bytes or saved_percent < 0.05)):
                     return False
             else:
@@ -1980,7 +1993,7 @@ def excel_report_matches_inputs(
                     or row["max_side"] != max_side or row["jpeg_quality"] != jpeg_quality):
                 return False
             observed.add(str(source).casefold())
-            relative = source.relative_to(input_root)
+            relative = _relative_input(source, input_root)
             output = output_root / relative
             if (row["relative_path"] != relative.as_posix()
                     or row["output_path"].casefold() != str(output).casefold()
@@ -2308,7 +2321,7 @@ def video_report_matches_inputs(
                 or source_stat_after.st_ctime_ns != source_stat_before.st_ctime_ns
             ):
                 return False
-            expected_output = output_root / source.relative_to(input_root)
+            expected_output = output_root / _relative_input(source, input_root)
             reported_output = Path(row["output_path"]).resolve(strict=False)
             if str(reported_output).casefold() != str(expected_output.resolve(strict=False)).casefold():
                 return False
@@ -2771,10 +2784,10 @@ def build_parser() -> argparse.ArgumentParser:
         prog="karufile",
         description="PDF・画像・明示選択Excel・対応動画を、原本を変更せず別フォルダーへ軽量化する",
     )
-    parser.add_argument("-i", "--input", required=True, help="入力ディレクトリ")
+    parser.add_argument("-i", "--input", required=True, help="入力フォルダーまたはPDFファイル")
     parser.add_argument(
         "-o", "--output",
-        help="出力ディレクトリ（未指定時は <input>_軽量化）",
+        help="出力ディレクトリ（省略時：フォルダーは <input>_軽量化、PDF1冊は <stem>_軽量化/files）",
     )
     parser.add_argument(
         "--pdf-workers", type=_positive_int, default=2,
@@ -2870,15 +2883,21 @@ def main(argv: list[str] | None = None) -> int:
     setup_logging(args.verbose)
 
     try:
-        input_dir = Path(args.input).resolve()
+        lexical_input = Path(os.path.abspath(Path(args.input).expanduser()))
+        if lexical_input.is_file() or lexical_input.is_symlink():
+            if any(_is_link_or_junction(part) for part in (lexical_input, *lexical_input.parents)):
+                raise ValueError("Input file path contains a symlink or junction")
+        input_dir = lexical_input.resolve()
         if args.output:
             output_dir = Path(args.output).resolve()
+        elif input_dir.is_file():
+            output_dir = (input_dir.parent / f"{input_dir.stem}_軽量化" / "files").resolve()
         else:
             output_dir = (input_dir.parent / f"{input_dir.name}_軽量化").resolve()
         validate_directories(input_dir, output_dir)
         pdf_files = collect_files(input_dir, PDF_EXTENSIONS)
         for path in pdf_files:
-            _pdf_profile(path.relative_to(input_dir), args.preset, args.pdf_photo_pattern,
+            _pdf_profile(_relative_input(path, input_dir), args.preset, args.pdf_photo_pattern,
                          args.pdf_preserve_pattern, args.pdf_text_pattern, args.pdf_text_scan_pattern,
                          args.pdf_text_scan_bilevel_pattern, args.pdf_font_replace_pattern)
         image_files = collect_files(input_dir, IMAGE_EXTENSIONS)
@@ -3054,53 +3073,57 @@ def main(argv: list[str] | None = None) -> int:
                 pdf_preview_index = preview["index_path"]
 
     # 2. 画像リサイズ
-    image_args = [
-        "python", "-m", "media_shrink", "resize",
-        "-i", str(input_dir),
-        "-o", str(output_dir),
-        "-j", str(args.image_workers),
-        "--preset", args.preset,
-    ]
-    if args.dry_run:
-        image_args.append("-n")
-    if args.verbose:
-        image_args.append("-v")
+    image_exit = 0
+    image_report_updated = False
+    image_result = _empty_result()
+    if not input_dir.is_file():
+        image_args = [
+            "python", "-m", "media_shrink", "resize",
+            "-i", str(input_dir),
+            "-o", str(output_dir),
+            "-j", str(args.image_workers),
+            "--preset", args.preset,
+        ]
+        if args.dry_run:
+            image_args.append("-n")
+        if args.verbose:
+            image_args.append("-v")
 
-    image_exit, _image_lines, _image_elapsed = run_command(
-        "media-shrink", MEDIA_SHRINK_DIR, image_args
-    )
-    image_report_updated = _was_updated(image_error_report, image_report_before)
-    if not image_report_updated:
-        logging.error("Image error report was not updated by this run: %s", image_error_report)
-        image_exit = image_exit or 1
-    image_result = _unavailable_result()
-    if _was_updated(image_manifest_path, image_manifest_before):
-        parsed_image = parse_image_manifest(image_manifest_path)
-        if (
-            parsed_image
-            and image_manifest_matches_inputs(
-                parsed_image,
-                image_files,
-                input_dir=input_dir,
-                output_dir=output_dir,
-                preset=args.preset,
-                dry_run=args.dry_run,
-            )
-            and image_report_updated
-            and image_errors_match_manifest(image_error_report, parsed_image)
-        ):
-            image_result = parsed_image
-            if parsed_image.get("errors", 0) > 0:
+        image_exit, _image_lines, _image_elapsed = run_command(
+            "media-shrink", MEDIA_SHRINK_DIR, image_args
+        )
+        image_report_updated = _was_updated(image_error_report, image_report_before)
+        if not image_report_updated:
+            logging.error("Image error report was not updated by this run: %s", image_error_report)
+            image_exit = image_exit or 1
+        image_result = _unavailable_result()
+        if _was_updated(image_manifest_path, image_manifest_before):
+            parsed_image = parse_image_manifest(image_manifest_path)
+            if (
+                parsed_image
+                and image_manifest_matches_inputs(
+                    parsed_image,
+                    image_files,
+                    input_dir=input_dir,
+                    output_dir=output_dir,
+                    preset=args.preset,
+                    dry_run=args.dry_run,
+                )
+                and image_report_updated
+                and image_errors_match_manifest(image_error_report, parsed_image)
+            ):
+                image_result = parsed_image
+                if parsed_image.get("errors", 0) > 0:
+                    image_exit = image_exit or 1
+            else:
+                logging.error(
+                    "Image manifest does not match current inputs/outputs/errors: %s",
+                    image_manifest_path,
+                )
                 image_exit = image_exit or 1
         else:
-            logging.error(
-                "Image manifest does not match current inputs/outputs/errors: %s",
-                image_manifest_path,
-            )
+            logging.error("Image manifest was not updated by this run: %s", image_manifest_path)
             image_exit = image_exit or 1
-    else:
-        logging.error("Image manifest was not updated by this run: %s", image_manifest_path)
-        image_exit = image_exit or 1
 
     # 3. 明示選択したxlsxのみ。CSVとZIP partを独立に検証して集計する。
     excel_exit = 0
@@ -3255,11 +3278,12 @@ def main(argv: list[str] | None = None) -> int:
     )
     print("Files deleted       : 0")
     print()
-    print("Image error report:")
-    if image_report_updated:
-        print(image_error_report)
-    else:
-        print(f"{image_error_report} (not updated this run)")
+    if not input_dir.is_file():
+        print("Image error report:")
+        if image_report_updated:
+            print(image_error_report)
+        else:
+            print(f"{image_error_report} (not updated this run)")
     if excel_files:
         print("Excel report:")
         print(excel_report_path if excel_report_updated else f"{excel_report_path} (not updated this run)")

@@ -9,16 +9,19 @@ usage: karufile [-h] -i INPUT [-o OUTPUT] [--pdf-workers PDF_WORKERS]
                 [--pdf-photo-pattern PATTERN] [--pdf-photo-dpi DPI]
                 [--pdf-preview] [--pdf-preview-dpi DPI] [--pdf-lossless-jpeg]
                 [--pdf-jpegtran-path PDF_JPEGTRAN_PATH]
-                [--excel-pattern PATTERN] [--excel-dpi DPI] [--video-safe]
-                [--video-remove-audio] [--ffmpeg-path FFMPEG_PATH]
-                [--ffprobe-path FFPROBE_PATH] [-n] [-v]
+                [--excel-pattern PATTERN] [--excel-dpi DPI]
+                [--excel-max-side PX] [--excel-jpeg-quality QUALITY]
+                [--video-safe] [--video-remove-audio]
+                [--ffmpeg-path FFMPEG_PATH] [--ffprobe-path FFPROBE_PATH] [-n]
+                [-v]
 
 PDF・画像・明示選択Excel・対応動画を、原本を変更せず別フォルダーへ軽量化する
 
 options:
   -h, --help            show this help message and exit
-  -i, --input INPUT     入力ディレクトリ
-  -o, --output OUTPUT   出力ディレクトリ（未指定時は <input>_軽量化）
+  -i, --input INPUT     入力フォルダーまたはPDFファイル
+  -o, --output OUTPUT   出力ディレクトリ（省略時：フォルダーは <input>_軽量化、PDF1冊は
+                        <stem>_軽量化/files）
   --pdf-workers PDF_WORKERS
                         pdf-shrink の並列数（デフォルト 2）
   --image-workers IMAGE_WORKERS
@@ -52,7 +55,10 @@ options:
                         PDFで使うjpegtran実行ファイル。指定だけでは有効化しない
   --excel-pattern PATTERN
                         指定xlsxの貼り付け画像の縮小を許可（画質劣化あり）。入力相対glob、反復可、既定OFF
-  --excel-dpi DPI       Excel画像の目標DPI（150〜300の整数、既定220、--excel-pattern必須）
+  --excel-dpi DPI       Excel画像を固定pxの代わりに配置DPIで縮小（150〜300、--excel-pattern必須）
+  --excel-max-side PX   Excel画像の長辺上限（100〜10000、既定800、--excel-dpiと排他）
+  --excel-jpeg-quality QUALITY
+                        Excel JPEG品質（40〜95、既定72、DPI指定時85）
   --video-safe          動画のprogressive/SAR/CFR情報を厳格判定（compactのみ）
   --video-remove-audio  動画を音声除去して圧縮（compactのみ、有音コピーにfallbackしない）
   --ffmpeg-path FFMPEG_PATH

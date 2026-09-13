@@ -21,11 +21,34 @@ def _is_nested(parent: Path, child: Path) -> bool:
         return False
 
 
+def relative_input(path: Path, root: Path) -> Path:
+    if root.is_file():
+        if path != root:
+            raise ValueError("File input must select exactly that PDF")
+        return Path(path.name)
+    return path.relative_to(root)
+
+
+def resolve_input(path: Path) -> Path:
+    lexical = Path(os.path.abspath(path.expanduser()))
+    if lexical.is_file() or lexical.is_symlink():
+        if any(_is_link_or_junction(part) for part in (lexical, *lexical.parents)):
+            raise ValueError("Input file path contains a symlink or junction")
+    return lexical.resolve()
+
+
+def default_output(path: Path) -> Path:
+    if path.is_file():
+        return path.parent / f"{path.stem}_軽量化" / "files"
+    return path.parent / f"{path.name}_軽量化"
+
+
 def validate_directories(input_dir: Path, output_dir: Path) -> None:
     if not input_dir.exists():
         raise ValueError(f"Input directory does not exist: {input_dir}")
-    if not input_dir.is_dir():
+    if not input_dir.is_dir() and not (input_dir.is_file() and input_dir.suffix.casefold() == ".pdf"):
         raise ValueError(f"Input path is not a directory: {input_dir}")
+    resolve_input(input_dir)
     input_root = input_dir.resolve(strict=True)
     output_root = output_dir.resolve(strict=False)
     if input_root == output_root:
@@ -79,6 +102,11 @@ def collect_pdfs(input_dir: Path) -> list[Path]:
     """PDFを探索する。symlink/junctionは追跡せず、fail closedにする。"""
 
     input_root = input_dir.resolve(strict=True)
+    if input_root.is_file():
+        resolve_input(input_dir)
+        if input_root.suffix.casefold() != ".pdf":
+            raise ValueError("Single-file input must be a PDF")
+        return [input_root]
     found: list[Path] = []
     pending = [input_root]
     while pending:
@@ -138,7 +166,7 @@ def snapshot(path: Path, input_dir: Path) -> SourceSnapshot:
     stat, file_hash = _capture_stable_hash(resolved)
     return SourceSnapshot(
         path=resolved,
-        relative_path=resolved.relative_to(input_root),
+        relative_path=relative_input(resolved, input_root),
         sha256=file_hash,
         size=stat.st_size,
         mtime_ns=stat.st_mtime_ns,

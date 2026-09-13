@@ -44,11 +44,11 @@
     {
       "id": "illustrated-pdf",
       "type": "external",
-      "label": "図・写真入りPDF",
-      "sublabel": "未指定のスキャンPDFも含む",
+      "label": "文字・画像が混在",
+      "sublabel": "OCR文字・描画線も従来の扱い",
       "pos": [
         40,
-        92
+        144
       ],
       "size": [
         220,
@@ -62,7 +62,7 @@
       "sublabel": "PDF全体を加工しない",
       "pos": [
         340,
-        92
+        144
       ],
       "size": [
         220,
@@ -72,11 +72,11 @@
     {
       "id": "scan-pdf",
       "type": "external",
-      "label": "指定したスキャンPDF",
-      "sublabel": "文章の資料と人が確認",
+      "label": "画像だけのスキャンPDF",
+      "sublabel": "写真だけのPDFも含む",
       "pos": [
         40,
-        190
+        92
       ],
       "size": [
         220,
@@ -86,11 +86,11 @@
     {
       "id": "scan-result",
       "type": "backend",
-      "label": "白黒の軽いコピー候補",
-      "sublabel": "条件を満たすものだけ採用",
+      "label": "300 DPIグレーで圧縮",
+      "sublabel": "色は失われる・原本は残る",
       "pos": [
         340,
-        190
+        92
       ],
       "size": [
         220,
@@ -156,7 +156,9 @@
         "text-pdf",
         "text-result",
         "illustrated-pdf",
-        "preserved-result"
+        "preserved-result",
+        "scan-pdf",
+        "scan-result"
       ],
       "pad": 24
     },
@@ -164,8 +166,6 @@
       "kind": "region",
       "label": "内容を確認して、追加指定",
       "wraps": [
-        "scan-pdf",
-        "scan-result",
         "font-replacement-pdf",
         "font-replacement-result"
       ],

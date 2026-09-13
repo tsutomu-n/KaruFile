@@ -177,6 +177,7 @@ source = { editable = "." }
 dependencies = [
     { name = "fonttools" },
     { name = "pikepdf" },
+    { name = "pillow" },
     { name = "pymupdf" },
 ]
 
@@ -189,6 +190,7 @@ dev = [
 requires-dist = [
     { name = "fonttools", specifier = "==4.64.0" },
     { name = "pikepdf", specifier = "==10.13.0.post1" },
+    { name = "pillow", specifier = ">=10.0" },
     { name = "pymupdf", specifier = "==1.28.2" },
 ]
 

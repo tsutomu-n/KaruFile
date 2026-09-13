@@ -11,6 +11,7 @@ from collections.abc import Callable, Iterable
 from pathlib import Path
 from typing import Iterator
 
+from .discovery import relative_input
 from .models import ProcessStatus
 from .state import Record, candidate_details_json
 from .utils import human_size, sha256_file
@@ -195,7 +196,7 @@ def staged_csv(
                 report_output_path = ""
                 if output_root is not None:
                     source_path = Path(r.source_path)
-                    relative_path = source_path.relative_to(input_root.resolve(strict=True))
+                    relative_path = relative_input(source_path, input_root.resolve(strict=True))
                     report_output_path = str(output_root / relative_path)
                 writer.writerow({
                     "source_path": r.source_path,

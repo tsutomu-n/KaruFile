@@ -40,11 +40,11 @@ ExecPlanは当時の判断と検証を残す履歴であり、現行仕様の正
 
 Archify生成HTMLは直接編集しません。Architecture JSONを更新し、Archifyのvalidate、deliver、
 visual-checkを実行してから、light/darkの画像を確認します。
-Excel追加時の図は未コミットの実装を含む作業ツリーに基づきます。
-図中の既存ソースリンクは基準commitを指し、未コミットのExcelソースを架空のGitHubリンクにはしません。
+現行の図は単一PDF入力・自動スキャンを追加した未コミットの作業ツリーに基づきます。
+図中の既存ソースリンクは基準commitを指し、未コミットの新規ソースを架空のGitHubリンクにはしません。
 照合時のローカルパス・SHA-256は[作業ツリーの根拠](architecture/karufile-runtime.compact.worktree.json)に記録しています。
 この記録は取得時点のsnapshotで、後のソース編集に合わせて再取得が必要です。
-[Excel経路追加時の確認記録](architecture/karufile-runtime.compact.review.md)には、生成・検証と明暗画像の目視結果を記載しています。
+[実行時アーキテクチャの確認記録](architecture/karufile-runtime.compact.review.md)には、生成・検証と明暗画像の目視結果を記載しています。
 
 入門ガイドの本文・埋込図の再生成手順と表示確認の証拠は [guide/README.md](guide/README.md)にあります。
 ガイドは概要説明であり、操作と安全情報の正本は引き続き `MANUAL.md` です。

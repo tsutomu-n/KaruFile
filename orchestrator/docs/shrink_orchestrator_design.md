@@ -4,6 +4,15 @@
 > `orchestrator/shrink_all.py` の内部責務と、処理コンポーネントとの境界を扱います。
 > 実装と矛盾する場合は、コードとテストを正とします。
 
+## PDF単一入力と自動スキャン（2026-09-13）
+
+rootはPDF1ファイルをそのまま子CLIへ渡し、PDFだけを実行する。相対名はファイル名で、周辺探索・入力コピーはしない。
+出力省略時は`<stem>_軽量化/files`。完成PDF以外はその親へ置き、明示outputとフォルダー入力は既存配置を維持する。
+原本・予定出力・reportの対応を単一ファイルでも独立検証する。
+既定の画像のみPDFは子側raster_scanで300 DPI・グレー・JPEG品質92へ画像化する。
+rootはstandard/compactに対するautomatic_scan_raster、raster_scanまたは上限によるprotectedの整合を確認する。
+文字PDFの処理と明示したPDF profileは維持する。正確な条件・上限はREFERENCEを参照する。
+
 ## 責務
 
 リポジトリ直下の `karufile.py` から引数を受け取り、次を担当します。

@@ -281,11 +281,12 @@ def test_worker_adopts_lossy_600_dpi_jpeg(tmp_path: Path) -> None:
     source = discovery.snapshot(source_path, input_dir)
     result = worker.process_one_file(source, cfg, temp_root, qpdf.ensure_qpdf())
 
-    assert result.status is ProcessStatus.PRESERVED_ORIGINAL
-    assert result.candidate_details == ()
-    assert result.output_path.read_bytes() == source_path.read_bytes()
+    assert result.status is ProcessStatus.ADOPTED_LOSSY
+    assert result.classification == "raster_scan"
+    assert any(c.kind == "raster_scan" and c.selected for c in result.candidate_details)
+    assert result.output_path.stat().st_size < source_path.stat().st_size
     assert result.error_message is None
-    assert _max_effective_dpi(result.output_path) == _max_effective_dpi(source_path)
+    assert _max_effective_dpi(result.output_path) == pytest.approx(300, abs=0.01)
 
 
 def test_lossy_does_not_upscale_72_dpi_image(tmp_path: Path) -> None:
@@ -443,7 +444,7 @@ def test_compact_keeps_real_bitonal_image_unchanged(tmp_path: Path) -> None:
     assert _max_effective_dpi(candidate) == pytest.approx(600, rel=0.05)
 
 
-def test_compact_worker_keeps_original_when_reduction_is_insufficient(
+def test_default_scan_uses_strictly_smaller_instead_of_photo_gates(
     tmp_path: Path,
 ) -> None:
     input_dir = tmp_path / "in"
@@ -475,10 +476,11 @@ def test_compact_worker_keeps_original_when_reduction_is_insufficient(
         qpdf.ensure_qpdf(),
     )
 
-    assert result.status is ProcessStatus.PRESERVED_ORIGINAL
-    assert result.candidate_details == ()
-    assert result.output_path.read_bytes() == source_path.read_bytes()
-    assert result.output_path.read_bytes() == source_path.read_bytes()
+    assert result.status is ProcessStatus.ADOPTED_LOSSY
+    assert result.classification == "raster_scan"
+    assert any(c.kind == "raster_scan" and c.selected for c in result.candidate_details)
+    assert result.output_path.stat().st_size < source_path.stat().st_size
+    assert result.output_path.stat().st_size < source_path.stat().st_size
 
 
 def test_compact_worker_adopts_300_dpi_jpeg_when_all_gates_pass(
@@ -513,12 +515,13 @@ def test_compact_worker_adopts_300_dpi_jpeg_when_all_gates_pass(
         qpdf.ensure_qpdf(),
     )
 
-    assert result.status is ProcessStatus.PRESERVED_ORIGINAL
-    assert result.candidate_details == ()
-    assert result.output_path.read_bytes() == source_path.read_bytes()
+    assert result.status is ProcessStatus.ADOPTED_LOSSY
+    assert result.classification == "raster_scan"
+    assert any(c.kind == "raster_scan" and c.selected for c in result.candidate_details)
+    assert result.output_path.stat().st_size < source_path.stat().st_size
     assert result.output_size is not None
-    assert result.output_size == source_path.stat().st_size
-    assert _max_effective_dpi(result.output_path) == _max_effective_dpi(source_path)
+    assert result.output_size < source_path.stat().st_size
+    assert _max_effective_dpi(result.output_path) == pytest.approx(300, abs=0.01)
 
 
 def test_compact_worker_recovers_original_when_validation_fails(
@@ -541,21 +544,21 @@ def test_compact_worker_recovers_original_when_validation_fails(
         cfg,
         reduction=replace(cfg.reduction, skip_below_bytes=1),
     )
-    monkeypatch.setattr(
-        worker.validate,
-        "validate",
-        lambda *_args, **_kwargs: (False, "deliberate_validation_failure"),
-    )
+    from pdf_shrink import raster_scan
+    from pdf_shrink.lossless_jpeg import CandidateRejected
+    def reject(*args, **kwargs):
+        raise CandidateRejected("deliberate_validation_failure")
+    monkeypatch.setattr(raster_scan, "validate", reject)
 
     result = worker.process_one_file(
         discovery.snapshot(source_path, input_dir),
         cfg,
         temp_root,
-        tmp_path / "qpdf.exe",
+        qpdf.ensure_qpdf(),
     )
 
-    assert result.status is ProcessStatus.PRESERVED_ORIGINAL
-    assert result.candidate_details == ()
+    assert result.status is ProcessStatus.UNCHANGED
+    assert all(c.reason == "quality_rejected" for c in result.candidate_details)
     assert result.output_path.read_bytes() == source_path.read_bytes()
     assert result.error_message is None
     assert result.output_path.read_bytes() == source_path.read_bytes()

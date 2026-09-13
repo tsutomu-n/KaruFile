@@ -6,6 +6,7 @@
 
 | 計画 | 状態 | 内容 |
 |---|---|---|
+| [2026-09-13-default-scan-compression.md](2026-09-13-default-scan-compression.md) | 完了・未コミット | スキャンPDFの既定300 DPIグレー圧縮、単一PDF直接入力、実19ページ68.77%減、1303 passed/4 skipped |
 | [2026-09-10-nishimaki-pdf-compression.md](2026-09-10-nishimaki-pdf-compression.md) | メイリオ既定化まで完了 | 指定5冊圧縮、分析報告を字体変更。メイリオ選択を追加し1冊目を前回比25.32%減、☑保持。1240 tests成功/4 skipped。既定メイリオの実1冊成功、3冊目の注釈は未対応 |
 | [2026-09-10-excel-image-research.md](2026-09-10-excel-image-research.md#excel-expansion-plan) | 800px/JPEG圧縮まで完了 | CP-019完了。ユーザー指定800px・JPEG品質72をCLI既定化、schema3。実28画像すべて圧縮し61.94%減、全1271 tests成功/4 skipped。未対応配置の保護は維持 |
 | [2026-09-10-video-policy-audio.md](2026-09-10-video-policy-audio.md) | 完了 | 動画の通常変換、任意safe、音声除去＋圧縮、実2動画Pilot |

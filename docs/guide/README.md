@@ -16,7 +16,7 @@
 | [chrome.mjs](chrome.mjs) | 上記2スクリプト専用の一時ChromeプロファイルとDevTools接続 |
 
 図の `*.html` と `../KARUFILE_GUIDE.html` は直接編集せず、各正本から再生成します。
-アプリの処理コードや依存関係は変更していません。文書の生成・表示確認にはNode.jsとローカルChromeが必要です。
+ガイド生成スクリプトは処理コードを書き換えません。文書の生成・表示確認にはNode.jsとローカルChromeが必要です。
 Chromeの自動検出先以外を使う場合は `GUIDE_CHROME` に実行ファイルのパスを指定します。
 
 ## 再生成
@@ -55,6 +55,14 @@ PNGは図1が2080×1136、図2が2400×1280で、ガイドにはdata URLとし�
 ページ数は`guide.a4.pages.json`を正とし、それを超える古い画像を今回の証拠として扱わないでください。
 
 ## 実装との照合元
+
+2026-09-13はpolicy.py、raster_scan.py、worker.py、discovery.py、orchestrator/shrink_all.pyと照合。
+画像だけのPDFの既定300 DPIグレー・品質92、原本維持、文字PDFの既存処理、単一ファイル入力を反映した。
+図2をArchifyで更新してbuild/check/render-printを実行し、明暗図・PC/狭幅・A4全7ページを確認した。
+この日の実行機能のテストと実19ページPilotは別のExecPlanとdocs/validationに記録する。
+
+以下の2026-09-10以前の記述は、各文書更新時点の履歴。
+
 
 2026-09-10のExcel追補では、明示選択xlsx、既定800px・JPEG品質72、両presetで同じ処理、
 画像の表示寸法が確定できない場合の保護、画像以外の内部データ維持、ERROR時の既存出力、

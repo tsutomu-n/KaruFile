@@ -1,3 +1,19 @@
+# 2026-09-13 単一PDF入力・自動スキャンの確認
+
+基準commitは`78c3e4e183ae26532a680cc2c6a06eab120d5881`、未コミットの実装を含む。
+単一PDF入力、自動スキャン、専用出力の説明をJSONで更新し、Archifyで再生成した。
+新規raster_scan.pyは基準commitに存在しないため架空のソースリンクを作らず、
+[worktree snapshot](karufile-runtime.compact.worktree.json)へ実ファイルのSHAを記録した。
+
+- validate/deliver: --repo-root . --quality showcase、9/9、errors/warnings 0。
+- [validation](karufile-runtime.compact.validation.json) / [delivery](karufile-runtime.compact.delivery.json)。
+- visual-check: 1440×900、1600×1000、1920×1080、2048×1320でoverflowなし。
+- 1440×900と2048×1320のlight/dark計4枚を目視。本文・経路・カードに欠けや重なりなし。
+- visual_review: passed。機械receiptのpendingは自動では目視を判定しないため維持。
+- 生成前の診断はrepo-root未指定と基準commitにないソース参照。各原因を修正し通過した。
+
+以下は9月10日の履歴であり、当時のSHA・ソース数を現在値として使わない。
+
 # 実行時アーキテクチャの確認記録
 
 2026-09-10、明示選択したExcel画像の処理経路を追加した。

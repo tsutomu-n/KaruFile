@@ -216,7 +216,7 @@ def _document(source: SourceSnapshot, record: Record, item: dict, cfg: RunConfig
     # The source/output SHA checks above and below bind the font classification
     # to the actual completed result. No extra font candidates are generated.
     decision = (_font_preview_decision(source, record, cfg) if profile == "font_replace"
-                else classify(source.path, profile))
+                else classify(source.path, profile, safe=True) if cfg.safe else classify(source.path, profile))
     if decision.protected and record.output_sha256 != source.sha256:
         raise RuntimeError("protected preview output must equal original")
     budget.check()

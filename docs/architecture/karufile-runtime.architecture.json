@@ -7,7 +7,7 @@
     "quality_profile": "showcase",
     "repository": {
       "url": "https://github.com/tsutomu-n/KaruFile",
-      "revision": "ce7f4bdca6ec36f8ebc8df5c9eee97b5ba426e36"
+      "revision": "78c3e4e183ae26532a680cc2c6a06eab120d5881"
     },
     "legend": {
       "mode": "auto",
@@ -73,8 +73,8 @@
     {
       "id": "input",
       "type": "external",
-      "label": "入力フォルダー",
-      "sublabel": "PDF・画像・指定Excel・compact動画",
+      "label": "入力PDF / フォルダー",
+      "sublabel": "単一PDFは周辺探索なし",
       "tag": "開始・終了時にSHA照合",
       "pos": [
         390,
@@ -89,7 +89,7 @@
       "id": "pdf",
       "type": "backend",
       "label": "pdf-shrink",
-      "sublabel": "原本保護・文章／写真の候補比較",
+      "sublabel": "文章・画像だけのPDFを自動圧縮",
       "pos": [
         650,
         215
@@ -106,6 +106,10 @@
         {
           "path": "pdf-shrink/src/pdf_shrink/worker.py",
           "label": "1 PDF処理"
+        },
+        {
+          "path": "pdf-shrink/src/pdf_shrink/policy.py",
+          "label": "判定の接続先（基準commit）"
         }
       ],
       "tag": "PyMuPDF・qpdf・任意jpegtran"
@@ -193,7 +197,7 @@
       "type": "external",
       "label": "出力フォルダー",
       "sublabel": "完成ファイルを別ツリーへ",
-      "tag": "相対構造を維持",
+      "tag": "単一PDF既定：<stem>_軽量化/files",
       "pos": [
         1140,
         397
@@ -565,11 +569,11 @@
     },
     {
       "dot": "amber",
-      "title": "Excelの明示選択",
+      "title": "PDF単一入力・自動スキャン",
       "items": [
-        "両presetで長辺800px・JPEG品質72",
-        "画像以外の内部ファイルは展開後のバイト一致",
-        "未commit変更を含む。ソースリンクは基準commit"
+        "画像だけのPDFは300 DPIグレー・品質92",
+        "単一PDFは専用出力、文字PDFは既存処理",
+        "未commit変更を含む。リンクは基準commit"
       ]
     }
   ]

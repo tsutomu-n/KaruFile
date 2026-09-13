@@ -43,7 +43,7 @@ def make_pdf(path, kind="text", dpi=600):
 
 
 @pytest.mark.parametrize("preset", ["standard", "compact"])
-@pytest.mark.parametrize("kind", ["scan", "rules", "curve", "fill", "diagonal"])
+@pytest.mark.parametrize("kind", ["rules", "curve", "fill", "diagonal"])
 def test_default_protection_never_generates_candidates(tmp_path, monkeypatch, preset, kind):
     inputs = tmp_path / "input"
     inputs.mkdir()

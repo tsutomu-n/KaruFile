@@ -27,8 +27,8 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     run_parser = subparsers.add_parser("run", help="PDFフォルダーを軽量化する")
-    run_parser.add_argument("--input", required=True, help="入力PDFフォルダー")
-    run_parser.add_argument("--output", help="出力フォルダー（未指定時は <input>_軽量化）")
+    run_parser.add_argument("--input", required=True, help="入力PDFファイルまたはフォルダー")
+    run_parser.add_argument("--output", help="出力フォルダー（省略時：フォルダーは <input>_軽量化、PDF1冊は <stem>_軽量化/files）")
     run_parser.add_argument("--font-family", choices=("yu-gothic", "meiryo"), default=None, help="置換字体（既定meiryo、--font-replace-pattern必須）")
     run_parser.add_argument("--workers", type=int, default=2, help="並列プロセス数（デフォルト2）")
     for name, help_text in (("preserve", "すべての許可に優先して原本を保護"),

@@ -100,8 +100,26 @@ The root CLI's `standard` preset does not discover or copy videos. The standalon
 - Standard image recipe: long side `1280`, short side `960`, quality `72`; compact image recipe:
   long side `1024`, short side `768`, quality `60`. Both use JPEG `4:2:0`, white alpha,
   EXIF Orientation applied, no upscale or crop.
-- PDF policy defaults to whole-document original protection for unpermitted images/drawings in both presets.
-  Automatically allow only confirmed text without images, paths or other paint; blank pages may coexist.
+- Root and PDF CLI accept a single PDF directly, without staging or neighboring-file discovery.
+  Single-PDF default output is `<source-parent>/<source-stem>_軽量化/files/<source-name>`;
+  reports/state/preview use the files parent. Explicit output and directory input retain their existing layout.
+  Single-PDF root runs only the PDF child. Preserve source identity, path guards and atomic publication.
+- Default PDF policy allows confirmed text and image-only scans in both presets. Blank pages may coexist.
+  Image-only means no text paint or hidden OCR and no vector paint; clipping paths are allowed.
+  Photo-only PDFs also qualify; never claim semantic scan/photo detection.
+  Raster scans use 300 DPI gray JPEG quality92, pixel-aligned page placement, preserving page boxes/rotation,
+  links, bookmarks and metadata. Existing text/mixed PDFs and explicit policy profiles keep their behavior.
+  Preserve overrides automatic processing; standalone safe disables it. Other document-level protection remains.
+  classification=raster_scan, permission_basis=automatic_scan_raster, requested_policy/profile=standard or compact.
+  Compare independent qpdf and raster_scan candidates; only strictly smaller validated output is adopted, qpdf wins ties.
+  raster_scan adoption is ADOPTED_LOSSY; images_changed is selected rasterized page count. Dry-run generates no candidates.
+  Limits:100 pages,128MiB input,80MP/source image,32MP/page render,600MP raster generation+validation,
+  separate600MP qpdf validation, shared300-second cooperative deadline. Preflight excess protects; runtime excess rejects.
+  Full-page300DPI validation: qpdf RGB exact, raster gray mean absolute difference <=5/255 per page and <=10/255 per32x32 tile.
+  Source and candidate boxes/rotation/text/links/toc/names/metadata must agree. Raster recipev3 participates in config hash;
+  keep schema6 fields and old DB rows. JPEG-lossless request is recorded but adds no candidates to this classification.
+  Page rendering can resample low-DPI source images upward; do not claim increased original detail.
+  Unselected mixed-text/image PDFs and vector drawings remain protected.
   Root `--pdf-preserve-pattern`, `--pdf-text-pattern`, `--pdf-text-scan-pattern` use the photo glob rules;
   standalone removes `pdf-`. Preserve overrides every permission; other overlapping permissions fail preflight.
   Text patterns allow only text and horizontal/vertical strokes/rectangles. Scan patterns allow simple RGB/Gray

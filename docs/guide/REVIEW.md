@@ -1,3 +1,18 @@
+# 2026-09-13 自動スキャン・単一PDFの追補
+
+図2と本文を現行動作へ更新。図1のフォルダー処理例はそのまま再利用した。
+画像だけのスキャン（写真だけのPDFも含む）の既定300 DPIグレー圧縮、文字・OCR混在の既存動作、
+原本維持、単一PDF入力を記載した。通常の文字PDFは画像化しない。
+
+- 図2: Archify validate/deliver 9/9、errors/warnings 0、visual-checkの4画面サイズ成功。
+- 1440/2048のlight/dark計4枚を目視。配置・文字・矢印に欠けや重なりなし。
+- build-guide.mjs、check-guide.mjs、render-print.py成功。5画面幅、目次・リンク、単独オフライン、A4印刷を確認。
+- PC/390pxのPDF節、A4全7ページの一覧と変更した3ページ目を目視。文字や図のはみ出しなし。
+- 正確なHTML/PDF/図のSHAはguide.build.json、guide.verify.json、guide.a4.pages.jsonを参照。
+- visual_review: passed。全文章の校正や実プリンターでの印刷検査を意味しない。
+
+以下は過去の文書作業の履歴。過去のSHAは今回の生成物を指さない。
+
 # 2026-09-10 文書改善と全ページ再確認
 
 同日800px/JPEG追補: Excel既定を800px/JPEG品質72へ更新し、build/check/render-printが成功。

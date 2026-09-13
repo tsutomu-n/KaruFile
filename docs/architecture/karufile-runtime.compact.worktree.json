@@ -1,11 +1,11 @@
 {
   "schema_version": 1,
-  "captured_utc": "2026-09-10T12:46:23.7311160Z",
-  "basis": "working tree including Excel CLI and Python API defaults of 800px/JPEG72",
-  "base_revision": "ce7f4bdca6ec36f8ebc8df5c9eee97b5ba426e36",
-  "source_links": "Archify source links refer only to files existing at base_revision; current local source and Excel dependency snapshot evidence is below",
-  "specification_sha256": "e315bb8517b03038d7b0a576a0bf4bb83a125b8de084236df5ba88799ff067c6",
-  "artifact_sha256": "f44a99449d2e760e94c3d9a2e8e3886b60b51fd540a1ef3a02f13b2e893b7d5e",
+  "captured_utc": "2026-09-13T03:12:15.296998+00:00",
+  "basis": "Working tree including default image-only scan compression and single PDF input",
+  "base_revision": "78c3e4e183ae26532a680cc2c6a06eab120d5881",
+  "source_links": "Diagram source links refer to base revision. New raster_scan.py exists only in the working tree and is evidenced by its local SHA256 below.",
+  "specification_sha256": "3117491aac91994246df8ed889da2dcc2a26d5d19e776d12fe4832cf529f6307",
+  "artifact_sha256": "3f241a36b20c0b9dea2460261f5bbc0098bf3f1a391dfd9e6b8c4da1ba93d879",
   "files": [
     {
       "path": "excel-shrink/.python-version",
@@ -68,6 +68,10 @@
       "sha256": "4c01a76d7bda87b48dac49625f108a2fbd8369780b61d369f7c2f7afda8ed248"
     },
     {
+      "path": "excel-shrink/src/excel_shrink/recipe.py",
+      "sha256": "d4544a5923704e784ef357c59b0d3bcc07233d73d9b2e8a379c7d93597ec32de"
+    },
+    {
       "path": "excel-shrink/src/excel_shrink/report.py",
       "sha256": "c2f4d61bf0e27ec0e9878f996981c0bf40a0c819e8075db410fc32340515ddae"
     },
@@ -93,27 +97,123 @@
     },
     {
       "path": "orchestrator/shrink_all.py",
-      "sha256": "ce73f43caa6c756a4cb46eb792124e6fc5b84757a4050e70fd997ab2a32467da"
+      "sha256": "df7acebb2209e20c03b110403656ab369f074698e24d68d1e5367bd3252f2ade"
+    },
+    {
+      "path": "orchestrator/test_single_pdf.py",
+      "sha256": "3e1c6714393a0d8b3a4384534345da50adc189e3896283abe5ce97d795cce247"
+    },
+    {
+      "path": "pdf-shrink/pyproject.toml",
+      "sha256": "fcfe7cdb7d8ccdf0910d3a2dfb078fd44de09bb0bbc827101b87a8b3d5508295"
+    },
+    {
+      "path": "pdf-shrink/src/pdf_shrink/__init__.py",
+      "sha256": "8c0633402c90e972872fd5e08b2e408a4c7d46d0a95e5b38184a316a30baf62c"
+    },
+    {
+      "path": "pdf-shrink/src/pdf_shrink/__main__.py",
+      "sha256": "38e4369b27289449b5d93b25f7ad88ff2457859213624321d25cb07ac1a0fcdf"
+    },
+    {
+      "path": "pdf-shrink/src/pdf_shrink/cli.py",
+      "sha256": "9ef2ce26c67dd0bbbbf1074323d08fde5b46d8f4e892ec6a3b9367742eaa71a2"
+    },
+    {
+      "path": "pdf-shrink/src/pdf_shrink/config.py",
+      "sha256": "813122f30d8f9813b7b2d83d63685f94437b88f7b2e76a66c4374bb74cb9eace"
+    },
+    {
+      "path": "pdf-shrink/src/pdf_shrink/discovery.py",
+      "sha256": "00e6194455dc2639fe0be40aab5aa70ed199cd14404f83463b201fa400edeec8"
+    },
+    {
+      "path": "pdf-shrink/src/pdf_shrink/font_pipeline.py",
+      "sha256": "09a6a0703dda574789cb408639a79bcb9ff4f11b4a999a861bf2cc8f84dc6fdf"
+    },
+    {
+      "path": "pdf-shrink/src/pdf_shrink/font_replace.py",
+      "sha256": "01786edb82e4af6381a78f07e70d4404994ed63e033d4d4e0cac41f83c2a7dda"
+    },
+    {
+      "path": "pdf-shrink/src/pdf_shrink/font_replace_parse.py",
+      "sha256": "08e13d31918b3a14ccc4c3c7bbc7fcde6b12d9e6537656daa0725afe729703da"
+    },
+    {
+      "path": "pdf-shrink/src/pdf_shrink/font_validate.py",
+      "sha256": "0efff29a8c1135af2a449fc4413e3d3e6617655a980384fffe3b04e1efe687cd"
+    },
+    {
+      "path": "pdf-shrink/src/pdf_shrink/inspect_pdf.py",
+      "sha256": "239f6e830b01ac41e4b81a58223d2e0ee3a17b1c9735b190a958f2ade6094280"
+    },
+    {
+      "path": "pdf-shrink/src/pdf_shrink/lossless_jpeg.py",
+      "sha256": "3619ea2e05393016c5df61c441227e22798c9bd11d82616f6874c06aafaeaf03"
+    },
+    {
+      "path": "pdf-shrink/src/pdf_shrink/models.py",
+      "sha256": "27f3724aa8bdf786ceb6efe58303f0cc306adf4497e90a7c26d19e954e55383e"
+    },
+    {
+      "path": "pdf-shrink/src/pdf_shrink/output.py",
+      "sha256": "b8d1887abc0f70cba89b058fca5ff7628599b527e7d17af43fd2b8af4d5fd926"
+    },
+    {
+      "path": "pdf-shrink/src/pdf_shrink/policy.py",
+      "sha256": "7b30e105adae78c5e34848cd236d59a5cd82e3dfdc95f6e12595cf1026190b7f"
+    },
+    {
+      "path": "pdf-shrink/src/pdf_shrink/preview.py",
+      "sha256": "2ed9a6fe8c3876e054dbe46794ef11d48f122ffe24a4ca8a59c947eba698a7ec"
+    },
+    {
+      "path": "pdf-shrink/src/pdf_shrink/qpdf.py",
+      "sha256": "f51ec6988eb5bcf5a72bac4f323386c7505e657af6a3f0c6ed58bc705e108348"
+    },
+    {
+      "path": "pdf-shrink/src/pdf_shrink/raster_scan.py",
+      "sha256": "b4af076a7edc7712d7af39620c936b1ae6a78d909b155c0ea08aaf022b80392b"
     },
     {
       "path": "pdf-shrink/src/pdf_shrink/report.py",
-      "sha256": "e4170c52ba13336bd542667c98ee6056ff5c3084e7ce472c0ae4a22ad2ec173f"
+      "sha256": "46f94ef75407eba6e4864ddec320e751a69f2162fbe8234afe797c10b106557d"
     },
     {
       "path": "pdf-shrink/src/pdf_shrink/runner.py",
-      "sha256": "913a0423d12083350e11dbde21132378d9c9c8d3b0eb1ce69c0b60ed771d3838"
+      "sha256": "02f4ba819145fa62d9de4ea751fa3f01d7005154d5061e5182c28e848dc71235"
     },
     {
       "path": "pdf-shrink/src/pdf_shrink/state.py",
       "sha256": "dbef6791f574660d2bbb57c5fdfce04a6b3a25ad06e80dd4109b5edba68e3701"
     },
     {
-      "path": "pdf-shrink/src/pdf_shrink/worker.py",
-      "sha256": "6d5dc09f7142d2563a46bbad06f676b6928ae6ed71b1a1fb35c89651a350e8fc"
+      "path": "pdf-shrink/src/pdf_shrink/text_optimize.py",
+      "sha256": "c8baa990fe5b0446a1a796ae37648a2445417b07216810b5ecc30f926aeb7232"
     },
     {
-      "path": "excel-shrink/src/excel_shrink/recipe.py",
-      "sha256": "d4544a5923704e784ef357c59b0d3bcc07233d73d9b2e8a379c7d93597ec32de"
+      "path": "pdf-shrink/src/pdf_shrink/transform.py",
+      "sha256": "c76227d763982dcddb2ed891d9a3bfd4b44ff1600fbbb4db7e40b88aac390d1f"
+    },
+    {
+      "path": "pdf-shrink/src/pdf_shrink/utils.py",
+      "sha256": "8b334b56cad079d3f774d330a4b66f2f075ccf0e4859ba18531006a2af165d2d"
+    },
+    {
+      "path": "pdf-shrink/src/pdf_shrink/validate.py",
+      "sha256": "53f0233133ae8462dea1ec90fab6dd06d41e965c8f8fa6355e3641ecf076abca"
+    },
+    {
+      "path": "pdf-shrink/src/pdf_shrink/worker.py",
+      "sha256": "3fd623c28a62d360c90219ef59103f9c919e27fecc3ef8f84aa1c8734e2e7bdd"
+    },
+    {
+      "path": "pdf-shrink/tests/test_automatic_scan.py",
+      "sha256": "c7848ef90c1c79522b65039afac72bdf78a005c06c545a271b0ed0c47683b06a"
+    },
+    {
+      "path": "pdf-shrink/uv.lock",
+      "sha256": "134164800955181a115595afc51a1d05598da5c522400acda06c413a8dce0a6c"
     }
   ]
 }

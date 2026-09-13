@@ -365,7 +365,7 @@ def run(cfg: RunConfig) -> int:
         sources = [discovery.snapshot(path, cfg.input_dir) for path in selected]
         # Validate all permissions before tool execution or output publication.
         for path in files:
-            profile_for_path(cfg, path.relative_to(cfg.input_dir))
+            profile_for_path(cfg, discovery.relative_input(path, cfg.input_dir))
         # --limit の未選択PDFもhardlink保護対象。未選択原本へのchmod/置換も禁止する。
         protected_sources = tuple(files)
         for source in sources:

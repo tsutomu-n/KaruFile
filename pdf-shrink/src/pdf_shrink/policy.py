@@ -121,7 +121,7 @@ def scan_images(doc: fitz.Document, *, deadline: float = float("inf")) -> tuple[
     return {xref: minimums[xref] for xref in placed}, ""
 
 
-def classify(path: Path, requested: str) -> Decision:
+def classify(path: Path, requested: str, *, safe: bool = False) -> Decision:
     deadline = time.monotonic() + 300
     basis = "automatic_text_only" if requested in {"standard", "compact"} else f"explicit_{requested}"
     def preserve(reason: str) -> Decision:
@@ -147,6 +147,11 @@ def classify(path: Path, requested: str) -> Decision:
         # semantics than the first text/scan recipe supports.
         if doc.get_ocgs():
             return preserve("optional_content")
+        if requested in {"standard", "compact"} and not safe:
+            from . import raster_scan
+            if raster_scan.automatic_scan(doc, deadline):
+                reason = raster_scan.preflight(doc, path)
+                return Decision("protected" if reason else "raster_scan", "automatic_scan_raster", reason)
         if requested in {"text_scan", "text_scan_bilevel"}:
             _, reason = scan_images(doc, deadline=deadline)
             if reason:

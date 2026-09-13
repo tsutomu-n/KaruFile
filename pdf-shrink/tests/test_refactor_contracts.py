@@ -1596,7 +1596,7 @@ def test_dry_run_reports_plan_without_creating_pdf(
 
     result = worker.process_one_file(source, cfg, tmp_path / "temp", None)
 
-    assert result.status is ProcessStatus.DRY_RUN_PRESERVED
+    assert result.status is ProcessStatus.DRY_RUN_LOSSY
     assert result.output_size is None
     assert not result.output_path.exists()
 

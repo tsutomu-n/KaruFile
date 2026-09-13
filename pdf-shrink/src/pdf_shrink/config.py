@@ -230,12 +230,13 @@ def default_config(
     preview: bool = False,
     preview_dpis: tuple[int, ...] = (),
 ) -> RunConfig:
+    from .discovery import default_output, resolve_input
     selected_preset = CompressionPreset(preset)
-    input_path = Path(input_dir).resolve()
+    input_path = resolve_input(Path(input_dir))
     output_path = (
         Path(output_dir).resolve()
         if output_dir is not None
-        else (input_path.parent / f"{input_path.name}_軽量化").resolve()
+        else default_output(input_path).resolve()
     )
     return RunConfig(
         input_dir=input_path,
@@ -255,12 +256,13 @@ def default_config(
 
 
 def build_config(args: Any) -> RunConfig:
-    input_dir = Path(args.input).resolve()
+    from .discovery import default_output, resolve_input
+    input_dir = resolve_input(Path(args.input))
     output_arg = getattr(args, "output", None)
     output_dir = (
         Path(output_arg).resolve()
         if output_arg
-        else (input_dir.parent / f"{input_dir.name}_軽量化").resolve()
+        else default_output(input_dir).resolve()
     )
     workers = int(getattr(args, "workers", 2))
     if workers < 1:
@@ -341,6 +343,7 @@ def config_for_path(cfg: RunConfig, relative_path: Path) -> RunConfig:
 def config_hash(cfg: RunConfig) -> str:
     """処理結果または記録される判定結果に影響する条件をハッシュ化する。"""
     from .lossless_jpeg import RECIPE
+    from .raster_scan import RECIPE as RASTER_RECIPE
 
     lossy = asdict(cfg.lossy)
     if not cfg.lossy.recompress_existing_jpeg:
@@ -350,7 +353,8 @@ def config_hash(cfg: RunConfig) -> str:
     relevant = {
         # Legacy rows lack the requested photo DPI and must run once again.
         "processing_schema": 6,
-        "protection_policy": "text-only-auto-v1",
+        "protection_policy": "text-and-image-only-auto-v2",
+        "raster_scan_recipe": RASTER_RECIPE,
         "preserve_patterns": cfg.preserve_patterns,
         "text_patterns": cfg.text_patterns,
         "text_scan_patterns": cfg.text_scan_patterns,

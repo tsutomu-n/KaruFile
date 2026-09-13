@@ -5,10 +5,41 @@
 
 製品動作とこの文書が矛盾する場合は、コードとテストを正とします。
 
+## 自動スキャン画像化と単一PDF入力
+
+root/PDF個別CLIの`--input`はPDF1ファイルも受け付ける。周辺探索・入力コピーを行わず、入力相対名は元ファイル名。
+出力省略時は`<source-parent>/<source-stem>_軽量化/files/<source-name>`、report/state/previewは`files`の親に置く。
+明示`--output`は従来どおり完成ファイルのディレクトリを指定する。フォルダー入力の配置は変更しない。
+単一PDFでは画像・Excel・動画子CLIを起動せず、それらの空レポートも生成しない。
+同一・親子出力、symlink/junction/hardlink宛先、原本変更検出、検証後の原子的公開を維持する。
+
+standard/compactの未選択PDFについて、文書に画像があり、全ページが画像とclipのみ（空白混在可）で、
+文字描画・不可視OCR・vector paintを含まない場合に`classification=raster_scan`、
+`permission_basis=automatic_scan_raster`とする。写真だけのPDFも含む構造判定であり、意味分類ではない。
+`profile`/`requested_policy`はstandard/compactのまま。preserveおよび明示した他のPDF処理が優先し、
+個別CLIのsafeでは無効。暗号化、修復、署名、フォーム/添付、レイヤー、注釈等の既存保護は維持する。
+
+`raster_scan`候補は各ページを300 DPI・DeviceGray・JPEG品質92にし、画素格子を一致させて配置する。
+元のページbox/rotation/表示寸法、リンク、詳細しおり、名前解決、metadata/XMPを検証する。
+元の文字を画像化しない。低解像度の元画像もページ描画時に300 DPIへ再標本化される。
+原本由来qpdf候補と独立に生成し、厳密に小さい検証済み候補の最小を採用、同サイズならqpdf優先。
+採用はADOPTED_LOSSY、kind=raster_scan、reason=adopted_raster_scan。images_changedは採用した画像化ページ数。
+可逆候補はADOPTED_LOSSLESS、dry-runはDRY_RUN_LOSSY・候補/完成PDFなし。tool/I/O/構造失敗はERROR。
+
+上限は100ページ、入力128 MiB、元画像80 MP/枚、ページ描画32 MP/枚。
+画像化候補の生成＋原本/候補検証の累積600 MP、独立qpdf候補検証も別枠600 MP。
+事前超過は保護、実行中超過は候補棄却。判定と全候補で300秒の協調的期限を共有する。
+検証はqpdf --checkと300 DPI全ページ比較。qpdf候補はRGB完全一致、画像化候補はグレーの
+平均絶対差が各ページ5/255以下、32×32画素ごと10/255以下。任意倍率や文字単位の同一性保証ではない。
+画像化を拒否しても適格なqpdf候補は採用し、両候補不採用なら原本コピーでUNCHANGED。
+任意lossless-jpegの要求は記録するが、この分類にはjpegtran候補を追加しない。
+CSV/DB schema6の既存欄を使用し、新分類・permission basisをrootが検証する。
+protection_policyと画像化recipe（v3、数値上限含む）をconfig hashに追加し、旧成功記録は再処理する。
+
 ## 統合CLI
 
 ```text
--i, --input PATH         入力フォルダー。必須
+-i, --input PATH         入力フォルダーまたはPDFファイル。必須
 -o, --output PATH        出力フォルダー。省略時は <input>_軽量化
 --pdf-workers N          PDFの並列処理数。既定値は2
 --image-workers N        画像の並列処理数。既定値は4
@@ -246,13 +277,14 @@ PDF dry-runではqpdfを使用しません。
 
 ### 圧縮対象の判定
 
-standard/compactとも、図・写真・その他の画像を含む未許可PDFは一冊まるごと原本コピーします。
-可逆候補、JPEG可逆候補、比較用追加候補も生成しません。自動対象は、文字を確認でき、画像・
-描画パス・その他の非文字描画がないPDFだけです。空白ページの混在は許可します。
+standard/compactとも、文字だけのPDFに加え、文字データがなく画像と切り抜き指定だけのPDFを自動対象にします。
+画像だけのPDFは300 DPI・グレー・JPEG品質92のページ画像へ変換します。写真だけのPDFも含まれます。
+文字（不可視OCRを含む）と画像が混在するPDFや描画線入りPDFは、従来どおり明示指定なしでは保護します。
+空白ページの混在は許可します。保護時は候補を生成せず原本をコピーします。
 
 | 指定 | 処理 |
 |---|---|
-| 無指定 | 文字だけを自動対象にし、その他は保護 |
+| 無指定 | 文字PDFと画像だけのスキャンPDFを自動対象にし、その他は保護 |
 | `--pdf-preserve-pattern` | 必ず原本保護。すべての許可に優先 |
 | `--pdf-text-pattern` | 文章と水平・垂直の直線・枠線だけの罫線表を許可 |
 | `--pdf-text-scan-pattern` | 明示した文章だけのスキャンを許可 |
@@ -322,7 +354,7 @@ PDF処理の開始前エラーです。保護指定を適用した後にfont_rep
 元の文字表示命令をPDF側の幅と字間調整へ変換して位置を保ち、文字を画像化したり、`ActualText`で
 本文を書き直したりしません。画像として焼き込まれた文字は置換しません。
 画像・描画パスを含むPDFも、このprofileで検証できる構造に限って保持したまま字体を置換します。
-通常の文章・罫線表profileでは代替フォントを使わず、未指定の図・画像PDFは引き続き原本保護します。
+通常の文章・罫線表profileでは代替フォントを使わず、自動スキャン条件に該当しない未指定の図・画像PDFは原本保護します。
 
 原本からqpdf単独と字体置換＋qpdfの2候補を独立に作り、検証済みで原本より厳密に小さい候補を採用します。
 同サイズならqpdf単独を優先します。字体置換候補の採用は`ADOPTED_LOSSY`、qpdf単独は`ADOPTED_LOSSLESS`です。
@@ -636,8 +668,8 @@ PDFの`ERROR`・`SKIPPED_*`は描画せず、比較側の`SKIPPED`と理由を�
 ### PDF個別CLI
 
 ```text
---input PATH          入力フォルダー。必須
---output PATH         省略時は <input>_軽量化
+--input PATH          入力フォルダーまたはPDFファイル。必須
+--output PATH         フォルダー入力の省略時は <input>_軽量化。PDF1冊は <stem>_軽量化/files
 --workers N           既定値2、最小値1
 --dry-run             出力PDFを作らず判定結果を記録
 --safe                非可逆処理を無効化し、可逆候補だけを選択

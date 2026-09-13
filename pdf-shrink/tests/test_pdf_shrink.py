@@ -130,8 +130,10 @@ def test_worker_processes_files(tmp_path: Path, sample_pdfs: dict[str, Path]) ->
 
     statuses = {result.status for result in results}
     assert statuses
-    # 未許可画像は保護、小容量文字PDFは候補比較へ進む。
-    assert ProcessStatus.PRESERVED_ORIGINAL in statuses
+    # 画像だけのスキャンも文字PDFも候補比較へ進む。
+    assert ProcessStatus.ADOPTED_LOSSY in statuses
+    scan_result = next(r for r in results if r.output_path.name == sample_pdfs["scan"].name)
+    assert scan_result.classification == "raster_scan"
     assert ProcessStatus.SKIPPED_SMALL not in statuses
     # 出力ミラーが存在する
     for result in results:

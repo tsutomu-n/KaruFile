@@ -185,7 +185,8 @@ def process_one_file(
             result, mode=selected_mode or result.mode, profile=profile,
             decision_reason=reason, candidate_size=size, candidate_saved_bytes=saved,
             candidate_saved_percent=saved / source.size if saved is not None and source.size else None,
-            images_changed=primary.images_changed if primary else 0,
+            images_changed=(next((c.images_changed for c in candidates if c.selected), 0)
+                            if decision.classification == "raster_scan" else primary.images_changed if primary else 0),
             candidate_details=tuple(candidates),
             lossless_jpeg_requested=cfg.lossless_jpeg,
             photo_dpi=cfg.photo_dpi if profile == "photo" else None,
@@ -210,7 +211,8 @@ def process_one_file(
                                            cfg.font_replace_sha256, processing_started + 300)
             decision = policy.Decision("protected" if reason else "font_replace", "explicit_font_replace", reason)
         else:
-            decision = policy.classify(source.path, profile)
+            decision = (policy.classify(source.path, profile, safe=True) if cfg.safe
+                        else policy.classify(source.path, profile))
         discovery.assert_source_unchanged(source, cfg.input_dir)
         if decision.protected:
             if not cfg.dry_run:
@@ -223,9 +225,10 @@ def process_one_file(
                 output_size=None if cfg.dry_run else source.size,
                 reason=decision.preservation_reason,
             )
+        raster_processing = decision.classification == "raster_scan"
         text_processing = decision.classification in {"text", "text_table", "text_scan"}
         font_processing = decision.classification == "font_replace"
-        if text_processing or font_processing:
+        if text_processing or font_processing or raster_processing:
             cfg = replace(cfg, reduction=ReductionOptions(0, 0, 0, 0, 0))
         if source.size < cfg.reduction.skip_below_bytes:
             if not cfg.dry_run:
@@ -244,7 +247,7 @@ def process_one_file(
                 reason="source_too_small",
             )
 
-        if text_processing or font_processing:
+        if text_processing or font_processing or raster_processing:
             import pymupdf as fitz
             with fitz.open(source.path) as doc:
                 inspection = InspectionResult(True, None, doc.page_count, 0.0,
@@ -305,7 +308,10 @@ def process_one_file(
         if font_processing:
             kinds = ["lossless", "font_replace"]
             modes = [OptimizationMode.LOSSLESS, OptimizationMode.LOSSY]
-        if cfg.lossless_jpeg and not (text_processing or font_processing):
+        if raster_processing:
+            kinds = ["lossless", "raster_scan"]
+            modes = [OptimizationMode.LOSSLESS, OptimizationMode.LOSSY]
+        if cfg.lossless_jpeg and not (text_processing or font_processing or raster_processing):
             modes.extend([OptimizationMode.LOSSLESS] * 2)
             kinds.extend(["jpeg_lossless_baseline", "jpeg_lossless_progressive"])
         jpeg_deadline = None
@@ -317,7 +323,26 @@ def process_one_file(
             os.close(descriptor)
             path = Path(temp_name)
             temp_paths.append(path)
-            if font_processing:
+            if raster_processing:
+                from . import raster_scan
+                candidate = CandidateResult(kind=jpeg_kind)
+                try:
+                    if jpeg_kind == "lossless":
+                        changed = text_optimize.generate(source.path, path, jpeg_kind, cfg, qpdf_exe, text_budget)
+                        raster_scan.validate(source.path, path, qpdf_exe,
+                                             raster_scan.Budget(processing_started + 300), exact=True)
+                    else:
+                        budget = raster_scan.Budget(processing_started + 300)
+                        changed = raster_scan.generate(source.path, path, budget)
+                        candidate = replace(candidate, size=path.stat().st_size, images_changed=changed)
+                        raster_scan.validate(source.path, path, qpdf_exe, budget)
+                    candidate = replace(candidate, size=path.stat().st_size, images_changed=changed,
+                                        reason="eligible" if path.stat().st_size < source.size else "candidate_not_smaller")
+                except lossless_jpeg.CandidateRejected as exc:
+                    candidate = replace(candidate, reason="quality_rejected", validation_reason=str(exc))
+                except Exception as exc:
+                    candidate = replace(candidate, reason="processing_error", validation_reason=str(exc))
+            elif font_processing:
                 from .font_pipeline import evaluate
                 candidate = evaluate(source, path, jpeg_kind, cfg, qpdf_exe, processing_started + 300)
             elif text_processing:
@@ -375,7 +400,7 @@ def process_one_file(
                 output_size=candidate_size,
                 saved_bytes=saved_bytes,
                 reason=(
-                    f"adopted_{candidate.kind}" if text_processing or font_processing or candidate.kind.startswith("jpeg_lossless_")
+                    f"adopted_{candidate.kind}" if text_processing or font_processing or raster_processing or candidate.kind.startswith("jpeg_lossless_")
                     else "fallback_lossless" if chosen else str(status).lower()
                 ),
                 selected_mode=modes[chosen],
