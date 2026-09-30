@@ -1,0 +1,101 @@
+KaruFile
+
+Input  : C:\Users\tn\AppData\Local\Temp\karufile-compact-final-20260930-p0zc_hdd\input
+Output : C:\Users\tn\AppData\Local\Temp\karufile-compact-final-20260930-p0zc_hdd\output
+Preset : compact
+
+PDF    : 1
+Images : 1
+Excel  : 0
+Videos : 1
+
+Source files : keep
+Files deleted: 0
+
+Starting...
+10:18:40 [INFO] Found 1 PDF files
+
+10:18:40 [INFO] Config hash: 1dd7efc45dc1810f
+
+10:18:40 [INFO] Files to process: 1, skipped: 0
+
+10:18:40 [INFO] Finished C:\Users\tn\AppData\Local\Temp\karufile-compact-final-20260930-p0zc_hdd\input\scan.pdf in 0.27s (status=DRY_RUN_LOSSY, saved=0.0 B, mode=lossy, profile=compact, reason=dry_run_lossy, candidate_size=-, images_changed=0)
+
+10:18:41 [INFO] Report saved to C:\Users\tn\AppData\Local\Temp\karufile-compact-final-20260930-p0zc_hdd\report.dry-run.csv
+
+
+
+==================================================
+
+PDF Shrink Summary
+
+==================================================
+
+Files            : 1
+
+Total input      : 7.7 MiB
+
+Total output     : 7.7 MiB
+
+Saved            : 0.0 B (0.00%)
+
+Elapsed          : 0.31s
+
+Throughput       : 24.66 MiB/s
+
+Files/sec        : 3.19
+
+--------------------------------------------------
+
+Status counts:
+
+  DRY_RUN_LOSSY            :    1
+
+==================================================
+
+10:18:41 [INFO] C:\Users\tn\AppData\Local\Temp\karufile-compact-final-20260930-p0zc_hdd\input\photo.png -> C:\Users\tn\AppData\Local\Temp\karufile-compact-final-20260930-p0zc_hdd\output\photo.png.jpg (SKIPPED_COMPLETE)
+
+10:18:41 [INFO] Image error report: C:\Users\tn\AppData\Local\Temp\karufile-compact-final-20260930-p0zc_hdd\output.image-errors.csv
+
+10:18:41 [ERROR] Could not update image result manifest: Invalid dry-run image action: SKIPPED_COMPLETE
+
+Resized 1 images (1 errors)
+
+  7.75 MB -> 157.22 KB
+
+Processed 1 videos (0 errors)
+
+  3.91 MB -> not written (dry-run)
+
+Video report: C:\Users\tn\AppData\Local\Temp\karufile-compact-final-20260930-p0zc_hdd\output.video-report.dry-run.csv
+
+
+KaruFile completed
+
+PDF errors   : 0
+Image errors : unknown
+Excel errors : 0
+Video errors : 0
+
+Original size : unknown
+Output size   : not written (dry-run)
+Saved         : not calculated (dry-run)
+Reduction     : not calculated (dry-run)
+
+Source files changed: NO
+Files deleted       : 0
+
+Image error report:
+C:\Users\tn\AppData\Local\Temp\karufile-compact-final-20260930-p0zc_hdd\output.image-errors.csv
+Video report:
+C:\Users\tn\AppData\Local\Temp\karufile-compact-final-20260930-p0zc_hdd\output.video-report.dry-run.csv
+Elapsed: 1.67s
+
+[DRY-RUN] PDF�E�摜�EExcel�E����o�͍͂쐬���܂���B��Ԃƃ��|�[�g�͍X�V�����ꍇ������܂��B
+10:18:40 [INFO] [pdf-shrink] Starting: uv run --project C:\Users\tn\c_projects\KaruFile\pdf-shrink python -m pdf_shrink run --input C:\Users\tn\AppData\Local\Temp\karufile-compact-final-20260930-p0zc_hdd\input --output C:\Users\tn\AppData\Local\Temp\karufile-compact-final-20260930-p0zc_hdd\output --workers 1 --preset compact --dry-run
+10:18:41 [INFO] [pdf-shrink] Finished in 0.83s (exit code: 0)
+10:18:41 [INFO] [media-shrink] Starting: uv run --project C:\Users\tn\c_projects\KaruFile\media-shrink-tool python -m media_shrink resize -i C:\Users\tn\AppData\Local\Temp\karufile-compact-final-20260930-p0zc_hdd\input -o C:\Users\tn\AppData\Local\Temp\karufile-compact-final-20260930-p0zc_hdd\output -j 1 --preset compact -n
+10:18:41 [INFO] [media-shrink] Finished in 0.38s (exit code: 1)
+10:18:41 [ERROR] Image manifest was not updated by this run: C:\Users\tn\AppData\Local\Temp\karufile-compact-final-20260930-p0zc_hdd\output.image-manifest.dry-run.csv
+10:18:41 [INFO] [video-shrink] Starting: uv run --project C:\Users\tn\c_projects\KaruFile\video-shrink python -m video_shrink run --input C:\Users\tn\AppData\Local\Temp\karufile-compact-final-20260930-p0zc_hdd\input --output C:\Users\tn\AppData\Local\Temp\karufile-compact-final-20260930-p0zc_hdd\output --workers 1 --preset compact --dry-run
+10:18:41 [INFO] [video-shrink] Finished in 0.42s (exit code: 0)

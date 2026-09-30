@@ -1,0 +1,9 @@
+{
+  "command": "uv run --project media-shrink-tool --extra dev python -m pytest -q media-shrink-tool/tests",
+  "cwd": "<repo-root>",
+  "exit_code": 0,
+  "pytest_passed": 64,
+  "pytest_seconds": 2.20,
+  "scope": "after both manifest race and dry-run reuse fixes",
+  "evidence_source": "exec_command output chunk f89ce6; not a reconstructed full log"
+}

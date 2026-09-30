@@ -1,0 +1,98 @@
+KaruFile
+
+Input  : C:\Users\tn\AppData\Local\Temp\karufile-compact-final-20260930-xf3nnx3y\input
+Output : C:\Users\tn\AppData\Local\Temp\karufile-compact-final-20260930-xf3nnx3y\output
+Preset : compact
+
+PDF    : 1
+Images : 1
+Excel  : 0
+Videos : 1
+
+Source files : keep
+Files deleted: 0
+
+Starting...
+10:21:55 [INFO] Found 1 PDF files
+
+10:21:55 [INFO] Using cached qpdf: C:\Users\tn\AppData\Local\pdf-shrink\qpdf\12.3.2\bin\qpdf.exe
+
+10:21:55 [INFO] Config hash: e534ee231ea6f49e
+
+10:21:55 [INFO] Files to process: 0, skipped: 1
+
+10:21:55 [INFO] Report saved to C:\Users\tn\AppData\Local\Temp\karufile-compact-final-20260930-xf3nnx3y\report.csv
+
+
+
+==================================================
+
+PDF Shrink Summary
+
+==================================================
+
+Files            : 1
+
+Total input      : 7.7 MiB
+
+Total output     : 2.2 MiB
+
+Saved            : 5.6 MiB (71.80%)
+
+Elapsed          : 0.00s
+
+Throughput       : 5526993.94 MiB/s
+
+Files/sec        : 714285.84
+
+--------------------------------------------------
+
+Status counts:
+
+  ADOPTED_LOSSY            :    1
+
+==================================================
+
+10:21:55 [INFO] C:\Users\tn\AppData\Local\Temp\karufile-compact-final-20260930-xf3nnx3y\input\photo.png -> C:\Users\tn\AppData\Local\Temp\karufile-compact-final-20260930-xf3nnx3y\output\photo.png.jpg (SKIPPED_COMPLETE)
+
+10:21:55 [INFO] Image error report: C:\Users\tn\AppData\Local\Temp\karufile-compact-final-20260930-xf3nnx3y\output.image-errors.csv
+
+10:21:56 [INFO] Image result manifest: C:\Users\tn\AppData\Local\Temp\karufile-compact-final-20260930-xf3nnx3y\output.image-manifest.csv
+
+Resized 1 images (0 errors)
+
+  7.75 MB -> 157.22 KB
+
+Processed 1 videos (0 errors)
+
+  3.91 MB -> 566.83 KB
+
+Video report: C:\Users\tn\AppData\Local\Temp\karufile-compact-final-20260930-xf3nnx3y\output.video-report.csv
+
+
+KaruFile completed
+
+PDF errors   : 0
+Image errors : 0
+Excel errors : 0
+Video errors : 0
+
+Original size : 19.40 MB
+Output size   : 2.89 MB
+Saved         : 16.51 MB
+Reduction     : 85.10%
+
+Source files changed: NO
+Files deleted       : 0
+
+Image error report:
+C:\Users\tn\AppData\Local\Temp\karufile-compact-final-20260930-xf3nnx3y\output.image-errors.csv
+Video report:
+C:\Users\tn\AppData\Local\Temp\karufile-compact-final-20260930-xf3nnx3y\output.video-report.csv
+Elapsed: 1.90s
+10:21:55 [INFO] [pdf-shrink] Starting: uv run --project C:\Users\tn\c_projects\KaruFile\pdf-shrink python -m pdf_shrink run --input C:\Users\tn\AppData\Local\Temp\karufile-compact-final-20260930-xf3nnx3y\input --output C:\Users\tn\AppData\Local\Temp\karufile-compact-final-20260930-xf3nnx3y\output --workers 1 --preset compact
+10:21:55 [INFO] [pdf-shrink] Finished in 0.56s (exit code: 0)
+10:21:55 [INFO] [media-shrink] Starting: uv run --project C:\Users\tn\c_projects\KaruFile\media-shrink-tool python -m media_shrink resize -i C:\Users\tn\AppData\Local\Temp\karufile-compact-final-20260930-xf3nnx3y\input -o C:\Users\tn\AppData\Local\Temp\karufile-compact-final-20260930-xf3nnx3y\output -j 1 --preset compact
+10:21:56 [INFO] [media-shrink] Finished in 0.44s (exit code: 0)
+10:21:56 [INFO] [video-shrink] Starting: uv run --project C:\Users\tn\c_projects\KaruFile\video-shrink python -m video_shrink run --input C:\Users\tn\AppData\Local\Temp\karufile-compact-final-20260930-xf3nnx3y\input --output C:\Users\tn\AppData\Local\Temp\karufile-compact-final-20260930-xf3nnx3y\output --workers 1 --preset compact
+10:21:57 [INFO] [video-shrink] Finished in 0.83s (exit code: 0)

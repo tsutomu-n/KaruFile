@@ -129,7 +129,11 @@ Orientation適用後は古いOrientation値を残しません。CMYKなどから
 
 列は `source_path,source_size,source_sha256,output_path,output_size,output_sha256,action,error,`
 `preset,recipe_hash,orig_width,orig_height,new_width,new_height` です。公開直前に全入力と、通常実行で
-生成・再利用した出力のpath、size、SHA-256、寸法を再検証します。manifestを更新できない場合も
+生成・再利用した出力のpath、size、SHA-256、寸法を再検証します。全行の検証後、公開直前に
+全入力・完成出力のファイル同一性、size、mtime、ctimeを一括再照合し、後続行の検証中に先行
+ファイルが差し替わった場合も公開を拒否します。以前のmanifestと正常な出力は保持します。
+dry-runは完成済み出力があっても通常の再利用結果を記録せず、完成出力と通常manifestを変更しません。
+共有の画像エラーCSVはdry-runでも更新します。manifestを更新できない場合も
 終了コードは `1` です。既存の正式出力またはレポートがread-onlyの場合、入力側のmodeを変えない
 ため自動でchmodせず、以前の内容を残してfail-closedにします。
 

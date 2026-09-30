@@ -463,9 +463,10 @@ input/kept.jpeg      -> output/kept.jpeg</code></pre>
       <pre><code>source_path,source_size,source_sha256,output_path,output_size,output_sha256,
 action,error,preset,recipe_hash,orig_width,orig_height,new_width,new_height</code></pre>
       <p>
-        manifest 行は、処理時の snapshot を使って検証されます。write 前にもう一度全 source/output を照合し、
-        整合しない場合は失敗します。正式ファイルへの公開は一時ファイルを <code>os.replace()</code> で移動する原子操作です。
+        manifest 行は、処理時の snapshot を使って検証されます。全行の SHA-256 と寸法を検証した後、公開直前に全 source/output の dev/inode/size/mtime/ctime を再照合します。
+        後続行の検証中に先行ファイルが差し替わった場合も終了コード 1 となり、以前の manifest と正常な出力を保持します。正式ファイルへの公開は一時ファイルを <code>os.replace()</code> で移動する原子操作です。
       </p>
+      <p>dry-run は完成済み JPEG や原本コピーがあっても通常の再利用経路を通りません。出力 size/SHA は空欄にし、完成出力と通常 manifest を維持します。共有の画像エラー CSV は更新します。入力のロックは行いません。</p>
 
       <h2 id="parallel">13. 並列実行</h2>
       <p>

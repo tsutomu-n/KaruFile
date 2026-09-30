@@ -1,0 +1,213 @@
+{
+  "fixture_kind": "synthetic",
+  "workspace": "<temp-root>",
+  "fixture": {
+    "command": [
+      "ffmpeg",
+      "-hide_banner",
+      "-loglevel",
+      "error",
+      "-nostdin",
+      "-n",
+      "-f",
+      "lavfi",
+      "-i",
+      "testsrc2=size=1280x720:rate=30:duration=2",
+      "-f",
+      "lavfi",
+      "-i",
+      "sine=frequency=440:sample_rate=48000:duration=2",
+      "-c:v",
+      "libx264",
+      "-preset",
+      "ultrafast",
+      "-crf",
+      "0",
+      "-pix_fmt",
+      "yuv420p",
+      "-c:a",
+      "aac",
+      "-shortest",
+      "<temp-root>\\input\\clip.mp4"
+    ],
+    "exit_code": 0,
+    "seconds": 0.091
+  },
+  "normal": {
+    "command": [
+      "uv",
+      "run",
+      "--script",
+      "<repo-root>\\karufile.py",
+      "--preset",
+      "compact",
+      "-i",
+      "<temp-root>\\input",
+      "-o",
+      "<temp-root>\\output",
+      "--pdf-workers",
+      "1",
+      "--image-workers",
+      "1",
+      "--video-workers",
+      "1"
+    ],
+    "exit_code": 0,
+    "seconds": 4.847
+  },
+  "resume": {
+    "command": [
+      "uv",
+      "run",
+      "--script",
+      "<repo-root>\\karufile.py",
+      "--preset",
+      "compact",
+      "-i",
+      "<temp-root>\\input",
+      "-o",
+      "<temp-root>\\output",
+      "--pdf-workers",
+      "1",
+      "--image-workers",
+      "1",
+      "--video-workers",
+      "1"
+    ],
+    "exit_code": 0,
+    "seconds": 2.111
+  },
+  "dry_run": {
+    "command": [
+      "uv",
+      "run",
+      "--script",
+      "<repo-root>\\karufile.py",
+      "--preset",
+      "compact",
+      "-i",
+      "<temp-root>\\input",
+      "-o",
+      "<temp-root>\\output",
+      "--pdf-workers",
+      "1",
+      "--image-workers",
+      "1",
+      "--video-workers",
+      "1",
+      "--dry-run"
+    ],
+    "exit_code": 0,
+    "seconds": 1.953
+  },
+  "source_snapshot": {
+    "<temp-root>\\input\\clip.mp4": [
+      "196327620af6bb72a65a7632c2ab3c8f7b64e56916d79bc03abbe72b07c8436f",
+      1790731310032905700
+    ],
+    "<temp-root>\\input\\photo.png": [
+      "04a422d0ad9792338cfb2b413ed6000eb8fe48baf242c97470d5cdfc0be7bc46",
+      1790731309654806100
+    ],
+    "<temp-root>\\input\\scan.pdf": [
+      "9873231807f4c36b748d3889bee1dad6215823a5672e567f99eb13aa69a1d9a3",
+      1790731309954212200
+    ]
+  },
+  "output_snapshot": {
+    "<temp-root>\\output\\clip.mp4": [
+      "319a2dfe1d57899d61170b4e9cae01b75dd7ee22f17664095d145489690621cc",
+      1790731314161844600
+    ],
+    "<temp-root>\\output\\photo.png.jpg": [
+      "6d3370d62a8a301d43424a4dc78da356308c0b84b05a6f797b0b791845031ea1",
+      1790731312753742800
+    ],
+    "<temp-root>\\output\\scan.pdf": [
+      "2edf0639b356524ab8af99793c3024d7d39d1822a5891f874c3b737e0edf3d75",
+      1790731309954212200
+    ]
+  },
+  "pdf": {
+    "source_path": "<temp-root>\\input\\scan.pdf",
+    "source_size": "8113661",
+    "source_sha256": "9873231807f4c36b748d3889bee1dad6215823a5672e567f99eb13aa69a1d9a3",
+    "output_path": "<temp-root>\\output\\scan.pdf",
+    "output_size": "2288344",
+    "output_sha256": "2edf0639b356524ab8af99793c3024d7d39d1822a5891f874c3b737e0edf3d75",
+    "saved_bytes": "5825317",
+    "saved_percent": "0.7179640608598264",
+    "preset": "compact",
+    "mode": "lossy",
+    "status": "ADOPTED_LOSSY",
+    "page_count": "1",
+    "scan_page_ratio": "0.0",
+    "error_message": "",
+    "profile": "compact",
+    "decision_reason": "adopted_raster_scan",
+    "candidate_size": "8115921",
+    "candidate_saved_bytes": "-2260",
+    "candidate_saved_percent": "-0.00027854257159622516",
+    "images_changed": "1",
+    "candidate_details": "[{\"kind\":\"lossless\",\"size\":8115921,\"images_changed\":0,\"reason\":\"candidate_not_smaller\",\"validation_reason\":\"\",\"selected\":false,\"text_extraction_changed\":false},{\"kind\":\"raster_scan\",\"size\":2288344,\"images_changed\":1,\"reason\":\"eligible\",\"validation_reason\":\"\",\"selected\":true,\"text_extraction_changed\":false}]",
+    "lossless_jpeg_requested": "false",
+    "photo_dpi": "",
+    "requested_policy": "compact",
+    "classification": "raster_scan",
+    "permission_basis": "automatic_scan_raster",
+    "preservation_reason": "",
+    "processing_schema": "6",
+    "font_replacement_requested": "false",
+    "replacement_font": "",
+    "replacement_font_sha256": "",
+    "text_extraction_changed": "false"
+  },
+  "image": {
+    "source_path": "<temp-root>\\input\\photo.png",
+    "source_size": "8122876",
+    "source_sha256": "04a422d0ad9792338cfb2b413ed6000eb8fe48baf242c97470d5cdfc0be7bc46",
+    "output_path": "<temp-root>\\output\\photo.png.jpg",
+    "output_size": "160990",
+    "output_sha256": "6d3370d62a8a301d43424a4dc78da356308c0b84b05a6f797b0b791845031ea1",
+    "action": "CONVERTED",
+    "error": "",
+    "preset": "compact",
+    "recipe_hash": "c5233dcedea2119fbfa723eb7020ba4f295d0fbcb0881ec8340f389614a26ddd",
+    "orig_width": "2048",
+    "orig_height": "1320",
+    "new_width": "1024",
+    "new_height": "660"
+  },
+  "video": {
+    "source_path": "<temp-root>\\input\\clip.mp4",
+    "source_size": "4100618",
+    "output_path": "<temp-root>\\output\\clip.mp4",
+    "output_size": "580438",
+    "saved_bytes": "3520180",
+    "saved_percent": "85.845109",
+    "status": "ADOPTED",
+    "error_message": "",
+    "preset": "compact",
+    "source_sha256": "196327620af6bb72a65a7632c2ab3c8f7b64e56916d79bc03abbe72b07c8436f",
+    "output_sha256": "319a2dfe1d57899d61170b4e9cae01b75dd7ee22f17664095d145489690621cc",
+    "reason": "adopted CRF 38",
+    "video_codec": "av1",
+    "audio_codec": "aac",
+    "width": "1280",
+    "height": "720",
+    "fps": "30.000000",
+    "duration": "2.000000",
+    "vmaf_mean": "94.484568",
+    "vmaf_p5": "91.950002",
+    "ffmpeg_version": "ffmpeg version 9.0-full_build-www.gyan.dev Copyright (c) 2000-2026 the FFmpeg developers",
+    "safe": "false",
+    "remove_audio": "false"
+  },
+  "checks": {
+    "input_sha_and_mtime_unchanged": true,
+    "output_sha_and_mtime_unchanged_on_resume_and_dry_run": true,
+    "normal_reports_unchanged_on_dry_run": true,
+    "manifest_report_counts_match": true,
+    "no_temporary_files_remain": true
+  }
+}

@@ -108,4 +108,6 @@ uv run --script karufile.py --preset compact -i "D:\作業\資料" -o "D:\作業
 自動テストは小さな合成データが中心です。写真DPI・比較HTMLの実資料5冊による限定検証は
 [検証記録](docs/validation/2026-09-09-photo-preview.md)を参照してください。
 游ゴシックでのフォント置換には、101ページ1冊で42.64%削減した[通常CLIの検証記録](docs/validation/2026-09-10-windows-font-replacement.md)があります。
-compactの最終検証は [ExecPlan索引](.agent/execplans/README.md)上で中断・再開待ちです。
+compactの最終検証は2026年9月30日に再開・完了しました。画像manifestの同時更新検出と、
+既存出力がある場合のdry-runを修正し、[全suiteと実CLIの検証記録](docs/validation/2026-09-30-compact-final/README.md)を残しています。
+計画の状態と過去の記録は [ExecPlan索引](.agent/execplans/README.md)を参照してください。

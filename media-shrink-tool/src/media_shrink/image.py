@@ -844,7 +844,10 @@ def process_image(
                 output_fingerprint=copied,
             )
 
-        completed = _completed_output_matches(output, source_stat, source_sha256, cfg)
+        completed = (
+            _completed_output_matches(output, source_stat, source_sha256, cfg)
+            if not cfg.dry_run else None
+        )
         if completed is not None:
             _assert_source_unchanged(source, source_fingerprint, effective_input_root)
             completed = _assert_reusable_output_unchanged(
@@ -873,6 +876,7 @@ def process_image(
         # SKIPPED_COPYとして誤再利用しない。
         if (
             source_is_jpeg
+            and not cfg.dry_run
             and not orientation_applied
             and not reprocess_generated
             and cfg.preset == "standard"
@@ -1276,6 +1280,41 @@ def _validated_manifest_rows(
     return rows
 
 
+def _assert_manifest_files_unchanged(
+    input_dir: Path,
+    output_dir: Path,
+    results: list[dict[str, Any]],
+) -> None:
+    """全行のhash検証中に先行fileが差し替わっていないか、最後にidentityを再照合する。"""
+
+    for result in results:
+        source = Path(str(result["source"]))
+        expected_source = cast(SourceFingerprint, result["_source_fingerprint"])
+        try:
+            validate_source_path(input_dir, source)
+            source_signature = _stat_signature(source.stat())
+        except (OSError, RuntimeError, ValueError) as exc:
+            raise SourceChangedError(f"Source changed before manifest publication: {source}") from exc
+        if source_signature != expected_source.stat_signature:
+            raise SourceChangedError(f"Source changed before manifest publication: {source}")
+
+        expected_output = result.get("_output_fingerprint")
+        if expected_output is None:
+            continue  # dry-runとERROR行は完成出力を所有しない。
+        output = Path(str(result["planned_output"]))
+        expected_output = cast(OutputFingerprint, expected_output)
+        try:
+            validate_output_destination(input_dir, output_dir, output)
+            _validate_existing_output_identity(
+                output, {(expected_source.stat.st_dev, expected_source.stat.st_ino)}
+            )
+            output_signature = _stat_signature(output.stat())
+        except (OSError, RuntimeError, ValueError) as exc:
+            raise OutputCollisionError(f"Image output changed before manifest publication: {output}") from exc
+        if output_signature != expected_output.stat_signature:
+            raise OutputCollisionError(f"Image output changed before manifest publication: {output}")
+
+
 def write_result_manifest(
     input_dir: Path,
     output_dir: Path,
@@ -1297,6 +1336,7 @@ def write_result_manifest(
         _validated_manifest_rows(input_dir, output_dir, results, config)
         validate_auxiliary_output(input_dir, report)
         _validate_replaceable_file(report, label="image manifest")
+        _assert_manifest_files_unchanged(input_dir, output_dir, results)
         os.replace(temporary, report)
     return report
 

@@ -1,0 +1,7 @@
+{
+  "command": "uv run --project pdf-shrink python -m pytest -q pdf-shrink/tests",
+  "cwd": "<repo-root>",
+  "started_utc": "2026-09-30T01:16:28.7563730+00:00",
+  "seconds": 50.1905372,
+  "exit_code": 0
+}

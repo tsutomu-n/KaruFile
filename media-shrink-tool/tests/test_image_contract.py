@@ -954,33 +954,81 @@ def test_dry_run_writes_only_the_sibling_report(tmp_path: Path) -> None:
     assert rows[0]["source_sha256"] == hashlib.sha256(source_bytes).hexdigest()
     assert (int(rows[0]["new_width"]), int(rows[0]["new_height"])) == (12, 8)
 
+    # 完成JPEGの再利用と原本コピーの再利用も、dry-runでは完成出力を所有しない。
+    copied_source = input_dir / "small.jpg"
+    Image.new("RGB", (80, 60), "orange").save(copied_source, "JPEG", quality=80)
+    assert main(["resize", "-i", str(input_dir), "-o", str(output_dir)]) == 0
+    normal_manifest = manifest_path(output_dir.resolve(), dry_run=False)
+    with normal_manifest.open(encoding="utf-8", newline="") as stream:
+        assert {row["action"] for row in csv.DictReader(stream)} == {"CONVERTED", "COPIED_ORIGINAL"}
+    protected_paths = [source, copied_source, normal_manifest, *output_dir.iterdir()]
+    snapshots = {path: (path.read_bytes(), path.stat().st_mtime_ns) for path in protected_paths}
+
+    assert main(["resize", "-i", str(input_dir), "-o", str(output_dir), "--dry-run"]) == 0
+
+    assert all((path.read_bytes(), path.stat().st_mtime_ns) == value for path, value in snapshots.items())
+    with dry_manifest.open(encoding="utf-8", newline="") as stream:
+        rows = list(csv.DictReader(stream))
+    assert len(rows) == 2
+    assert all(row["action"] == "DRY_RUN" for row in rows)
+    assert all(row["output_size"] == row["output_sha256"] == "" for row in rows)
+
 
 @pytest.mark.parametrize("race_target", ["source", "output"])
 def test_manifest_rejects_changed_files_and_preserves_previous_manifest(
     tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
     race_target: str,
 ) -> None:
     input_dir = tmp_path / "input"
     output_dir = tmp_path / "output"
     input_dir.mkdir()
-    source = input_dir / "photo.bmp"
+    source = input_dir / "a.bmp"
     Image.new("RGB", (64, 64), "red").save(source, "BMP")
+    later_source = input_dir / "b.bmp"
+    Image.new("RGB", (64, 64), "blue").save(later_source, "BMP")
     config = ImageConfig(workers=1)
-    results = image_module.process_all(input_dir, output_dir, config)
+    image_module.process_all(input_dir, output_dir, config)
     report = manifest_path(output_dir, dry_run=False)
     report.write_text("previous-manifest\n", encoding="utf-8")
-    target = source if race_target == "source" else output_dir / "photo.bmp.jpg"
-    _mutate_source_content_preserving_size_and_mtime(target)
+    target = source if race_target == "source" else output_dir / "a.bmp.jpg"
+    original_stat = target.stat()
+    healthy_outputs = {
+        path: path.read_bytes()
+        for path in output_dir.iterdir()
+        if path != target
+    }
+    original_hash = image_module._sha256_file
+    replaced = False
 
-    expected_error = (
-        image_module.SourceChangedError
-        if race_target == "source"
-        else image_module.OutputCollisionError
-    )
-    with pytest.raises(expected_error):
-        write_result_manifest(input_dir.resolve(), output_dir.resolve(), results, config)
+    def replace_earlier_file_while_hashing_later(path: Path) -> str:
+        nonlocal replaced
+        digest = original_hash(path)
+        if (
+            path == later_source
+            and not replaced
+            and list(report.parent.glob(f".{report.name}.*.tmp"))
+        ):
+            payload = bytearray(target.read_bytes())
+            payload[len(payload) // 2] ^= 0x01
+            replacement = target.with_name(f"{target.name}.replacement")
+            replacement.write_bytes(payload)
+            os.utime(replacement, ns=(original_stat.st_atime_ns, original_stat.st_mtime_ns))
+            os.replace(replacement, target)
+            assert target.stat().st_size == original_stat.st_size
+            assert target.stat().st_mtime_ns == original_stat.st_mtime_ns
+            assert target.stat().st_ino != original_stat.st_ino
+            replaced = True
+        return digest
 
+    monkeypatch.setattr(image_module, "_sha256_file", replace_earlier_file_while_hashing_later)
+    assert main([
+        "resize", "-i", str(input_dir), "-o", str(output_dir), "--workers", "1",
+    ]) == 1
+
+    assert replaced
     assert report.read_text(encoding="utf-8") == "previous-manifest\n"
+    assert all(path.read_bytes() == payload for path, payload in healthy_outputs.items())
     assert list(report.parent.glob(f".{report.name}.*.tmp")) == []
 
 

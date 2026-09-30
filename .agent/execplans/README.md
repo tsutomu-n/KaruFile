@@ -6,7 +6,7 @@
 
 | 計画 | 状態 | 内容 |
 |---|---|---|
-| [2026-09-13-default-scan-compression.md](2026-09-13-default-scan-compression.md) | 完了・未コミット | スキャンPDFの既定300 DPIグレー圧縮、単一PDF直接入力、実19ページ68.77%減、1303 passed/4 skipped |
+| [2026-09-13-default-scan-compression.md](2026-09-13-default-scan-compression.md) | 完了・c483d9cに収録 | スキャンPDFの既定300 DPIグレー圧縮、単一PDF直接入力、実19ページ68.77%減、9月13日1303 passed/4 skipped |
 | [2026-09-10-nishimaki-pdf-compression.md](2026-09-10-nishimaki-pdf-compression.md) | メイリオ既定化まで完了 | 指定5冊圧縮、分析報告を字体変更。メイリオ選択を追加し1冊目を前回比25.32%減、☑保持。1240 tests成功/4 skipped。既定メイリオの実1冊成功、3冊目の注釈は未対応 |
 | [2026-09-10-excel-image-research.md](2026-09-10-excel-image-research.md#excel-expansion-plan) | 800px/JPEG圧縮まで完了 | CP-019完了。ユーザー指定800px・JPEG品質72をCLI既定化、schema3。実28画像すべて圧縮し61.94%減、全1271 tests成功/4 skipped。未対応配置の保護は維持 |
 | [2026-09-10-video-policy-audio.md](2026-09-10-video-policy-audio.md) | 完了 | 動画の通常変換、任意safe、音声除去＋圧縮、実2動画Pilot |
@@ -18,8 +18,8 @@
 | [2026-08-15-karufile-v1.md](2026-08-15-karufile-v1.md) | 完了・履歴 | KaruFile v1の実装と安全性検証 |
 | [2026-08-16-karufile-user-manual.md](2026-08-16-karufile-user-manual.md) | 完了・履歴 | 正本マニュアル、図解、文書監査 |
 | [2026-08-20-pdf-300dpi-placed-images.md](2026-08-20-pdf-300dpi-placed-images.md) | 完了・履歴 | PDF配置画像を300DPIへ縮小 |
-| [2026-09-04-compact-preset.md](2026-09-04-compact-preset.md) | 中断・再開待ち | compact presetと安全な動画処理 |
-| [2026-09-04-compact-preset-handoff.md](2026-09-04-compact-preset-handoff.md) | 再開用 | 中断時点、残るP2、検証証拠、再開手順 |
+| [2026-09-04-compact-preset.md](2026-09-04-compact-preset.md) | 9月30日再開・完了 | 画像manifest競合と既存出力ありのdry-runを修正。1303 passed/4 skipped、実compact通常・再開・dry-run確認 |
+| [2026-09-04-compact-preset-handoff.md](2026-09-04-compact-preset-handoff.md) | 履歴・再開完了 | 9月4日の中断時点を保持。9月30日の完了計画と検証記録へ案内 |
 | [2026-09-08-pdf-compression-policy-research.md](2026-09-08-pdf-compression-policy-research.md) | CP-017/018完了、CP-019/020実装・自動検証/Pilot完了／比較HTMLブラウザー目視のみツールpolicyで停止 | PDF原本保護、文章・罫線表・300 DPIグレースキャン候補、写真DPIと静的HTML比較 |
 
 PDF責務分離の完了記録は

@@ -142,6 +142,13 @@ recipe hash、source/outputの安定したsize・SHA-256、action別の空欄、
 使用しません。既存の正式出力または画像レポートがread-onlyならchmodせず終了コード `1` で
 fail-closedにします。
 
+画像子CLIは、全行のSHA-256・寸法検証とレポート宛先検査の後、`os.replace()`の直前に
+全source/outputのdev/inode/size/mtime/ctimeを処理時snapshotと再照合します。後続行のhash中に
+先行ファイルが差し替わった場合はmanifestを公開せず、終了コード1で旧manifestと正常出力を保持します。
+dry-runは既存の完成JPEG・原本コピーの再利用経路を通らず、`DRY_RUN`または
+`DRY_RUN_SKIPPED_GENERATED`として出力size/SHAを空欄にします。完成出力・通常manifestは維持します。
+入力ファイルのロックは行わず、最終検査後のあらゆる同時更新を防ぐ保証ではありません。
+
 動画レポートとstateはcompactで動画がある場合だけ使います。reportは現在入力を重複なく1行ずつ
 記録し、orchestratorは更新、入力・予定出力path、preset、実ファイルのsize/SHA-256、削減値の
 整合を照合します。

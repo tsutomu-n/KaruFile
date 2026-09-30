@@ -1,0 +1,7 @@
+{
+  "command": "uv run --project media-shrink-tool --extra dev python -m pytest -q media-shrink-tool/tests",
+  "cwd": "<repo-root>",
+  "started_utc": "2026-09-30T01:16:29.2835601+00:00",
+  "seconds": 3.0366757,
+  "exit_code": 0
+}

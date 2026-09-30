@@ -1,0 +1,10 @@
+usage: media-shrink [-h] {resize} ...
+
+KaruFile image resize and JPEG conversion tool
+
+positional arguments:
+  {resize}
+    resize    Resize and convert images without changing sources
+
+options:
+  -h, --help  show this help message and exit

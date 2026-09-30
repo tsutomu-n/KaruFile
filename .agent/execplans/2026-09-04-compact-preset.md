@@ -3,6 +3,10 @@
 この文書はliving documentである。
 実装中はProgress、Discoveries、Decision Log、Validation、Outcomesを継続的に更新する。
 
+2026-09-30、利用者の依頼でCP-007を再開。基準HEADは`c483d9c`、着手時の作業ツリーはclean。
+9月4日の仕様・検証記録は履歴として保持し、今回の判断と結果は追記する。
+後続のPDF・Excel・動画の仕様は現行コード、MANUAL、REFERENCEを正とする。
+
 ## Goal
 
 利用者が既存の安全な `standard` 動作を維持したまま、統合CLIで
@@ -42,7 +46,7 @@
 - 入力削除、dedup、GUI、クラウド処理。
 - 「全入力が必ず小さくなる」という保証。
 
-## Current State
+## Current State（2026-09-04着手時）
 
 - `main` は `origin/main` と一致し、既存の利用者差分は
   `docs/architecture/karufile-runtime.html` だけである。
@@ -187,15 +191,30 @@
 
 ### CP-007: 全体検証と再評価
 
-- Status: Paused by user
+- Status: Complete (2026-09-30)
 - Objective: 要求動作と回帰、安全失敗経路を最終確認する。
 - Dependencies: CP-002〜CP-006。
 - Files or components: Repo全体。
-- Actions: 全suite、compileall、help、lock、smoke、diff reviewを実行し計画へ証拠を記録する。
+- Actions: 画像manifestの全source/output identity最終再照合を追加し、既存の代表回帰で
+  複数入力間のatomic replacementを再現する。その後、全suite、compileall、help、lock、
+  smoke、P1/P2に限定したdiff reviewを実行し計画へ証拠を記録する。
 - Completion criteria: 必須検証成功、残課題とPilot未実施範囲が明示される。
 - Validation: AGENTS記載commandと実FFmpeg smoke。
 - Failure conditions: 必須suite失敗、入力hash変化、temp残留、誤成功。
 - Recovery: 失敗checkpointへ戻り、原因を修正して対象検証から再実行する。
+
+### CP-008: 現在の進捗と履歴の同期
+
+- Status: Complete (2026-09-30)
+- Objective: compactの検証結果と、既にコミット済みのスキャン機能を文書から正しく判断できる。
+- Dependencies: CP-007。
+- Files or components: 本計画、旧引継ぎ、ExecPlan索引、9月13日スキャン計画、README、AGENTS、文書ガイド、画像仕様。
+- Actions: 完了した条件だけを完了へ更新し、旧引継ぎを履歴と明示する。スキャン機能の
+  `c483d9c`への収録と今回の追加修正を区別し、画像manifestの追加検査を関連文書へ反映する。
+- Completion criteria: 現行の案内に中断・未コミットの古い断定がなく、当時の検証値と今回の結果を区別できる。
+- Validation: 参照先と文書差分の確認、git diff --check、現在のGit状態との照合。
+- Failure conditions: 未実行検証の成功扱い、履歴の数値改変、生成architecture HTMLの手編集。
+- Recovery: 事実に基づく文書修正へ戻し、実装・検証の証拠を保持する。
 
 ## Progress
 
@@ -205,11 +224,32 @@
 - [x] CP-004
 - [x] CP-005
 - [x] CP-006
-- [~] CP-007
+- [x] CP-007 (2026-09-30完了)
+- [x] CP-008 (2026-09-30完了)
 
 2026-09-04、利用者指示によりCP-007途中で停止した。中断時点の正確な状態、残るP2、
 検証済み結果、再開commandは
 [`2026-09-04-compact-preset-handoff.md`](2026-09-04-compact-preset-handoff.md)に固定した。
+
+2026-09-30: 現行コードにも画像manifestの最後の一括identity確認がないことを確認。
+既存の2条件(source/output)の回帰を、後続入力のhash中に先行ファイルをatomic replacementする
+ケースへ拡張する。新しい依存関係、処理recipe、runtime境界や出力パスの変更は不要。
+
+再現結果: 修正前の代表回帰はsource/outputの2条件とも失敗し、差替え後も画像単体CLIが
+exit 0でmanifestを公開することを確認した（2 failed、62 deselected）。
+全行のhash確認とreport自体の安全確認後、os.replaceの直前に既存fingerprintのstat signatureと
+全source/outputを再照合する最小修正を追加した。成功時のCSV schema・recipeは変更しない。
+
+全suiteは1,303 passed/4 skippedまで成功したが、初回の実CLI smokeで、完成済み画像を持つ
+入力へのdry-runがSKIPPED_COMPLETEを返し、dry-run manifestで拒否される既存不具合を発見。
+SKIPPED_COPYも同じ制御順である。CP-007の通常・再開・dry-run確認に直結するため、画像処理の
+2再利用経路をdry-runでは通らない局所修正を追加する。manifest validatorは緩和しない。
+既存dry-run回帰に通常実行後の完成JPEG・原本コピーの2経路を組み込み、正常出力と通常manifest
+のbytes/mtime保持を検証する。初回smokeのログはattempt-1-*として保持。
+
+最終結果: 既存dry-run回帰も修正前は1 failed、修正後の画像suiteは64 passed。
+画像CSVのschemaと通常再利用を維持し、root再検証468 passed、通常・再開・dry-run smokeはすべてexit 0。
+CP-007/008を完了とし、旧引継ぎ、索引、README、AGENTS、文書ガイドと画像仕様へ反映した。
 
 ## Discoveries
 
@@ -268,6 +308,15 @@
 - Alternatives: 既存HTMLを生成物で置換する、図更新を完全に停止する。
 - Consequences: 旧HTMLは未リンクで残り、現行図は別名になる。
 
+### Decision-006
+
+- Date: 2026-09-30
+- Decision: 最後の全ファイルstat照合と、dry-run時の通常reuse抑止だけを既存画像processorへ追加する。
+- Rationale: 再現した誤成功・dry-run失敗を、validatorや安全設定を緩和せず修正できる。
+- Alternatives: 入力ロック、CSV schema拡張、全processorの再設計、dry-runで通常結果を許可する。
+- Consequences: 新依存・recipe変更・runtime境界変更なし。既存2テストを拡張しテスト件数は増やさない。
+  9月13日のスキャン実装は`c483d9c`に収録済みとして区別し、今回の修正と進捗更新を別に記録する。
+
 ## Validation Evidence
 
 - Baseline: PDF 52 passed、image 34 passed、orchestrator 41 passed。
@@ -289,16 +338,42 @@
 ## Outcomes
 
 compact preset、独立video processor、統合CLI、文書、現行architecture生成物を実装し、
-全suiteと実subprocess統合smokeまで成功した。画像standalone manifestの最後のbatch競合窓を
-修正する直前に利用者指示で停止したため、CP-007は未完了である。
+9月4日には全suiteと実subprocess統合smokeまで成功したが、画像standalone manifestの最後の
+batch競合窓を修正する直前に利用者指示で停止し、当時のCP-007は未完了だった。
+
+2026-09-30に再開し、その競合窓と、実CLI検証で見つけた既存出力ありのdry-run失敗を修正。
+1,303 passed/4 skipped、全compileall、4 lock check、root/画像help、実compactの通常・再開・dry-run、
+P1/P2の差分確認と文書同期を完了した。詳細は[今回の検証記録](../../docs/validation/2026-09-30-compact-final/README.md)。
+9月4日のfixtureは入力・出力とも空だったため、旧場所を変更せず新規の合成fixtureを作成した。
+入力SHA/mtime、再開・dry-runでの完成出力SHA/mtime、dry-runでの通常レポート保持を確認した。
+画像エラーCSVは通常/dry-runで共有し、dry-runでも更新する既存契約を維持する。
+CP-007/008は完了。この9月30日の修正と検証記録を今回のcommit/push対象に含める。
 
 ## Remaining Issues
 
-- 画像standalone manifestは、複数rowの最終hash検証後に全source/output identityを一括再照合する
-  barrierが未実装。詳細と最小修正は再開引継ぎを参照する。
-- 代表実データPilotは未実施。
+- 画像manifestの一括identity再照合は実装・代表回帰確認済み。入力はロックせず、最後の検査後の
+  すべての外部更新を防ぐ保証ではない。
+- 今回のsmokeは合成データで、広範な実資料の品質・実印刷・全viewerの検証は行っていない。
+  9月10日の動画2本などの個別Pilotは、それぞれの計画の履歴を参照する。
+- 任意jpegtranの実物テスト4件は`KARUFILE_TEST_JPEGTRAN`未設定によりskip。
 - VMAF JSONの64 MiB上限は生成完了後に検査するため、異常なlibvmaf実行中はvalidation timeoutまで
   一時diskを消費し得る。
-- architectureのrepository evidenceは変更前commitを指す。今回の未commit実装をGitHub上の
-  revisionへ固定するには、利用者承認後のcommit後に図を再生成する必要がある。
-- 既存 `karufile-runtime.html` の利用者差分は保持し、現行図を別名で追加した。
+- architectureは9月13日の生成時点のsnapshot。今回runtime境界とパスは変更しておらず、
+  図の再生成・手編集は行わない。将来図を更新するときは根拠snapshotも再取得する。
+- 旧architecture HTMLと過去の検証履歴は変更していない。
+
+## Validation Evidence（2026-09-30再開）
+
+- 代表manifest回帰: 修正前2 failed → 修正後2 passed。source/outputの同size/mtime atomic replacementを
+  先行fileの検証後に注入し、画像単体CLIのexit 1・旧manifest・正常出力保持・一時CSV回収を確認。
+- dry-run代表回帰: 修正前1 failed → 修正後成功。完成JPEGと原本コピーの両方で完成出力と通常manifestを保持。
+- suites: PDF471 passed/4 skipped、画像64、Excel187、動画113、root468、合計1,303 passed。
+  dry-run修正後は影響する画像64とroot468を再検証した。他processorの実装は変更していない。
+- PDFの既存孤立Widget合成fixtureでPageCopyWarning1件。jpegtranの4 skipは環境未設定による。
+- AGENTS記載の全compileall、4 projectのuv lock --check、root/画像CLI helpはexit 0。
+- 新規合成PDF・画像・動画のcompact通常・再開・dry-runはすべてexit 0。候補採用、CSV件数、
+  入力と完成出力のSHA/mtime、dry-runの通常レポート保持、一時ファイルなしをassertした。
+- スモークスクリプト、stdout/stderrログ、pytest結果、数値とsnapshotは検証記録の同名ディレクトリに保存。
+- 最終git diff --checkはexit 0、変更Markdownのローカル参照先89件は欠落なし、JSON証拠はparse成功。
+- 最初の一括テスト起動はコマンド組立てでuv runのrunを落としexit 2。suite開始前の引数エラーを
+  修正し、上記テストを実行した。初回smokeのdry-run失敗ログはattempt-1-*として保持。

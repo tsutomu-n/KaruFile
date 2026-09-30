@@ -1,0 +1,7 @@
+{
+  "command": "uv run --with pytest python -m pytest -q",
+  "cwd": "<repo-root>\\orchestrator",
+  "started_utc": "2026-09-30T01:24:20.9397094+00:00",
+  "seconds": 12.5812029,
+  "exit_code": 0
+}

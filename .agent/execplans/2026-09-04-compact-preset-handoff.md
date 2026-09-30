@@ -1,5 +1,10 @@
 # KaruFile compact preset 再開引継ぎ
 
+> 2026-09-30追補: 画像manifestの残件と、再開時の実CLI検証で見つけたdry-run不具合は修正・検証済み。
+> CP-007/008は[本計画](2026-09-04-compact-preset.md)で完了。
+> この引継ぎの本文は9月4日の中断時点の履歴で、未修正・中断・未コミットの記載は当時の状態を示す。
+> 現在の検証は[9月30日の記録](../../docs/validation/2026-09-30-compact-final/README.md)を参照する。
+
 更新日: 2026-09-04（Asia/Tokyo）  
 状態: 利用者指示により最終検証工程で中断  
 branch / HEAD: `main` / `e9cbe0b73fdf1af5d818c2dacc09c2ae79b09a3e`
@@ -203,4 +208,3 @@ PowerShellの `Remove-Item -LiteralPath` を使う。
 - VMAF JSONの64 MiB上限は生成後検査であり、異常実行中の一時disk消費余地がある。
 - preset閾値は代表実データPilot未実施。
 - architectureのrepository evidenceは未commit実装ではなく上記HEADを指す。
-

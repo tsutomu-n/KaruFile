@@ -1,0 +1,7 @@
+{
+  "command": "uv run --project excel-shrink python -m pytest -q excel-shrink/tests",
+  "cwd": "<repo-root>",
+  "started_utc": "2026-09-30T01:16:29.8244937+00:00",
+  "seconds": 11.9589497,
+  "exit_code": 0
+}

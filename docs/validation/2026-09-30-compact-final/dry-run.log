@@ -1,0 +1,100 @@
+KaruFile
+
+Input  : C:\Users\tn\AppData\Local\Temp\karufile-compact-final-20260930-xf3nnx3y\input
+Output : C:\Users\tn\AppData\Local\Temp\karufile-compact-final-20260930-xf3nnx3y\output
+Preset : compact
+
+PDF    : 1
+Images : 1
+Excel  : 0
+Videos : 1
+
+Source files : keep
+Files deleted: 0
+
+Starting...
+10:21:57 [INFO] Found 1 PDF files
+
+10:21:57 [INFO] Config hash: cc132f8b89a8990e
+
+10:21:57 [INFO] Files to process: 1, skipped: 0
+
+10:21:57 [INFO] Finished C:\Users\tn\AppData\Local\Temp\karufile-compact-final-20260930-xf3nnx3y\input\scan.pdf in 0.26s (status=DRY_RUN_LOSSY, saved=0.0 B, mode=lossy, profile=compact, reason=dry_run_lossy, candidate_size=-, images_changed=0)
+
+10:21:57 [INFO] Report saved to C:\Users\tn\AppData\Local\Temp\karufile-compact-final-20260930-xf3nnx3y\report.dry-run.csv
+
+
+
+==================================================
+
+PDF Shrink Summary
+
+==================================================
+
+Files            : 1
+
+Total input      : 7.7 MiB
+
+Total output     : 7.7 MiB
+
+Saved            : 0.0 B (0.00%)
+
+Elapsed          : 0.30s
+
+Throughput       : 25.44 MiB/s
+
+Files/sec        : 3.29
+
+--------------------------------------------------
+
+Status counts:
+
+  DRY_RUN_LOSSY            :    1
+
+==================================================
+
+10:21:58 [INFO] C:\Users\tn\AppData\Local\Temp\karufile-compact-final-20260930-xf3nnx3y\input\photo.png -> C:\Users\tn\AppData\Local\Temp\karufile-compact-final-20260930-xf3nnx3y\output\photo.png.jpg (DRY_RUN)
+
+10:21:58 [INFO] Image error report: C:\Users\tn\AppData\Local\Temp\karufile-compact-final-20260930-xf3nnx3y\output.image-errors.csv
+
+10:21:58 [INFO] Image result manifest: C:\Users\tn\AppData\Local\Temp\karufile-compact-final-20260930-xf3nnx3y\output.image-manifest.dry-run.csv
+
+Resized 1 images (0 errors)
+
+  7.75 MB -> 0.00 B
+
+Processed 1 videos (0 errors)
+
+  3.91 MB -> not written (dry-run)
+
+Video report: C:\Users\tn\AppData\Local\Temp\karufile-compact-final-20260930-xf3nnx3y\output.video-report.dry-run.csv
+
+
+KaruFile completed
+
+PDF errors   : 0
+Image errors : 0
+Excel errors : 0
+Video errors : 0
+
+Original size : 19.40 MB
+Output size   : not written (dry-run)
+Saved         : not calculated (dry-run)
+Reduction     : not calculated (dry-run)
+
+Source files changed: NO
+Files deleted       : 0
+
+Image error report:
+C:\Users\tn\AppData\Local\Temp\karufile-compact-final-20260930-xf3nnx3y\output.image-errors.csv
+Video report:
+C:\Users\tn\AppData\Local\Temp\karufile-compact-final-20260930-xf3nnx3y\output.video-report.dry-run.csv
+Elapsed: 1.74s
+
+[DRY-RUN] PDF・画像・Excel・動画出力は作成しません。状態とレポートは更新される場合があります。
+10:21:57 [INFO] [pdf-shrink] Starting: uv run --project C:\Users\tn\c_projects\KaruFile\pdf-shrink python -m pdf_shrink run --input C:\Users\tn\AppData\Local\Temp\karufile-compact-final-20260930-xf3nnx3y\input --output C:\Users\tn\AppData\Local\Temp\karufile-compact-final-20260930-xf3nnx3y\output --workers 1 --preset compact --dry-run
+10:21:58 [INFO] [pdf-shrink] Finished in 0.81s (exit code: 0)
+10:21:58 [INFO] [media-shrink] Starting: uv run --project C:\Users\tn\c_projects\KaruFile\media-shrink-tool python -m media_shrink resize -i C:\Users\tn\AppData\Local\Temp\karufile-compact-final-20260930-xf3nnx3y\input -o C:\Users\tn\AppData\Local\Temp\karufile-compact-final-20260930-xf3nnx3y\output -j 1 --preset compact -n
+10:21:58 [INFO] [media-shrink] Finished in 0.40s (exit code: 0)
+10:21:58 [INFO] [video-shrink] Starting: uv run --project C:\Users\tn\c_projects\KaruFile\video-shrink python -m video_shrink run --input C:\Users\tn\AppData\Local\Temp\karufile-compact-final-20260930-xf3nnx3y\input --output C:\Users\tn\AppData\Local\Temp\karufile-compact-final-20260930-xf3nnx3y\output --workers 1 --preset compact --dry-run
+10:21:58 [INFO] [video-shrink] Finished in 0.47s (exit code: 0)

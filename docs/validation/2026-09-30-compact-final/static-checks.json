@@ -1,0 +1,68 @@
+[
+  {
+    "name": "pdf-compile",
+    "command": "uv run --project pdf-shrink python -m compileall -q pdf-shrink/src pdf-shrink/tests",
+    "exit_code": 0,
+    "seconds": 0.3108352
+  },
+  {
+    "name": "image-compile",
+    "command": "uv run --project media-shrink-tool python -m compileall -q media-shrink-tool/src media-shrink-tool/tests",
+    "exit_code": 0,
+    "seconds": 0.1476876
+  },
+  {
+    "name": "excel-compile",
+    "command": "uv run --project excel-shrink python -m compileall -q excel-shrink/src excel-shrink/tests",
+    "exit_code": 0,
+    "seconds": 0.149177
+  },
+  {
+    "name": "video-compile",
+    "command": "uv run --project video-shrink python -m compileall -q video-shrink/src video-shrink/tests",
+    "exit_code": 0,
+    "seconds": 0.1360033
+  },
+  {
+    "name": "root-compile",
+    "command": "uv run --project pdf-shrink python -m compileall -q karufile.py orchestrator docs/validation/2026-09-30-compact-final/compact-smoke.py",
+    "exit_code": 0,
+    "seconds": 0.1495359
+  },
+  {
+    "name": "pdf-lock",
+    "command": "uv lock --project pdf-shrink --check",
+    "exit_code": 0,
+    "seconds": 0.0728394
+  },
+  {
+    "name": "image-lock",
+    "command": "uv lock --project media-shrink-tool --check",
+    "exit_code": 0,
+    "seconds": 0.032457
+  },
+  {
+    "name": "excel-lock",
+    "command": "uv lock --project excel-shrink --check",
+    "exit_code": 0,
+    "seconds": 0.0303203
+  },
+  {
+    "name": "video-lock",
+    "command": "uv lock --project video-shrink --check",
+    "exit_code": 0,
+    "seconds": 0.0354245
+  },
+  {
+    "name": "root-help",
+    "command": "uv run --script karufile.py --help",
+    "exit_code": 0,
+    "seconds": 0.1811046
+  },
+  {
+    "name": "image-help",
+    "command": "uv run --project media-shrink-tool python -m media_shrink --help",
+    "exit_code": 0,
+    "seconds": 0.1985442
+  }
+]

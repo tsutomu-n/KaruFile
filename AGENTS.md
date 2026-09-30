@@ -260,9 +260,10 @@ The root CLI's `standard` preset does not discover or copy videos. The standalon
 
 ## Work status and scope
 
-- Read `.agent/execplans/README.md` before resuming multi-stage work. It currently lists compact work as
-  interrupted, with `2026-09-04-compact-preset.md` and `2026-09-04-compact-preset-handoff.md` as the plan
-  and handoff. Recheck described issues against current code; these records are not current test results.
+- Read `.agent/execplans/README.md` before resuming multi-stage work. Compact final verification was
+  completed on 2026-09-30 in `2026-09-04-compact-preset.md`; the matching handoff retains the September 4
+  interruption as history. Use `docs/validation/2026-09-30-compact-final/README.md` for the dated evidence.
+  Recheck described issues against current code; historical records do not replace fresh validation.
 - Do not infer completion from the presence of compact code or documentation. Resolve remaining work
   and run the relevant verification before changing a plan's completion status.
 - Preserve unrelated working-tree changes and untracked work. Updating instructions or ignore rules

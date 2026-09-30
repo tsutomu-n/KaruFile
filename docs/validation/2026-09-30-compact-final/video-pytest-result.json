@@ -1,0 +1,7 @@
+{
+  "command": "uv run --project video-shrink python -m pytest -q video-shrink/tests",
+  "cwd": "<repo-root>",
+  "started_utc": "2026-09-30T01:16:30.4380404+00:00",
+  "seconds": 3.5218491,
+  "exit_code": 0
+}

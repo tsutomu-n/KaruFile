@@ -1,0 +1,69 @@
+usage: karufile [-h] -i INPUT [-o OUTPUT] [--pdf-workers PDF_WORKERS]
+                [--image-workers IMAGE_WORKERS]
+                [--video-workers VIDEO_WORKERS] [--preset {standard,compact}]
+                [--pdf-font-family {yu-gothic,meiryo}]
+                [--pdf-preserve-pattern PATTERN] [--pdf-text-pattern PATTERN]
+                [--pdf-text-scan-pattern PATTERN]
+                [--pdf-text-scan-bilevel-pattern PATTERN]
+                [--pdf-font-replace-pattern PATTERN]
+                [--pdf-photo-pattern PATTERN] [--pdf-photo-dpi DPI]
+                [--pdf-preview] [--pdf-preview-dpi DPI] [--pdf-lossless-jpeg]
+                [--pdf-jpegtran-path PDF_JPEGTRAN_PATH]
+                [--excel-pattern PATTERN] [--excel-dpi DPI]
+                [--excel-max-side PX] [--excel-jpeg-quality QUALITY]
+                [--video-safe] [--video-remove-audio]
+                [--ffmpeg-path FFMPEG_PATH] [--ffprobe-path FFPROBE_PATH] [-n]
+                [-v]
+
+PDF�E�摜�E�����I��Excel�E�Ή�������A���{��ύX�����ʃt�H���_�[�֌y�ʉ�����
+
+options:
+  -h, --help            show this help message and exit
+  -i, --input INPUT     ���̓t�H���_�[�܂���PDF�t�@�C��
+  -o, --output OUTPUT   �o�̓f�B���N�g���i�ȗ����F�t�H���_�[�� <input>_�y�ʉ��APDF1����
+                        <stem>_�y�ʉ�/files�j
+  --pdf-workers PDF_WORKERS
+                        pdf-shrink �̕��񐔁i�f�t�H���g 2�j
+  --image-workers IMAGE_WORKERS
+                        media-shrink-tool �̕��񐔁i�f�t�H���g 4�j
+  --video-workers VIDEO_WORKERS
+                        video-shrink �̕��񐔁i�f�t�H���g 1�Acompact�̂݁j
+  --preset {standard,compact}
+                        ���k�v���Z�b�g�i�f�t�H���g standard�j
+  --pdf-font-family {yu-gothic,meiryo}
+                        �u�����́i����meiryo�A--pdf-font-replace-pattern�K�{�j
+  --pdf-preserve-pattern PATTERN
+                        ���{�ی�i���ׂĂ̋����D��j�B���͑���glob�A������
+  --pdf-text-pattern PATTERN
+                        ���͂ƒP���Ȍr���\�����B���͑���glob�A������
+  --pdf-text-scan-pattern PATTERN
+                        ���̓X�L������300 DPI�O���[JPEG�������B���͑���glob�A������
+  --pdf-text-scan-bilevel-pattern PATTERN
+                        �������ރX�L�����ɓ�l������ǉ��i�F�E�K����������j�B���͑���glob�A������
+  --pdf-font-replace-pattern PATTERN
+                        ���{��E�p���Windows�̃��C���I�֓��ꂷ��������i���`�E����/�R�s�[�̋󔒂��ς��ꍇ����j�B����
+                        ����glob�A������
+  --pdf-photo-pattern PATTERN
+                        �w�肵���ʐ^���SPDF�ɉ{���pDPI�k���EJPEG�i��80�������i�掿�򉻂���j�B���͑��΃p�X��glob
+                        �A�召��������ʂ����A*��/���܂ށB������
+  --pdf-photo-dpi DPI   �ʐ^PDF�̖ڕWDPI�i150�`300�̐����A����200�A--pdf-photo-pattern�K�{�j
+  --pdf-preview         PDF�̌��{�Ǝ��ۂ̏o�͂��r����ÓIHTML��ǉ��i�ی엝�R���\���j
+  --pdf-preview-dpi DPI
+                        �ڎ���r�p�̒ǉ�DPI���i150�`300�A�����A�ő�5��ށA--pdf-preview�K�{�j
+  --pdf-lossless-jpeg   jpegtran 3.2.0��JPEG�t����ǉ��i����OFF�A�蓮�����j
+  --pdf-jpegtran-path PDF_JPEGTRAN_PATH
+                        PDF�Ŏg��jpegtran���s�t�@�C���B�w�肾���ł͗L�������Ȃ�
+  --excel-pattern PATTERN
+                        �w��xlsx�̓\��t���摜�̏k�������i�掿�򉻂���j�B���͑���glob�A�����A����OFF
+  --excel-dpi DPI       Excel�摜���Œ�px�̑���ɔz�uDPI�ŏk���i150�`300�A--excel-pattern�K�{�j
+  --excel-max-side PX   Excel�摜�̒��ӏ���i100�`10000�A����800�A--excel-dpi�Ɣr���j
+  --excel-jpeg-quality QUALITY
+                        Excel JPEG�i���i40�`95�A����72�ADPI�w�莞85�j
+  --video-safe          �����progressive/SAR/CFR�������i����icompact�̂݁j
+  --video-remove-audio  ����������������Ĉ��k�icompact�̂݁A�L���R�s�[��fallback���Ȃ��j
+  --ffmpeg-path FFMPEG_PATH
+                        compact����Ŏg��ffmpeg���s�t�@�C���i���w�莞��PATH�j
+  --ffprobe-path FFPROBE_PATH
+                        compact����Ŏg��ffprobe���s�t�@�C���i���w�莞��PATH�j
+  -n, --dry-run         ����PDF�E�摜�EExcel�E�������炸������m�F�i��ԁE���|�[�g�͍X�V�����ꍇ����j
+  -v, --verbose         �ڍ׃��O
