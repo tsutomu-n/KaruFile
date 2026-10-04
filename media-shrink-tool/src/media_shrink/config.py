@@ -103,9 +103,15 @@ class ImageConfig:
     workers: int = 4
     dry_run: bool = False
     preset: ImagePreset = "standard"
+    output_format: str = "jpeg"
+    strip_exif: bool = False
     recipe: ImageRecipe = field(init=False, repr=False)
 
     def __post_init__(self) -> None:
+        if self.output_format not in {"jpeg", "png", "webp"}:
+            raise ValueError("output_format must be jpeg, png, or webp")
+        if not isinstance(self.strip_exif, bool):
+            raise ValueError("strip_exif must be boolean")
         if self.workers < 1:
             raise ValueError("workers must be at least 1")
         object.__setattr__(self, "recipe", image_recipe_for(self.preset))
@@ -136,7 +142,15 @@ class ImageConfig:
 
     @property
     def recipe_hash(self) -> str:
-        return self.recipe.recipe_hash
+        base = self.recipe.recipe_hash
+        if self.output_format == "jpeg" and not self.strip_exif:
+            return base
+        return hashlib.sha256(
+            (
+                f"{base}\nformat={self.output_format}\n"
+                f"strip_exif={str(self.strip_exif).lower()}\nversion=1"
+            ).encode("ascii")
+        ).hexdigest()
 
 
 def default_output_dir(input_dir: Path) -> Path:

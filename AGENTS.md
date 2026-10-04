@@ -21,7 +21,7 @@ document in the same change. Do not invent setup, behavior, guarantees, or valid
   and runs video only for `compact`. Validates reports/manifests against current inputs and outputs
   before combining results; do not replace this with stdout parsing or approximate counts.
 - `pdf-shrink/`: only PDF processor; owns PDF state and reports.
-- `media-shrink-tool/`: only standalone-image processor; outputs JPEG and owns image error reports/manifests.
+- `media-shrink-tool/`: only standalone-image processor; outputs selectable JPEG/PNG/WebP and owns image error reports/manifests.
 - `excel-shrink/`: only Excel processor; owns bounded OOXML parsing, image resizing, reports and temporary workspace.
 - `video-shrink/`: only standalone-video processor; owns video state and reports and calls external FFmpeg tools.
 
@@ -98,8 +98,8 @@ The root CLI's `standard` preset does not discover or copy videos. The standalon
   Record analysis_complete, diagnostics_complete, image_diagnostics (1000 records, depth8, 2MiB UTF-8/field).
   Child/root finite CSV limits match; root independently checks known inventory with Content Types.
 - Standard image recipe: long side `1280`, short side `960`, quality `72`; compact image recipe:
-  long side `1024`, short side `768`, quality `60`. Both use JPEG `4:2:0`, white alpha,
-  EXIF Orientation applied, no upscale or crop.
+  long side `1024`, short side `768`, quality `60`. JPEG output uses `4:2:0` and white alpha. All formats apply
+  EXIF Orientation without upscale or crop.
 - Root and PDF CLI accept a single PDF directly, without staging or neighboring-file discovery.
   Single-PDF default output is `<source-parent>/<source-stem>_軽量化/files/<source-name>`;
   reports/state/preview use the files parent. Explicit output and directory input retain their existing layout.
@@ -235,7 +235,15 @@ The root CLI's `standard` preset does not discover or copy videos. The standalon
   CSV safe/remove_audio booleans must match the root request; both enter the v2 processing hash.
 - Video candidates must pass stream/duration checks, full decode, VMAF, and size-reduction gates.
   Tool/encoding failures remain `ERROR` even if a recovery copy succeeds; do not silently count them as skips.
-- Image metadata is best-effort, not a sanitization guarantee.
+- Root --image-format / image resize --format selects jpeg (default), png, or webp for standalone images.
+  Root --image-strip-exif / image resize --strip-exif defaults OFF; apply Orientation before removing EXIF.
+  PNG/WebP preserve alpha; JPEG uses white. PNG is lossless after resizing; WebP uses preset quality72/60, method6.
+  Selected-format suffix is retained, otherwise appended to the full source filename; apply collision hashes.
+  Non-JPEG output or EXIF removal disables original-copy shortcuts and failure recovery copies. Adopt validated
+  candidates regardless of savings; failures are ERROR and retain existing outputs. Other independent files continue.
+  Bind format/strip policy into recipe hash and manifest output_format/strip_exif; retain legacy default JPEG hash.
+  Reuse validates actual format and requested EXIF absence. Dry-run produces no completed images.
+- Other image metadata is best-effort, not a sanitization guarantee.
 - Root dry-run creates no completed PDF/image/video outputs but may update PDF state and reports. Video
   dry-run may initialize an empty state workspace but does not read or overwrite successful normal records.
 - PDF uses `<output-parent>/report.csv`, `<output-parent>/report.dry-run.csv`, and

@@ -37,7 +37,7 @@ def _positive_int(value: str) -> int:
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="media-shrink",
-        description="KaruFile image resize and JPEG conversion tool",
+        description="KaruFile image resize, JPEG/PNG/WebP output, and optional EXIF removal",
     )
     subparsers = parser.add_subparsers(dest="command", required=True)
     resize = subparsers.add_parser("resize", help="Resize and convert images without changing sources")
@@ -67,6 +67,13 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Compression preset (default: standard)",
     )
     resize.add_argument("-v", "--verbose", action="store_true", help="Verbose logging")
+    resize.add_argument(
+        "--format", choices=("jpeg", "png", "webp"), default="jpeg",
+        help="Output format (default: jpeg)",
+    )
+    resize.add_argument(
+        "--strip-exif", action="store_true", help="Remove EXIF after applying Orientation",
+    )
     resize.set_defaults(func=cmd_resize)
     return parser
 
@@ -87,6 +94,8 @@ def cmd_resize(args: argparse.Namespace) -> int:
         workers=args.workers,
         dry_run=args.dry_run,
         preset=getattr(args, "preset", "standard"),
+        output_format=getattr(args, "format", "jpeg"),
+        strip_exif=getattr(args, "strip_exif", False),
     )
     if not config.dry_run:
         try:

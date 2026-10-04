@@ -215,7 +215,7 @@
 
       <h2 id="overview">1. 概要</h2>
       <p>
-        KaruFile の画像処理は、入力画像を一切変更・削除せず、別の出力ツリーへ変換済み JPEG を書き出すことを目的としています。
+        KaruFile の画像処理は、入力画像を一切変更・削除せず、別の出力ツリーへ選択形式の画像を書き出すことを目的としています。
         処理は以下の原則に基づきます。
       </p>
       <ul class="tight">
@@ -224,8 +224,8 @@
         <li>symlink / junction / hard link 等の危険なリンクを検出して拒否する。</li>
         <li>縦横比を維持し、拡大・切り抜きは行わない。</li>
         <li>EXIF Orientation は画素へ適用し、出力から Orientation タグは削除する。</li>
-        <li>アルファ通道は白背景に合成する。</li>
-        <li>JPEG への保存時に「いつ・どのレシピで生成したか」を marker として埋め込み、再実行時の再利用を可能にする。</li>
+        <li>JPEGは透過を白背景に合成し、PNG・WebPは透過を保持する。</li>
+        <li>保存時に入力の同一性とレシピを marker として埋め込み、再実行時の再利用を可能にする。</li>
         <li>1ファイルの失敗で他のファイルの処理は止めない。</li>
       </ul>
 
@@ -233,7 +233,7 @@
       <p>探索対象となる拡張子は以下の通りです。大文字小文字は区別しません。</p>
       <pre><code>.jpg .jpeg .png .tif .tiff .bmp .gif .webp .heic .heif</code></pre>
       <p>HEIF/HEIC は <code>pillow-heif</code> が利用可能な場合のみ対応します。DLL 未インストール等で初期化に失敗しても、対応拡張子の列挙自体は続行し、実ファイル処理時に失敗します。</p>
-      <p>出力形式は常に JPEG です。拡張子の扱いは次の通りです。</p>
+      <p>出力形式はJPEG（既定）・PNG・WebPから選択できます。以下は既定JPEGの場合です。選択形式と異なる入力拡張子には、元名全体へ選択形式の拡張子を追加します。</p>
       <table>
         <thead><tr><th>入力</th><th>出力パス例</th></tr></thead>
         <tbody>
@@ -256,7 +256,7 @@
           <tr><td>サブサンプリング</td><td>4:2:0</td><td>4:2:0</td></tr>
           <tr><td>optimize</td><td>true</td><td>true</td></tr>
           <tr><td>progressive</td><td>true</td><td>true</td></tr>
-          <tr><td>アルファ処理</td><td>白背景合成</td><td>白背景合成</td></tr>
+          <tr><td>アルファ処理</td><td>JPEGのみ白背景合成</td><td>JPEGのみ白背景合成</td></tr>
           <tr><td>Orientation</td><td>画素適用</td><td>画素適用</td></tr>
         </tbody>
       </table>
@@ -317,8 +317,8 @@ new_h = max(1, round(height * scale))</code></pre>
       <h3>6.2 plan_outputs</h3>
       <p>変換前に、すべてのソースに対する出力パスを先に決めます。これにより、実行中の出力衝突を防ぎます。</p>
       <ol class="tight">
-        <li>非 JPEG 入力は <code>&lt;basename&gt;.jpg</code> を付加。</li>
-        <li>JPEG 入力は元の拡張子を維持。</li>
+        <li>選択形式と異なる入力は元名全体へ <code>.jpg / .png / .webp</code> を付加。</li>
+        <li>選択形式と同じ入力は元の拡張子を維持（JPEGは.jpg/.jpeg）。</li>
         <li>大文字小文字を無視して同名・同じディレクトリ prefix になる出力があれば、相対入力パスの SHA-256 先頭 8 文字をファイル名に追加して解消します。</li>
         <li>8 桁 hash で解消できない重複が残った場合は <code>OutputCollisionError</code> で停止します。</li>
       </ol>
@@ -336,10 +336,10 @@ input/kept.jpeg      -> output/kept.jpeg</code></pre>
         <li data-step="4">既存 marker を解析。同じレシピ・同一ソースで生成済みなら「SKIPPED_GENERATED」短絡</li>
         <li data-step="5">既存の完成済み出力が現在のソース・レシピと一致すれば「SKIPPED_COMPLETE」または「SKIPPED_COPY」短絡</li>
         <li data-step="6">EXIF Orientation を画素に適用（<code>ImageOps.exif_transpose</code>）</li>
-        <li data-step="7">透過を白背景に合成、モードを RGB に変換</li>
+        <li data-step="7">JPEGは白背景のRGBへ、PNG・WebPはRGB/RGBAへ変換</li>
         <li data-step="8">出力寸法を計算し、必要なら LANCZOS で縮小</li>
         <li data-step="9">dry-run ならここで予定寸法を返す（DRY_RUN）</li>
-        <li data-step="10">一時ファイルへ JPEG 保存（marker 付き）</li>
+        <li data-step="10">一時ファイルへ選択形式で保存（marker 付き）</li>
         <li data-step="11">一時ファイルを検証（寸法・marker）</li>
         <li data-step="12">候補サイズをもとに採用/原本コピーを決定</li>
         <li data-step="13">採用時は <code>os.replace()</code> で正式出力へ原子公開</li>
@@ -347,9 +347,9 @@ input/kept.jpeg      -> output/kept.jpeg</code></pre>
       </ol>
 
       <h3>7.1 Orientation の扱い</h3>
-      <p>Orientation タグ（EXIF ID 274）が 2〜8 の場合は、<code>ImageOps.exif_transpose()</code> で画素を回転・反転してから処理します。出力 JPEG には Orientation タグを残さず、元の向きで保存します。</p>
+      <p>Orientation タグ（EXIF ID 274）が 2〜8 の場合は、<code>ImageOps.exif_transpose()</code> で画素を回転・反転してから処理します。出力画像には Orientation タグを残さず、元の向きで保存します。</p>
       <h3>7.2 透過処理</h3>
-      <p>アルファ通道を含む画像（<code>RGBA</code>、またはパレット透過を持つ <code>P</code>）は、白背景 <code>(255,255,255,255)</code> に <code>alpha_composite</code> してから RGB 変換します。警告 <code>ALPHA_FLATTENED</code> が出力されます。</p>
+      <p>アルファ通道を含む画像（<code>RGBA</code>、またはパレット透過を持つ <code>P</code>）は、JPEG出力の場合、白背景 <code>(255,255,255,255)</code> に <code>alpha_composite</code> してから RGB 変換します。警告 <code>ALPHA_FLATTENED</code> が出力されます。</p>
       <h3>7.3 アニメーション・複数ページ</h3>
       <p>先頭フレームのみを使用します。失われたフレームに対して警告を出します。</p>
       <table>
@@ -360,6 +360,9 @@ input/kept.jpeg      -> output/kept.jpeg</code></pre>
         </tbody>
       </table>
 
+      <h3>出力形式とEXIF除去</h3>
+      <p>rootの<code>--image-format jpeg|png|webp</code>／<code>--image-strip-exif</code>、画像CLIの<code>--format</code>／<code>--strip-exif</code>で指定します。既定JPEG・EXIF保持です。</p>
+      <p>PNGはリサイズ後の画素を可逆圧縮し、WebPはpreset品質72/60・method6を使います。両形式は透過を保持します。EXIF除去はOrientationを画素へ適用してから行い、完成候補を開き直して除去を確認します。XMP・ICC・コメント等の全metadata除去は保証しません。</p>
       <h2 id="jpeg-encoding">8. JPEGエンコード</h2>
       <p>
         JPEG 候補は Pillow の <code>Image.save()</code> で生成します。常に以下のパラメータを使用します。
@@ -395,20 +398,21 @@ input/kept.jpeg      -> output/kept.jpeg</code></pre>
         <li><code>combined_comment + no metadata</code>（<code>METADATA_DROPPED</code>）</li>
         <li><code>marker only + no metadata</code>（両方廃棄）</li>
       </ol>
-      <p>どの組み合わせでも保存できなければ、JPEG 入力であれば原本コピー、それ以外は <code>ERROR</code> になります。</p>
+      <p>どの組み合わせでも保存できなければ、JPEG入力・JPEG出力・EXIF保持のときのみ原本コピーを試みます。PNG・WebP出力またはEXIF除去指定時はERRORとなり既存出力を保持します。</p>
 
       <h3>8.3 候補検証</h3>
       <p>保存後、<code>_verify_candidate()</code> で一時ファイルを検証します。</p>
       <ul class="tight">
         <li>寸法が予定値と一致すること</li>
         <li>長辺・短辺がプリセット上限を超えていないこと</li>
-        <li>JPEG comment に <code>karufile:image-v2</code> marker が含まれていること</li>
+        <li>実形式が要求に一致し、markerが存在し、EXIF除去指定時にEXIFが存在しないこと</li>
       </ul>
 
       <h2 id="adoption">9. 候補採用条件</h2>
-      <p>JPEG 候補を採用するか、入力をそのままコピーするかは、以下の条件で決まります。</p>
+      <p>PNG・WebPまたはEXIF除去指定時は原本コピーを禁止し、検証済み候補を採用します。JPEG・EXIF保持では以下の条件を使います。</p>
       <pre><code>adopt_candidate = (
-    not source_is_jpeg
+    not allow_original_copy
+    or not source_is_jpeg
     or must_resize
     or orientation_applied
     or (reprocess_generated and savings &gt; 0)
@@ -416,7 +420,7 @@ input/kept.jpeg      -> output/kept.jpeg</code></pre>
 )</code></pre>
       <p>定数は <code>JPEG_MIN_SAVINGS = 32 KiB</code>、<code>JPEG_MIN_REDUCTION = 10%</code> です。</p>
       <ul class="tight">
-        <li>非 JPEG 入力 → 必ず JPEG 変換を行います（元形式に戻せないため）。サイズが元より大きくなる場合は <code>OUTPUT_LARGER_THAN_SOURCE</code> 警告。</li>
+        <li>非 JPEG 入力 → 選択形式へ変換します。サイズが元より大きくなる場合は <code>OUTPUT_LARGER_THAN_SOURCE</code> 警告。</li>
         <li>リサイズが必要 → 必ず採用。</li>
         <li>Orientation 適用が必要 → 必ず採用。</li>
         <li>compact へ再処理する生成済み standard 画像 → 候補が小さければ採用。</li>
@@ -427,23 +431,23 @@ input/kept.jpeg      -> output/kept.jpeg</code></pre>
       <p>再実行時には、すでにある出力を再エンコードせずに再利用する経路が 3 つあります。</p>
       <h3>10.1 SKIPPED_GENERATED</h3>
       <p>
-        入力 JPEG 自身が KaruFile 生成済みで、現在のレシピと完全に一致し、かつ Orientation 適用が不要・寸法上限内なら、
+        JPEG出力・EXIF保持で、入力 JPEG 自身が KaruFile 生成済みで、現在のレシピと完全に一致し、かつ Orientation 適用が不要・寸法上限内なら、
         入力をそのまま出力へコピーします。未知・破損・旧 v1 marker は無視して通常判定へ戻ります。
       </p>
       <h3>10.2 SKIPPED_COMPLETE</h3>
       <p>
         前回の実行で完成した出力ファイルが、同一ソースの stat・SHA-256・レシピ hash を含む marker を持ち、
-        寸法が上限内なら、完成出力をそのまま利用します。
+        寸法・実形式・EXIF除去条件が一致すれば完成出力を再利用します。recipe hashは出力形式と除去設定にも結びついています。
       </p>
       <h3>10.3 SKIPPED_COPY</h3>
       <p>
-        standard プリセット時、JPEG 入力がリサイズ不要で「原本コピー」されていた出力が、バイト列まで同一なら再利用します。
+        JPEG出力・EXIF保持のstandard プリセット時、JPEG 入力がリサイズ不要で「原本コピー」されていた出力が、バイト列まで同一なら再利用します。
         compact では既存コピーを再評価するため <code>SKIPPED_COPY</code> にはなりません。
       </p>
 
       <h2 id="marker">11. Markerの仕組み</h2>
       <p>
-        KaruFile が生成した JPEG には、ソースの同一性とレシピを示す marker が JPEG comment として書き込まれます。
+        ソースの同一性とレシピを示すmarkerは、JPEGのCOM、PNGのcomment text、WebPのXMP末尾のXML commentへ保存します。
       </p>
       <pre><code>karufile:image-v2;recipe=&lt;sha256&gt;;src_size=&lt;bytes&gt;;src_mtime_ns=&lt;nanoseconds&gt;;src_sha256=&lt;sha256&gt;</code></pre>
       <p>例:</p>
@@ -461,7 +465,7 @@ input/kept.jpeg      -> output/kept.jpeg</code></pre>
 &lt;output&gt;.image-manifest.dry-run.csv</code></pre>
       <p>列:</p>
       <pre><code>source_path,source_size,source_sha256,output_path,output_size,output_sha256,
-action,error,preset,recipe_hash,orig_width,orig_height,new_width,new_height</code></pre>
+action,error,preset,recipe_hash,output_format,strip_exif,orig_width,orig_height,new_width,new_height</code></pre>
       <p>
         manifest 行は、処理時の snapshot を使って検証されます。全行の SHA-256 と寸法を検証した後、公開直前に全 source/output の dev/inode/size/mtime/ctime を再照合します。
         後続行の検証中に先行ファイルが差し替わった場合も終了コード 1 となり、以前の manifest と正常な出力を保持します。正式ファイルへの公開は一時ファイルを <code>os.replace()</code> で移動する原子操作です。
@@ -511,7 +515,7 @@ action,error,preset,recipe_hash,orig_width,orig_height,new_width,new_height</cod
           <tr><td><code>ICC_DROPPED</code></td><td>ICC プロファイルを保存できなかった</td></tr>
           <tr><td><code>XMP_DROPPED</code></td><td>XMP を保存できなかった</td></tr>
           <tr><td><code>DPI_DROPPED</code></td><td>DPI を保存できなかった</td></tr>
-          <tr><td><code>OUTPUT_LARGER_THAN_SOURCE</code></td><td>非 JPEG 変換で出力が元より大きくなった</td></tr>
+          <tr><td><code>OUTPUT_LARGER_THAN_SOURCE</code></td><td>変換出力が元より大きくなった</td></tr>
           <tr><td><code>ENCODE_FAILED_ORIGINAL_COPIED</code></td><td>JPEG 再エンコード失敗、原本コピーで回復</td></tr>
           <tr><td><code>COMMENT_DROPPED</code></td><td>既存 JPEG comment を廃棄して保存</td></tr>
           <tr><td><code>METADATA_DROPPED</code></td><td>メタデータを廃棄して保存</td></tr>
@@ -521,7 +525,7 @@ action,error,preset,recipe_hash,orig_width,orig_height,new_width,new_height</cod
       <table>
         <thead><tr><th>Action</th><th>意味</th></tr></thead>
         <tbody>
-          <tr><td><code>CONVERTED</code></td><td>JPEG 変換または再エンコードを実行</td></tr>
+          <tr><td><code>CONVERTED</code></td><td>選択形式への変換または再エンコードを実行</td></tr>
           <tr><td><code>COPIED_ORIGINAL</code></td><td>条件を満たさない JPEG を原本コピー</td></tr>
           <tr><td><code>COPIED_ENCODE_FAILED</code></td><td>JPEG 再エンコード失敗後に原本コピー</td></tr>
           <tr><td><code>SKIPPED_GENERATED</code></td><td>KaruFile 生成済み JPEG をコピー</td></tr>

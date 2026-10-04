@@ -78,7 +78,7 @@ uv run --script karufile.py --preset compact -i "D:\作業\資料" -o "D:\作業
 `--pdf-preview`では原本・完成出力と、任意の追加DPI候補をローカルHTMLで比較できます。
 
 > `--dry-run` でも状態DBとレポートは更新される場合があります。画像のメタデータは
-> 削除を保証せず、GPS情報が残る場合があります。実行前に正本マニュアルを確認してください。
+> 全削除する機能ではありません。EXIF除去は `--image-strip-exif` で指定できます。実行前に正本マニュアルを確認してください。
 
 ## 構成
 
@@ -87,7 +87,7 @@ uv run --script karufile.py --preset compact -i "D:\作業\資料" -o "D:\作業
 | `karufile.py` | 通常使うCLI入口 |
 | `orchestrator/` | PDF・画像・指定Excel・compact動画の処理コンポーネントを順に呼び、結果を集計 |
 | `pdf-shrink/` | PDF処理の正本。PyMuPDF、qpdf、SQLiteを使用 |
-| `media-shrink-tool/` | 画像をJPEGへ変換する処理コンポーネント |
+| `media-shrink-tool/` | 画像をJPEG・PNG・WebPへ変換する処理コンポーネント |
 | `excel-shrink/` | 明示選択したxlsx内の画像を縮小し、画像以外の内容一致を検証 |
 | `video-shrink/` | compact動画を外部FFmpegで変換・検証する処理コンポーネント |
 

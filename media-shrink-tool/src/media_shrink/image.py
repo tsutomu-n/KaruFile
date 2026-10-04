@@ -13,6 +13,7 @@ import stat
 from typing import Any, Mapping, cast
 
 from PIL import Image, ImageOps
+from PIL.PngImagePlugin import PngInfo
 
 from .config import ImageConfig, ImagePreset, image_preset_for_recipe_hash
 from .utils import (
@@ -54,6 +55,8 @@ MANIFEST_COLUMNS = (
     "error",
     "preset",
     "recipe_hash",
+    "output_format",
+    "strip_exif",
     "orig_width",
     "orig_height",
     "new_width",
@@ -106,7 +109,7 @@ class SourceFingerprint:
 
 @dataclass(frozen=True, slots=True)
 class OutputFingerprint:
-    """再利用候補JPEGの安定した内容・metadata snapshot。"""
+    """再利用候補画像の安定した内容・metadata snapshot。"""
 
     stat: os.stat_result
     sha256: str
@@ -165,6 +168,8 @@ def _coerce_config(config: ImageConfig | Mapping[str, Any]) -> ImageConfig:
         workers=int(config.get("workers", 4)),
         dry_run=bool(config.get("dry_run", False)),
         preset=cast(ImagePreset, str(config.get("preset", "standard"))),
+        output_format=str(config.get("output_format", "jpeg")),
+        strip_exif=cast(bool, config.get("strip_exif", False)),
     )
 
 
@@ -181,10 +186,12 @@ def calculate_output_size(size: tuple[int, int], config: ImageConfig | None = No
     return max(1, round(width * scale)), max(1, round(height * scale))
 
 
-def _relative_output_path(relative_source: Path) -> Path:
-    if relative_source.suffix.lower() in JPEG_EXTENSIONS:
+def _relative_output_path(relative_source: Path, output_format: str = "jpeg") -> Path:
+    extensions = JPEG_EXTENSIONS if output_format == "jpeg" else {f".{output_format}"}
+    if relative_source.suffix.lower() in extensions:
         return relative_source
-    return relative_source.with_name(f"{relative_source.name}.jpg")
+    suffix = "jpg" if output_format == "jpeg" else output_format
+    return relative_source.with_name(f"{relative_source.name}.{suffix}")
 
 
 def _case_insensitive_key(path: Path) -> str:
@@ -196,14 +203,19 @@ def _hashed_output(path: Path, relative_source: Path) -> Path:
     return path.with_name(f"{path.stem}~{digest}{path.suffix}")
 
 
-def plan_outputs(input_dir: Path, output_dir: Path, sources: list[Path]) -> list[ImagePlan]:
+def plan_outputs(
+    input_dir: Path,
+    output_dir: Path,
+    sources: list[Path],
+    output_format: str = "jpeg",
+) -> list[ImagePlan]:
     """全出力を先に決め、大小無視の同名・file/dir衝突をhashで解消する。"""
 
     base_plans: list[ImagePlan] = []
     groups: dict[str, list[int]] = {}
     for source in sources:
         relative = source.relative_to(input_dir)
-        output = output_dir / _relative_output_path(relative)
+        output = output_dir / _relative_output_path(relative, output_format)
         index = len(base_plans)
         base_plans.append(ImagePlan(source, relative, output))
         groups.setdefault(_case_insensitive_key(output.relative_to(output_dir)), []).append(index)
@@ -304,6 +316,8 @@ def _comment_payloads(image: Image.Image) -> list[bytes]:
         return payloads
 
     payload = image.info.get("comment")
+    if image.format == "WEBP":
+        payload = image.info.get("xmp")
     if isinstance(payload, bytes):
         return [payload]
     if isinstance(payload, str):
@@ -442,14 +456,18 @@ def _inspect_jpeg(path: Path) -> tuple[tuple[int, int], bytes]:
 
 
 def _capture_output_fingerprint(output: Path) -> OutputFingerprint:
-    """linkでなく、読取り中も同一だったJPEG出力だけをsnapshot化する。"""
+    """linkでなく、読取り中も同一だった画像出力だけをsnapshot化する。"""
 
     if is_link_like(output):
         raise PathValidationError(f"Linked output file is not allowed: {output}")
     before = output.stat()
     if not output.is_file() or before.st_nlink > 1:
         raise PathValidationError(f"Unsafe image output cannot be reused: {output}")
-    dimensions, comment = _inspect_jpeg(output)
+    with Image.open(output) as image:
+        if image.format not in {"JPEG", "PNG", "WEBP"}:
+            raise ValueError("Unsupported image output format")
+        image.load()
+        dimensions, comment = image.size, _combined_comment(image)
     digest = _sha256_file(output)
     after = output.stat()
     if _stat_signature(before) != _stat_signature(after):
@@ -491,6 +509,7 @@ def _completed_output_matches(
     if not output.is_file():
         return None
     try:
+        _validate_output_policy(output, config)
         fingerprint = _capture_output_fingerprint(output)
         dimensions, comment = fingerprint.dimensions, fingerprint.comment
         width, height = dimensions
@@ -642,19 +661,62 @@ def _save_jpeg(
     raise ValueError("JPEG candidate could not be saved with its required marker") from last_error
 
 
+def _validate_output_policy(path: Path, config: ImageConfig) -> None:
+    """再利用・公開前に実形式とEXIF除去の要求を照合する。"""
+    with Image.open(path) as image:
+        if image.format != config.output_format.upper():
+            raise ValueError(f"Output format does not match {config.output_format}")
+        image.load()
+        if config.strip_exif and ("exif" in image.info or image.getexif()):
+            raise ValueError("EXIF remains in output")
+
+
+def _save_image(
+    image: Image.Image,
+    temporary: Path,
+    marker: bytes,
+    existing_comment: bytes,
+    metadata: Mapping[str, Any],
+    warnings: list[str],
+    config: ImageConfig,
+) -> None:
+    """形式固有のmetadata領域に必須markerを保存する。"""
+    if config.output_format == "jpeg":
+        _save_jpeg(image, temporary, marker, existing_comment, metadata, warnings, config)
+        return
+    options = dict(metadata)
+    if config.output_format == "png":
+        info = PngInfo()
+        info.add_text("comment", (existing_comment + b"\n" + marker).decode("utf-8", "replace"))
+        xmp = options.pop("xmp", None)
+        if xmp:
+            info.add_itxt("XML:com.adobe.xmp", xmp.decode("utf-8") if isinstance(xmp, bytes) else xmp)
+        image.save(temporary, format="PNG", pnginfo=info, **options)
+    else:
+        options.pop("dpi", None)
+        xmp = options.pop("xmp", b"")
+        if isinstance(xmp, str):
+            xmp = xmp.encode("utf-8")
+        if not xmp:
+            xmp = b'<x:xmpmeta xmlns:x="adobe:ns:meta/"/>'
+        options["xmp"] = xmp + b"\n<!--" + marker + b"-->"
+        image.save(temporary, format="WEBP", quality=config.quality, method=6, **options)
+
+
 def _verify_candidate(
     path: Path,
     expected_size: tuple[int, int],
     config: ImageConfig,
 ) -> OutputFingerprint:
+    _validate_output_policy(path, config)
     fingerprint = _capture_output_fingerprint(path)
     dimensions, comment = fingerprint.dimensions, fingerprint.comment
     if dimensions != expected_size:
-        raise ValueError(f"JPEG output dimensions differ: expected {expected_size}, got {dimensions}")
+        raise ValueError(f"Image output dimensions differ: expected {expected_size}, got {dimensions}")
     if max(dimensions) > config.max_long or min(dimensions) > config.max_short:
-        raise ValueError(f"JPEG output exceeds dimension limits: {dimensions}")
+        raise ValueError(f"Image output exceeds dimension limits: {dimensions}")
     if not _has_karufile_marker(comment):
-        raise ValueError("JPEG output marker is missing")
+        raise ValueError("Image output marker is missing")
     return fingerprint
 
 
@@ -798,6 +860,7 @@ def process_image(
         opened.load()
 
         source_is_jpeg = source_format == "JPEG"
+        allow_original_copy = cfg.output_format == "jpeg" and not cfg.strip_exif
         existing_comment = _combined_comment(opened)
         reprocess_generated = source_is_jpeg and _generated_jpeg_requires_reprocessing(
             existing_comment,
@@ -805,6 +868,7 @@ def process_image(
         )
         generated_copy_safe = (
             source_is_jpeg
+            and allow_original_copy
             and _known_generated_preset(existing_comment) is not None
             and not reprocess_generated
             and not orientation_applied
@@ -876,6 +940,7 @@ def process_image(
         # SKIPPED_COPYとして誤再利用しない。
         if (
             source_is_jpeg
+            and allow_original_copy
             and not cfg.dry_run
             and not orientation_applied
             and not reprocess_generated
@@ -921,7 +986,15 @@ def process_image(
                 oriented.load()
                 metadata = _optional_metadata(opened, oriented, source_mode, warnings)
                 oriented_dimensions = oriented.size
-                working = _to_rgb(oriented, warnings)
+                if cfg.strip_exif:
+                    metadata.pop("exif", None)
+                if cfg.output_format == "jpeg":
+                    working = _to_rgb(oriented, warnings)
+                else:
+                    has_alpha = _has_alpha(oriented) or "transparency" in oriented.info
+                    working = oriented.convert("RGBA" if has_alpha else "RGB")
+                # PNG等のencoderによるEXIFの暗黙継承も防ぐ。
+                working.info.clear()
             finally:
                 oriented.close()
 
@@ -957,20 +1030,21 @@ def process_image(
                 input_root=effective_input_root,
                 output_root=effective_output_root,
             ) as temporary:
-                _save_jpeg(working, temporary, marker, candidate_comment, metadata, warnings, cfg)
+                _save_image(working, temporary, marker, candidate_comment, metadata, warnings, cfg)
                 candidate = _verify_candidate(temporary, expected_dimensions, cfg)
                 candidate_size = candidate.stat.st_size
                 savings = source_stat.st_size - candidate_size
                 reduction = savings / source_stat.st_size if source_stat.st_size else 0.0
                 adopt_candidate = (
-                    not source_is_jpeg
+                    not allow_original_copy
+                    or not source_is_jpeg
                     or must_resize
                     or orientation_applied
                     or (reprocess_generated and savings > 0)
                     or (savings >= JPEG_MIN_SAVINGS and reduction >= JPEG_MIN_REDUCTION)
                 )
                 if adopt_candidate:
-                    if not source_is_jpeg and candidate_size > source_stat.st_size:
+                    if candidate_size > source_stat.st_size:
                         _append_warning(warnings, "OUTPUT_LARGER_THAN_SOURCE")
                     _replace_staged(
                         temporary,
@@ -1027,7 +1101,7 @@ def process_image(
                 (SourceChangedError, OutputCollisionError, PathValidationError),
             ):
                 raise
-            if not source_is_jpeg:
+            if not source_is_jpeg or not allow_original_copy:
                 raise
             if cfg.dry_run:
                 raise
@@ -1097,7 +1171,7 @@ def process_all(
     resolved_input = input_dir.resolve(strict=True)
     resolved_output = output_dir.resolve(strict=False)
     sources = collect_images(resolved_input)
-    plans = plan_outputs(resolved_input, resolved_output, sources)
+    plans = plan_outputs(resolved_input, resolved_output, sources, cfg.output_format)
     source_identities = {
         identity for source in sources if (identity := _file_identity(source)) is not None
     }
@@ -1233,6 +1307,7 @@ def _validated_manifest_rows(
                 raise OutputCollisionError(
                     f"Dry-run result unexpectedly owns an output: {output}"
                 )
+            _validate_output_policy(output, config)
             observed_output = _assert_reusable_output_unchanged(
                 output,
                 expected_output,
@@ -1271,6 +1346,8 @@ def _validated_manifest_rows(
                 "error": error,
                 "preset": config.preset,
                 "recipe_hash": config.recipe_hash,
+                "output_format": config.output_format,
+                "strip_exif": str(config.strip_exif).lower(),
                 "orig_width": orig_width,
                 "orig_height": orig_height,
                 "new_width": new_width,

@@ -7,7 +7,7 @@
     "quality_profile": "showcase",
     "repository": {
       "url": "https://github.com/tsutomu-n/KaruFile",
-      "revision": "78c3e4e183ae26532a680cc2c6a06eab120d5881"
+      "revision": "6c0ebcc97057a8f24b07c1c3181acdb248ec5689"
     },
     "legend": {
       "mode": "auto",
@@ -118,7 +118,7 @@
       "id": "image",
       "type": "backend",
       "label": "media-shrink-tool",
-      "sublabel": "静止画をJPEGへ変換",
+      "sublabel": "JPEG / PNG / WebP",
       "pos": [
         650,
         400
@@ -413,7 +413,7 @@
       "id": "image_publishes",
       "from": "image",
       "to": "output",
-      "label": "JPEGを原子的に公開",
+      "label": "画像を原子的に公開",
       "labelAt": [
         990,
         495

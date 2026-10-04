@@ -128,3 +128,10 @@ karufile.py
 - Excel dry-runは構造と処理予定を調べて専用reportを更新するだけで、完成xlsxや縮小候補を作らない。
 - processorのstdout/stderrは画面へ逐次転送し、memoryには固定長tailだけを保持する。
   各processorは24時間でtimeoutし、子process treeも停止する。
+
+## 単独画像の出力形式とEXIF除去
+
+`--image-format jpeg|png|webp`（既定jpeg）と`--image-strip-exif`（既定OFF）を画像子CLIへ渡します。
+rootも形式別の出力名・衝突を事前計画し、manifestの形式・EXIF除去設定・recipe hashを要求と照合します。
+PNG/WebP出力や除去指定で原本コピーactionが返った場合は不整合として拒否します。
+通常の寸法制約・入力/出力のidentityとSHA照合・dry-runの完成出力なしを維持します。

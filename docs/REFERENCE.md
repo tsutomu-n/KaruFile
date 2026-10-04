@@ -42,6 +42,8 @@ protection_policyと画像化recipe（v3、数値上限含む）をconfig hash�
 -i, --input PATH         入力フォルダーまたはPDFファイル。必須
 -o, --output PATH        出力フォルダー。省略時は <input>_軽量化
 --pdf-workers N          PDFの並列処理数。既定値は2
+--image-format FORMAT   単独画像の出力形式。jpeg（既定）/png/webp
+--image-strip-exif       単独画像のEXIFをOrientation適用後に除去。既定OFF
 --image-workers N        画像の並列処理数。既定値は4
 --excel-pattern PATTERN  対象xlsxを入力相対globで明示選択。反復可、既定は探索しない
 --excel-max-side PX      Excel画像の長辺上限。100〜10000、既定800。excel-dpiと排他
@@ -133,7 +135,7 @@ source,planned_output,error
 
 ```text
 source_path,source_size,source_sha256,output_path,output_size,output_sha256,
-action,error,preset,recipe_hash,orig_width,orig_height,new_width,new_height
+action,error,preset,recipe_hash,output_format,strip_exif,orig_width,orig_height,new_width,new_height
 ```
 
 通常実行とdry-runは別ファイルです。統合CLIは更新の有無、入力との1:1対応、予定出力、presetと
@@ -145,7 +147,7 @@ fail-closedにします。
 画像子CLIは、全行のSHA-256・寸法検証とレポート宛先検査の後、`os.replace()`の直前に
 全source/outputのdev/inode/size/mtime/ctimeを処理時snapshotと再照合します。後続行のhash中に
 先行ファイルが差し替わった場合はmanifestを公開せず、終了コード1で旧manifestと正常出力を保持します。
-dry-runは既存の完成JPEG・原本コピーの再利用経路を通らず、`DRY_RUN`または
+dry-runは既存の完成画像・原本コピーの再利用経路を通らず、`DRY_RUN`または
 `DRY_RUN_SKIPPED_GENERATED`として出力size/SHAを空欄にします。完成出力・通常manifestは維持します。
 入力ファイルのロックは行わず、最終検査後のあらゆる同時更新を防ぐ保証ではありません。
 
@@ -184,10 +186,10 @@ dry-runは既存の完成JPEG・原本コピーの再利用経路を通らず、
 
 ### 対応形式と出力名
 
-入力候補はJPEG、PNG、TIFF、BMP、GIF、WebP、HEIC、HEIFです。出力はJPEGです。
+入力候補はJPEG、PNG、TIFF、BMP、GIF、WebP、HEIC、HEIFです。出力は既定JPEGで、PNG・WebPも選択できます。
 
-- JPEG入力は `.jpg` または `.jpeg` を維持します。
-- 非JPEG入力は元のファイル名全体へ `.jpg` を追加します。
+- 既定JPEG出力では、JPEG入力の `.jpg` または `.jpeg` を維持します。
+- 既定JPEG出力では、非JPEG入力の元のファイル名全体へ `.jpg` を追加します。
 
 ```text
 photo.jpg  -> photo.jpg
@@ -213,10 +215,39 @@ SHA-256先頭8文字を付けます。ファイルとディレクトリのprefix
 | リサイズ | 縦横比維持、拡大・切り抜きなし |
 | JPEG | 4:2:0、optimize、progressive |
 | Orientation | EXIF Orientationを画素へ適用 |
-| 透過 | 白背景へ合成 |
+| 透過 | JPEGは白背景へ合成、PNG・WebPは保持 |
 | animation・複数ページ | 先頭フレームだけを使用し、ターミナルへ警告を表示 |
 
+
+### 出力形式とEXIF除去の設定
+
+ルートは `--image-format jpeg|png|webp` / `--image-strip-exif`、画像CLIのresizeは
+`--format jpeg|png|webp` / `--strip-exif`。既定jpeg、除去OFF。単独画像にのみ適用する。
+`ImageConfig(output_format="webp", strip_exif=True)` でも指定できる。
+PNGはリサイズ後のRGB/RGBAを可逆圧縮する。WebPはquality72/60、method6の非可逆圧縮。
+PNG/WebPは透過を保持し、JPEGのみ白背景合成。寸法上限・先頭フレーム規則は全形式共通。
+
+EXIFはOrientationを画素へ適用後に除去し、保存前の暗黙のmetadata継承を切る。
+完成候補を再オープンして実形式・寸法・marker・EXIF除去を検査し、検証後に原子的に公開する。
+除去指定時、またはPNG/WebP出力時は原本コピー・生成済み入力コピーを使わず、削減率によらず
+候補を採用する。エンコード・検証失敗はERRORとなり、既存出力を置き換えず他画像を続行する。
+EXIF以外の個人情報・metadata除去は保証しない。PNG/WebPのICC・EXIFは保存可能な範囲で渡す。
+PNGのXMPはiTXtへ、WebPのXMPはXMP chunkへ渡す。WebPにはDPI・元コメントを引き継がない。
+
+入力拡張子が選択形式と一致する場合は名前を維持し、異なる場合は元名全体へ出力拡張子を追加する。
+JPEGの一致対象は.jpg/.jpeg、追加拡張子は.jpg。PNGは.png、WebPは.webp。
+衝突時の8桁hash規則は全形式共通。形式変更後も過去形式の出力は自動削除しない。
+
+完成出力の再利用は3形式ともsource SHA・stat・寸法・recipe markerを照合する。
+JPEGはCOM、PNGはcomment text、WebPはXMP末尾のXML commentへ内部markerを保存する。
+形式と除去設定をrecipe hashへ含める。旧jpeg/除去OFFのhashは維持し、その他は旧hashに
+`\nformat=<format>\nstrip_exif=<true|false>\nversion=1`を付けたASCIIのSHA-256。
+manifestに `output_format` と `strip_exif`（true/false）を追加し、rootで要求と照合する。
+旧列構成はjpeg/除去OFFとしてのみ解釈する。dry-runは完成画像を作成・再利用せず要求を記録する。
+
 ### JPEG候補の採用と再利用
+
+以下の原本コピー・生成済み入力の短絡はJPEG出力かつEXIF保持の場合に限ります。
 
 上限内で、Orientationの画素適用が不要なJPEGは、再エンコード候補が32 KiB以上かつ
 10%以上小さくなる場合だけ候補を採用します。それ以外は入力JPEGを出力へコピーします。
@@ -239,7 +270,7 @@ KaruFileが生成したJPEGには、小文字の識別情報 `karufile:image-v2`
 
 ### メタデータ
 
-EXIF、GPS、DateTimeOriginal、カメラ・レンズ情報、ICC、XMP、JPEG comment、DPIは、
+EXIF除去を指定しない場合、EXIF、GPS、DateTimeOriginal、カメラ・レンズ情報、ICC、XMP、JPEG comment、DPIは、
 PillowでJPEGへ保存できる範囲で可能な限り保持します。完全保持は保証しません。
 
 Orientation適用後は古いOrientation値を残しません。CMYKなどからRGBへ単純変換した場合は、
@@ -258,10 +289,10 @@ warningだけなら終了コードは `0` です。
 
 ### 画像出力の公開と失敗
 
-候補JPEGと原本コピーは、出力先と同じディレクトリの一時ファイルへ書き、JPEGとして
+候補画像と原本コピーは、出力先と同じディレクトリの一時ファイルへ書き、要求形式として
 再オープンしてから `os.replace()` で公開します。
 
-JPEG候補生成に失敗した場合は、可能なら入力JPEGを出力へコピーします。必須のリサイズまたは
+JPEG出力・EXIF保持で候補生成に失敗した場合は、可能なら入力JPEGを出力へコピーします。必須のリサイズまたは
 Orientation適用を完了できなかった場合は、原本をコピーしてもエラーとして記録します。
 
 1件の失敗で残りの画像を停止しません。シンボリックリンク、junction、危険なhardlinkは、
@@ -712,6 +743,8 @@ Nが奇数の場合、`--limit` は固定seedのランダム側を1件多く選�
 -o, --output PATH     省略時は <input>_resized
 -n, --dry-run         画像出力を作らず、画像エラーCSVとdry-run manifestを更新
 -j, --workers N       既定値4、最小値1
+--format FORMAT      jpeg（既定）/png/webp
+--strip-exif          Orientation適用後にEXIFを除去。既定OFF
 --preset NAME         standardまたはcompact。既定値standard
 -v, --verbose         詳細ログ
 ```

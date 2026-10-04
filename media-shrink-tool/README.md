@@ -27,6 +27,8 @@ uv run --project media-shrink-tool python -m media_shrink resize `
 | `-o`, `--output` | 別の出力フォルダー。省略時は `<input>_resized` |
 | `-n`, `--dry-run` | 画像をデコードして予定を確認 |
 | `-j`, `--workers` | 並列処理数。既定値は4、最小値は1 |
+| `--format` | 出力形式jpeg/png/webp。既定jpeg |
+| `--strip-exif` | Orientation適用後にEXIFを除去。既定OFF |
 | `--preset` | `standard`または`compact`。既定値は`standard` |
 | `-v`, `--verbose` | 詳細ログ |
 
@@ -49,14 +51,41 @@ manifestの更新を試みます。
 
 どちらもJPEG 4:2:0、optimize、progressiveを使います。縦横比を維持し、
 拡大や切り抜きは行いません。EXIF Orientationは画素へ適用し、透過部分は
-白背景へ合成します。animation・複数ページは先頭フレームだけを使用し、
+JPEGでは白背景へ合成、PNG・WebPでは保持します。animation・複数ページは先頭フレームだけを使用し、
 ターミナルへ警告を表示します。
 
-入力候補はJPEG、PNG、TIFF、BMP、GIF、WebP、HEIC、HEIF、出力はJPEGです。
+入力候補はJPEG、PNG、TIFF、BMP、GIF、WebP、HEIC、HEIF、出力は既定JPEGで、PNG・WebPも選択できます。
+
+
+### 出力形式とEXIF除去の設定
+
+ルートは `--image-format jpeg|png|webp` / `--image-strip-exif`、画像CLIのresizeは
+`--format jpeg|png|webp` / `--strip-exif`。既定jpeg、除去OFF。単独画像にのみ適用する。
+`ImageConfig(output_format="webp", strip_exif=True)` でも指定できる。
+PNGはリサイズ後のRGB/RGBAを可逆圧縮する。WebPはquality72/60、method6の非可逆圧縮。
+PNG/WebPは透過を保持し、JPEGのみ白背景合成。寸法上限・先頭フレーム規則は全形式共通。
+
+EXIFはOrientationを画素へ適用後に除去し、保存前の暗黙のmetadata継承を切る。
+完成候補を再オープンして実形式・寸法・marker・EXIF除去を検査し、検証後に原子的に公開する。
+除去指定時、またはPNG/WebP出力時は原本コピー・生成済み入力コピーを使わず、削減率によらず
+候補を採用する。エンコード・検証失敗はERRORとなり、既存出力を置き換えず他画像を続行する。
+EXIF以外の個人情報・metadata除去は保証しない。PNG/WebPのICC・EXIFは保存可能な範囲で渡す。
+PNGのXMPはiTXtへ、WebPのXMPはXMP chunkへ渡す。WebPにはDPI・元コメントを引き継がない。
+
+入力拡張子が選択形式と一致する場合は名前を維持し、異なる場合は元名全体へ出力拡張子を追加する。
+JPEGの一致対象は.jpg/.jpeg、追加拡張子は.jpg。PNGは.png、WebPは.webp。
+衝突時の8桁hash規則は全形式共通。形式変更後も過去形式の出力は自動削除しない。
+
+完成出力の再利用は3形式ともsource SHA・stat・寸法・recipe markerを照合する。
+JPEGはCOM、PNGはcomment text、WebPはXMP末尾のXML commentへ内部markerを保存する。
+形式と除去設定をrecipe hashへ含める。旧jpeg/除去OFFのhashは維持し、その他は旧hashに
+`\nformat=<format>\nstrip_exif=<true|false>\nversion=1`を付けたASCIIのSHA-256。
+manifestに `output_format` と `strip_exif`（true/false）を追加し、rootで要求と照合する。
+旧列構成はjpeg/除去OFFとしてのみ解釈する。dry-runは完成画像を作成・再利用せず要求を記録する。
 
 ## 出力名と衝突
 
-JPEG入力は `.jpg` または `.jpeg` を維持します。非JPEG入力は元のファイル名全体へ
+JPEG出力では、JPEG入力の `.jpg` または `.jpeg` を維持します。非JPEG入力は元のファイル名全体へ
 `.jpg` を追加します。
 
 ```text
@@ -70,6 +99,8 @@ SHA-256先頭8文字を付けます。ファイルとディレクトリのprefix
 ファイル側の出力名へハッシュを付けて解消します。
 
 ## JPEG候補と再利用
+
+以下の原本コピー・生成済み入力の短絡はJPEG出力かつEXIF保持の場合に限ります。
 
 上限内のJPEGは、候補が32 KiB以上かつ10%以上小さくなる場合だけ再エンコード結果を
 採用します。それ以外は入力JPEGを出力へコピーします。
@@ -91,7 +122,7 @@ KaruFileが生成したJPEGには、小文字の識別情報 `karufile:image-v2`
 
 ## メタデータと警告
 
-EXIF、GPS、DateTimeOriginal、カメラ・レンズ情報、ICC、XMP、JPEG comment、DPIは、
+EXIF除去を指定しない場合、EXIF、GPS、DateTimeOriginal、カメラ・レンズ情報、ICC、XMP、JPEG comment、DPIは、
 PillowでJPEGへ保存できる範囲で可能な限り保持します。完全保持は保証しません。
 Orientation適用後は古いOrientation値を残しません。CMYKなどからRGBへ単純変換した場合は、
 意味の異なるICCを付けず、ターミナルへ警告を表示します。警告は画像エラーCSVへ
@@ -128,7 +159,7 @@ Orientation適用後は古いOrientation値を残しません。CMYKなどから
 ```
 
 列は `source_path,source_size,source_sha256,output_path,output_size,output_sha256,action,error,`
-`preset,recipe_hash,orig_width,orig_height,new_width,new_height` です。公開直前に全入力と、通常実行で
+`preset,recipe_hash,output_format,strip_exif,orig_width,orig_height,new_width,new_height` です。公開直前に全入力と、通常実行で
 生成・再利用した出力のpath、size、SHA-256、寸法を再検証します。全行の検証後、公開直前に
 全入力・完成出力のファイル同一性、size、mtime、ctimeを一括再照合し、後続行の検証中に先行
 ファイルが差し替わった場合も公開を拒否します。以前のmanifestと正常な出力は保持します。
@@ -143,7 +174,7 @@ dry-runは完成済み出力があっても通常の再利用結果を記録せ�
 | `1` | 画像エラーあり、レポート更新失敗、または入出力検査失敗 |
 | `2` | 引数不正 |
 
-候補JPEGと原本コピーは、出力先と同じディレクトリの一時ファイルへ書き、JPEGとして
+候補画像と原本コピーは、出力先と同じディレクトリの一時ファイルへ書き、要求形式として
 再オープンしてから `os.replace()` で公開します。入力または出力に含まれるシンボリックリンク、
 ジャンクション、危険なハードリンクは処理前または公開境界で拒否します。
 

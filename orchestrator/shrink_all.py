@@ -614,6 +614,7 @@ def _plan_image_destinations(
     input_root: Path,
     output_dir: Path,
     image_files: list[Path],
+    output_format: str = "jpeg",
 ) -> list[tuple[Path, Path]]:
     """media_shrink.image.plan_outputs と同じstable naming/collision規則を適用する。"""
 
@@ -622,8 +623,10 @@ def _plan_image_destinations(
     for source in image_files:
         relative_source = _relative_input(source.resolve(strict=True), input_root)
         relative_output = relative_source
-        if relative_output.suffix.lower() not in JPEG_EXTENSIONS:
-            relative_output = relative_output.with_name(f"{relative_output.name}.jpg")
+        extensions = JPEG_EXTENSIONS if output_format == "jpeg" else {f".{output_format}"}
+        if relative_output.suffix.lower() not in extensions:
+            suffix = "jpg" if output_format == "jpeg" else output_format
+            relative_output = relative_output.with_name(f"{relative_output.name}.{suffix}")
         index = len(base)
         base.append((source, relative_source, relative_output))
         groups.setdefault(relative_output.as_posix().casefold(), []).append(index)
@@ -697,6 +700,7 @@ def validate_planned_destinations(
     image_files: list[Path],
     video_files: list[Path] | None = None,
     excel_files: list[Path] | None = None,
+    image_format: str = "jpeg",
 ) -> None:
     """全processorの予定出力が、link解決後も安全な出力root内か確認する。"""
 
@@ -713,6 +717,7 @@ def validate_planned_destinations(
             input_root,
             output_dir,
             image_files,
+            image_format,
         )
     )
     for source in video_files or []:
@@ -2492,6 +2497,10 @@ def parse_image_manifest(report_path: Path) -> dict[str, Any]:
                 source_sha256 = (raw_row.get("source_sha256") or "").lower()
                 output_sha256 = (raw_row.get("output_sha256") or "").lower()
                 recipe_hash = (raw_row.get("recipe_hash") or "").lower()
+                output_format = raw_row.get("output_format", "jpeg")
+                strip_exif = raw_row.get("strip_exif", "false")
+                if output_format not in {"jpeg", "png", "webp"} or strip_exif not in {"true", "false"}:
+                    raise ValueError("invalid image output policy")
                 if not re.fullmatch(r"[0-9a-f]{64}", source_sha256):
                     raise ValueError("image manifest source_sha256 is invalid")
                 if output_sha256 and not re.fullmatch(r"[0-9a-f]{64}", output_sha256):
@@ -2515,6 +2524,8 @@ def parse_image_manifest(report_path: Path) -> dict[str, Any]:
                     "error": raw_row.get("error") or "",
                     "preset": preset,
                     "recipe_hash": recipe_hash,
+                    "output_format": output_format,
+                    "strip_exif": strip_exif == "true",
                     "orig_width": _parse_optional_image_int(
                         raw_row, "orig_width", positive=True
                     ),
@@ -2568,6 +2579,18 @@ def _image_dimensions_are_valid(row: dict[str, Any], preset: str) -> bool:
     return max(resized) <= max_long and min(resized) <= max_short
 
 
+def _image_recipe_hash(preset: str, output_format: str, strip_exif: bool) -> str:
+    base = IMAGE_RECIPE_HASHES[preset]
+    if output_format == "jpeg" and not strip_exif:
+        return base
+    return hashlib.sha256(
+        (
+            f"{base}\nformat={output_format}\n"
+            f"strip_exif={str(strip_exif).lower()}\nversion=1"
+        ).encode("ascii")
+    ).hexdigest()
+
+
 def image_manifest_matches_inputs(
     manifest: dict[str, Any],
     image_files: list[Path],
@@ -2576,6 +2599,8 @@ def image_manifest_matches_inputs(
     output_dir: Path,
     preset: str,
     dry_run: bool,
+    output_format: str = "jpeg",
+    strip_exif: bool = False,
 ) -> bool:
     """Validate 1:1 paths, recipes, shapes, and current source/output bytes."""
 
@@ -2589,7 +2614,7 @@ def image_manifest_matches_inputs(
     try:
         input_root = input_dir.resolve(strict=True)
         output_root = output_dir.resolve(strict=False)
-        expected_plans = _plan_image_destinations(input_root, output_dir, image_files)
+        expected_plans = _plan_image_destinations(input_root, output_dir, image_files, output_format)
         expected_by_source = {
             str(source.resolve(strict=True)).casefold(): (
                 source.resolve(strict=True),
@@ -2615,7 +2640,9 @@ def image_manifest_matches_inputs(
                 str(Path(row["output_path"]).resolve(strict=False)).casefold()
                 != str(expected_output).casefold()
                 or row["preset"] != preset
-                or row["recipe_hash"] != IMAGE_RECIPE_HASHES[preset]
+                or row["recipe_hash"] != _image_recipe_hash(preset, output_format, strip_exif)
+                or row.get("output_format", "jpeg") != output_format
+                or row.get("strip_exif", False) is not strip_exif
             ):
                 return False
             source_size, source_sha256 = _stable_file_size_and_sha256(source)
@@ -2654,6 +2681,8 @@ def image_manifest_matches_inputs(
                     return False
                 verified.append((source, source_size, source_sha256, None, None, ""))
                 continue
+            if (strip_exif or output_format != "jpeg") and action in IMAGE_EXACT_COPY_ACTIONS:
+                return False
             if action not in IMAGE_NORMAL_ACTIONS:
                 return False
             if error and action != "COPIED_ENCODE_FAILED":
@@ -2794,6 +2823,14 @@ def build_parser() -> argparse.ArgumentParser:
         help="pdf-shrink の並列数（デフォルト 2）",
     )
     parser.add_argument(
+        "--image-format", choices=("jpeg", "png", "webp"), default="jpeg",
+        help="画像出力形式 (既定: jpeg)",
+    )
+    parser.add_argument(
+        "--image-strip-exif", action="store_true",
+        help="単独画像のEXIFをOrientation適用後に除去",
+    )
+    parser.add_argument(
         "--image-workers", type=_positive_int, default=4,
         help="media-shrink-tool の並列数（デフォルト 4）",
     )
@@ -2908,7 +2945,7 @@ def main(argv: list[str] | None = None) -> int:
             else []
         )
         validate_planned_destinations(
-            input_dir, output_dir, pdf_files, image_files, video_files, excel_files
+            input_dir, output_dir, pdf_files, image_files, video_files, excel_files, args.image_format
         )
         validate_derived_write_paths(
             input_dir, output_dir, pdf_files, image_files, video_files,
@@ -2926,7 +2963,7 @@ def main(argv: list[str] | None = None) -> int:
         try:
             output_dir.mkdir(parents=True, exist_ok=True)
             validate_planned_destinations(
-                input_dir, output_dir, pdf_files, image_files, video_files, excel_files
+                input_dir, output_dir, pdf_files, image_files, video_files, excel_files, args.image_format
             )
             validate_derived_write_paths(
                 input_dir, output_dir, pdf_files, image_files, video_files,
@@ -3084,6 +3121,9 @@ def main(argv: list[str] | None = None) -> int:
             "-j", str(args.image_workers),
             "--preset", args.preset,
         ]
+        image_args.extend(["--format", args.image_format])
+        if args.image_strip_exif:
+            image_args.append("--strip-exif")
         if args.dry_run:
             image_args.append("-n")
         if args.verbose:
@@ -3104,6 +3144,8 @@ def main(argv: list[str] | None = None) -> int:
                 and image_manifest_matches_inputs(
                     parsed_image,
                     image_files,
+                    output_format=args.image_format,
+                    strip_exif=args.image_strip_exif,
                     input_dir=input_dir,
                     output_dir=output_dir,
                     preset=args.preset,

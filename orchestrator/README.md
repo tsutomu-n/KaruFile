@@ -162,3 +162,10 @@ uv run --script karufile.py --help
 ```
 
 内部構造と責務境界は [設計文書](docs/shrink_orchestrator_design.md)を参照してください。
+
+## 単独画像の出力形式とEXIF除去
+
+`--image-format jpeg|png|webp`（既定jpeg）と`--image-strip-exif`（既定OFF）を画像子CLIへ渡します。
+rootも形式別の出力名・衝突を事前計画し、manifestの形式・EXIF除去設定・recipe hashを要求と照合します。
+PNG/WebP出力や除去指定で原本コピーactionが返った場合は不整合として拒否します。
+通常の寸法制約・入力/出力のidentityとSHA照合・dry-runの完成出力なしを維持します。

@@ -1,0 +1,70 @@
+{
+  "output_format": "png",
+  "fixture_images": 4,
+  "policies": [
+    {
+      "strip_exif": false,
+      "runs": [
+        {
+          "phase": "normal",
+          "exit_code": 0,
+          "image_count": 4,
+          "actions": [
+            "CONVERTED"
+          ]
+        },
+        {
+          "phase": "resume",
+          "exit_code": 0,
+          "image_count": 4,
+          "actions": [
+            "SKIPPED_COMPLETE"
+          ]
+        },
+        {
+          "phase": "dry-run",
+          "exit_code": 0,
+          "image_count": 4,
+          "actions": [
+            "DRY_RUN"
+          ]
+        }
+      ],
+      "source_sha256_and_mtime_unchanged": true,
+      "output_sha256_and_mtime_unchanged_on_resume_and_dry_run": true,
+      "normal_manifest_unchanged_on_dry_run": true
+    },
+    {
+      "strip_exif": true,
+      "runs": [
+        {
+          "phase": "normal",
+          "exit_code": 0,
+          "image_count": 4,
+          "actions": [
+            "CONVERTED"
+          ]
+        },
+        {
+          "phase": "resume",
+          "exit_code": 0,
+          "image_count": 4,
+          "actions": [
+            "SKIPPED_COMPLETE"
+          ]
+        },
+        {
+          "phase": "dry-run",
+          "exit_code": 0,
+          "image_count": 4,
+          "actions": [
+            "DRY_RUN"
+          ]
+        }
+      ],
+      "source_sha256_and_mtime_unchanged": true,
+      "output_sha256_and_mtime_unchanged_on_resume_and_dry_run": true,
+      "normal_manifest_unchanged_on_dry_run": true
+    }
+  ]
+}
