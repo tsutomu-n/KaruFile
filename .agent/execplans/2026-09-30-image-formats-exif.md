@@ -1,5 +1,8 @@
 # EXIF除去とPNG・JPEG・WebP出力
 
+> 2026-10-05追補: この計画の実装・文書・検証資料は`f71cf51`に収録し、origin/mainへpush済み。
+> 本文の未コミット・公開なしの記載は2026-09-30時点の履歴を保持する。
+
 ## Goal / Acceptance Criteria
 ルートCLIと画像CLIで出力形式を選択でき、EXIF除去を指定できる。原本は変更しない。
 Orientationを画素に適用後、除去指定時は完成画像にEXIFを残さない。PNG/WebPの透過を保持する。

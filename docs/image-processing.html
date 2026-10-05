@@ -260,12 +260,19 @@
           <tr><td>Orientation</td><td>画素適用</td><td>画素適用</td></tr>
         </tbody>
       </table>
-      <p>レシピ hash は以下の文字列です。これが marker に埋め込まれ、同一レシピ判定に使われます。</p>
+      <p>既定JPEG出力・EXIF保持のレシピ hash は以下の文字列です。これが marker に埋め込まれ、同一レシピ判定に使われます。</p>
       <ul class="tight">
         <li><code>standard</code>: <code class="marker">2f60924f29b4cedccd15bd92d6dab4da72b22c1358c23e2edf1174fa3b70f420</code></li>
         <li><code>compact</code>: <code class="marker">c5233dcedea2119fbfa723eb7020ba4f295d0fbcb0881ec8340f389614a26ddd</code></li>
       </ul>
-      <p>hash は <code>max_long=&lt;N&gt;</code>, <code>max_short=&lt;N&gt;</code>, <code>quality=&lt;N&gt;</code>, <code>subsampling=4:2:0</code>, <code>alpha=white</code>, <code>orientation=apply</code> を改行で連結した SHA-256 です。設定値が変われば hash も変わり、旧 marker は自動的に「未知のレシピ」として再処理されます。</p>
+      <p>既定hashは <code>max_long=&lt;N&gt;</code>, <code>max_short=&lt;N&gt;</code>, <code>quality=&lt;N&gt;</code>, <code>subsampling=4:2:0</code>, <code>alpha=white</code>, <code>orientation=apply</code> を改行で連結した SHA-256 です。既定JPEG・EXIF保持ではこのhashをそのまま維持します。</p>
+      <p>PNG・WebPまたはEXIF除去指定時は、以下のASCII文字列のSHA-256を使用します。最後の改行も含めます。<code>format</code>は<code>jpeg/png/webp</code>、<code>strip_exif</code>は小文字の<code>true/false</code>です。</p>
+      <pre><code>&lt;既定hash&gt;
+format=&lt;選択形式&gt;
+strip_exif=&lt;trueまたはfalse&gt;
+version=1
+</code></pre>
+      <p>設定値が変わればhashも変わり、完成出力の再利用時に要求との一致を検査します。</p>
 
       <h2 id="sizing">4. 出力寸法の計算</h2>
       <p>寸法計算は <code>calculate_output_size()</code> で行います。Orientation 適用後の寸法を前提に、次式でスケールを決めます。</p>
@@ -489,6 +496,8 @@ action,error,preset,recipe_hash,output_format,strip_exif,orig_width,orig_height,
           <tr><td><code>-n, --dry-run</code></td><td>画像出力を書かず、寸法・action を確認</td><td>OFF</td></tr>
           <tr><td><code>-j, --workers N</code></td><td>並列数</td><td>4</td></tr>
           <tr><td><code>--preset NAME</code></td><td><code>standard</code> または <code>compact</code></td><td>standard</td></tr>
+          <tr><td><code>--format {jpeg,png,webp}</code></td><td>出力形式。PNG・WebPは透過を保持</td><td>jpeg</td></tr>
+          <tr><td><code>--strip-exif</code></td><td>Orientation適用後にEXIFを除去</td><td>OFF</td></tr>
           <tr><td><code>-v, --verbose</code></td><td>詳細ログ</td><td>OFF</td></tr>
         </tbody>
       </table>

@@ -1,3 +1,24 @@
+# 2026-10-05 監査修正・画像出力形式とEXIFの確認
+
+templateにJPEG/PNG/WebP選択・EXIF除去を反映し、生成HTMLだけにあった追補を正本へ戻した。
+ガイド内の写真だけのPDFと個人情報に関する注意事項も実装・MANUALに合わせた。
+`build-guide.mjs`、`check-guide.mjs`、`render-print.py`を実行し、本文を直接生成HTMLへ編集していない。
+
+- 1440/1920/768/390/320pxの表示検査、目次7項目、マニュアル6リンク、720pxの200%相当確認に成功。
+- 単独オフライン、画像2点、外部リクエスト0、console例外0。HTMLのSHAはbuild/verifyで一致。
+- [PCの画像説明](validation/guide.1440.uses.png)・[狭幅の画像説明](validation/guide.390.uses.png)、
+  [PCの注意事項](validation/guide.1440.care.png)・[狭幅の注意事項](validation/guide.390.care.png)を目視。
+  画像形式・EXIFオプション・注意事項の欠け、横はみ出し、重なりなし。
+- A4 PDFの全7ページを開いて確認。第1節の説明が次ページへ孤立せず、本文・図・表がページ内に収まる。
+  印刷後の本文境界検査も全7ページ成功。実プリンターでの確認ではない。
+- 最初の注意事項の追補後は第1節の最終段落だけが別ページへ流れて8ページになった。
+  第1節の原本保護の説明を簡潔にし、写真だけのPDFの詳細は第6節で説明して再生成。最終は7ページ。
+- visual_review: passed。機械receiptの`pending`はこの目視結果とは分離して保持する。
+- 正確なSHA・バイト数は[guide.build.json](guide.build.json)、[guide.verify.json](guide.verify.json)、
+  [guide.a4.pages.json](validation/guide.a4.pages.json)を参照。
+
+以下は過去の確認履歴。旧スクリーンショット・contact sheet・SHAを現在の確認証拠には使わない。
+
 # 2026-09-13 自動スキャン・単一PDFの追補
 
 図2と本文を現行動作へ更新。図1のフォルダー処理例はそのまま再利用した。

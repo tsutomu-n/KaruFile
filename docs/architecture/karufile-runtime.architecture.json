@@ -7,7 +7,7 @@
     "quality_profile": "showcase",
     "repository": {
       "url": "https://github.com/tsutomu-n/KaruFile",
-      "revision": "6c0ebcc97057a8f24b07c1c3181acdb248ec5689"
+      "revision": "f71cf514dd9716eeafdbebc13a762c82d56ebedd"
     },
     "legend": {
       "mode": "auto",
@@ -573,7 +573,7 @@
       "items": [
         "画像だけのPDFは300 DPIグレー・品質92",
         "単一PDFは専用出力、文字PDFは既存処理",
-        "未commit変更を含む。リンクは基準commit"
+        "ソースリンクは基準commitに固定"
       ]
     }
   ]

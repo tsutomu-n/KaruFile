@@ -1,0 +1,29 @@
+{
+  "captured_utc": "2026-10-05T00:48:20.108993+00:00",
+  "base_revision": "f71cf514dd9716eeafdbebc13a762c82d56ebedd",
+  "markdown_files": 49,
+  "local_links_checked": 233,
+  "markdown_anchors_checked": 27,
+  "missing_references": [],
+  "json_files_parsed": 53,
+  "architecture": {
+    "specification_sha256": "2b0266b4f50b7ecca0181279427a9ff20343142bfdbd0416037a423430176622",
+    "artifact_sha256": "d12f05d2d2412bb4641d2a0dd1b30cda641e5ff2920870b249b61378097f884e",
+    "snapshot_files_checked": 74,
+    "receipt_revision_agreement": true
+  },
+  "guide": {
+    "html_sha256": "5c98adf9f40d268dbe616328e4c075d50a733660819c76727651bbfda06626f8",
+    "template_matches_html": true,
+    "build_verify_sha_agreement": true,
+    "pdf_sha256": "426ecc863eca1fcd00302550aa7c8cbcc0278fa5b893e2807d68c19ea5cba032",
+    "page_count": 7,
+    "all_text_bounds_inside": true
+  },
+  "runtime_config_changes": [],
+  "diff_check_exit": 0,
+  "visual_review": {
+    "architecture": "passed; four light/dark screenshots inspected",
+    "guide": "passed; four changed-paragraph screenshots and all seven printed pages inspected"
+  }
+}

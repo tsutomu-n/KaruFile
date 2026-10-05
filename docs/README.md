@@ -40,11 +40,13 @@ ExecPlanは当時の判断と検証を残す履歴であり、現行仕様の正
 
 Archify生成HTMLは直接編集しません。Architecture JSONを更新し、Archifyのvalidate、deliver、
 visual-checkを実行してから、light/darkの画像を確認します。
-現行の図は単一PDF入力・自動スキャンを追加した2026-09-13の生成時点の作業ツリーに基づきます。
-その機能は後に`c483d9c`へ収録済みです。図中の既存ソースリンクは生成時の基準commitを指し、
-生成時に未コミットだった新規ソースには架空のGitHubリンクを作っていません。
+現行の図は2026-10-05に再生成し、JPEG/PNG/WebP・EXIF設定を含む実装を照合しています。
+ソースリンクは基準commit `f71cf514dd9716eeafdbebc13a762c82d56ebedd` に固定しています。
+単一PDF入力・自動スキャンも収録済みで、未コミットruntimeの参照ではありません。
 照合時のローカルパス・SHA-256は[作業ツリーの根拠](architecture/karufile-runtime.compact.worktree.json)に記録しています。
 この記録は取得時点のsnapshotで、後のソース編集に合わせて再取得が必要です。
+現在のJSON・HTMLのSHAはdelivery receiptとsnapshotで、表示確認は同じHTMLを指す
+visual-check receiptで照合します。reviewの9月分は当時の生成・判断の履歴です。
 [実行時アーキテクチャの確認記録](architecture/karufile-runtime.compact.review.md)には、生成・検証と明暗画像の目視結果を記載しています。
 
 入門ガイドの本文・埋込図の再生成手順と表示確認の証拠は [guide/README.md](guide/README.md)にあります。

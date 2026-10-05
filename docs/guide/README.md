@@ -56,6 +56,13 @@ PNGは図1が2080×1136、図2が2400×1280で、ガイドにはdata URLとし�
 
 ## 実装との照合元
 
+2026-10-05は基準commit `f71cf51` の画像config/CLI、PDF policy/workerとMANUALを照合。
+templateへJPEG/PNG/WebP・EXIF設定を反映し、画像化する写真PDFとmetadata除去の範囲もそろえた。
+2図は同じSHAの検証済み図を再利用し、build/check/render-printでガイドと証拠を更新した。
+PC/狭幅の変更段落とA4全7ページを目視した結果は[REVIEW.md](REVIEW.md)に記録している。
+
+以下の2026-09-13以前の記述は、各文書更新時点の履歴。
+
 2026-09-13はpolicy.py、raster_scan.py、worker.py、discovery.py、orchestrator/shrink_all.pyと照合。
 画像だけのPDFの既定300 DPIグレー・品質92、原本維持、文字PDFの既存処理、単一ファイル入力を反映した。
 図2をArchifyで更新してbuild/check/render-printを実行し、明暗図・PC/狭幅・A4全7ページを確認した。

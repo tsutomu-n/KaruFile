@@ -1,3 +1,20 @@
+# 2026-10-05 監査修正後の構成図確認
+
+基準commitは`f71cf514dd9716eeafdbebc13a762c82d56ebedd`。runtimeは変更せず、
+ソースリンクを収録済み実装へ固定し、未commit runtimeを含むという旧説明を修正した。
+JSONからArchifyで再生成し、HTMLを直接編集していない。
+
+- validate/deliver: `--repo-root . --quality showcase`、9/9、errors/warnings 0。
+- visual-check: 1440×900、1600×1000、1920×1080、2048×1320すべて横・縦overflowなし。
+- 1440×900と2048×1320のlight/dark計4枚を開いて確認。ラベル・矢印・下部カードの欠けや重なりなし。
+- visual_review: passed。自動receiptの`visualReview: pending`は自動判定の境界として維持する。
+- 現在のJSON/HTMLのSHA・基準commitは[delivery](karufile-runtime.compact.delivery.json)、
+  74ファイルの取得時点のSHAは[worktree snapshot](karufile-runtime.compact.worktree.json)を参照する。
+  [visual-check](karufile-runtime.compact.visual-check.json)も同じHTMLのSHAに一致する。
+- 詳しい範囲・コマンド・最終照合は[監査修正の検証記録](../validation/2026-10-05-document-audit/README.md)。
+
+以下は過去の確認履歴であり、記載したSHA・基準commit・ファイル数は当時の値。
+
 # 2026-09-13 単一PDF入力・自動スキャンの確認
 
 基準commitは`78c3e4e183ae26532a680cc2c6a06eab120d5881`、未コミットの実装を含む。

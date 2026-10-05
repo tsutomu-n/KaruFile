@@ -1,11 +1,11 @@
 {
   "schema_version": 1,
-  "captured_utc": "2026-09-13T03:12:15.296998+00:00",
-  "basis": "Working tree including default image-only scan compression and single PDF input",
-  "base_revision": "78c3e4e183ae26532a680cc2c6a06eab120d5881",
-  "source_links": "Diagram source links refer to base revision. New raster_scan.py exists only in the working tree and is evidenced by its local SHA256 below.",
-  "specification_sha256": "3117491aac91994246df8ed889da2dcc2a26d5d19e776d12fe4832cf529f6307",
-  "artifact_sha256": "3f241a36b20c0b9dea2460261f5bbc0098bf3f1a391dfd9e6b8c4da1ba93d879",
+  "captured_utc": "2026-10-05T00:40:29.693587+00:00",
+  "basis": "Committed runtime at f71cf51; diagram and documentation regenerated in the working tree on 2026-10-05.",
+  "base_revision": "f71cf514dd9716eeafdbebc13a762c82d56ebedd",
+  "source_links": "All diagram source links refer to the committed base revision; files below record exact local bytes at capture time.",
+  "specification_sha256": "2b0266b4f50b7ecca0181279427a9ff20343142bfdbd0416037a423430176622",
+  "artifact_sha256": "d12f05d2d2412bb4641d2a0dd1b30cda641e5ff2920870b249b61378097f884e",
   "files": [
     {
       "path": "excel-shrink/.python-version",
@@ -88,16 +88,36 @@
       "sha256": "d494858a343d88e4715b68eab4e789debff8890bf42a3f22b9796b61a50eac14"
     },
     {
+      "path": "media-shrink-tool/pyproject.toml",
+      "sha256": "4c7ebc5ba4259f9f8fcda545aa0680988f2fa3282e43a8b89a628d986037e900"
+    },
+    {
       "path": "media-shrink-tool/src/media_shrink/cli.py",
-      "sha256": "0d5d0caa73e6a793529c700cf6af16ac9fb829d1648fd0ca1c8a3b051f9087fb"
+      "sha256": "4a98ebcd4f8a848e10b50e03d95b03711d709919afc12967cdd756dd09fbd019"
+    },
+    {
+      "path": "media-shrink-tool/src/media_shrink/config.py",
+      "sha256": "aecb8a3a1e50a01cbd64c4ddfc97dad4ceb145c3ab902b21d4719d73a64d9202"
     },
     {
       "path": "media-shrink-tool/src/media_shrink/image.py",
-      "sha256": "8a27730ea8df2c47f9502c96f630a192a42fabe0825208a8a76b90af9875798b"
+      "sha256": "4b2ca297f351e4be8c14b351ec63455480ad8094cd8afafcf71d0c2256698fd5"
+    },
+    {
+      "path": "media-shrink-tool/src/media_shrink/utils.py",
+      "sha256": "6f7fd680831f93398ab8fd9c53afdf146fdad3d4478a559439bc29e17c74d29b"
+    },
+    {
+      "path": "media-shrink-tool/tests/test_output_formats.py",
+      "sha256": "580300c0b44e19cf643b5c0af7360959bfb8172099dae892ff7026a4c1c69275"
+    },
+    {
+      "path": "media-shrink-tool/uv.lock",
+      "sha256": "c7f8e80dddd1c4c7abdd17447b2767dce72052f85c2acd628e91e2609e2579d1"
     },
     {
       "path": "orchestrator/shrink_all.py",
-      "sha256": "df7acebb2209e20c03b110403656ab369f074698e24d68d1e5367bd3252f2ade"
+      "sha256": "77c29beb7a6de7ac2a17e672a723f59254be99dc0a236429677a5b8b704b5bf8"
     },
     {
       "path": "orchestrator/test_single_pdf.py",
@@ -214,6 +234,74 @@
     {
       "path": "pdf-shrink/uv.lock",
       "sha256": "134164800955181a115595afc51a1d05598da5c522400acda06c413a8dce0a6c"
+    },
+    {
+      "path": "video-shrink/pyproject.toml",
+      "sha256": "b6dc5aa8a5872b56ede09d05df236f847a89b3c6beacafe28382ce418fae6bad"
+    },
+    {
+      "path": "video-shrink/src/video_shrink/__init__.py",
+      "sha256": "70dabcb06d1d1199f9c5562b2c4b85d630e58a47592eb0ba9d5230a388c89383"
+    },
+    {
+      "path": "video-shrink/src/video_shrink/__main__.py",
+      "sha256": "3d2438ae92f4746e9ffaa1f837b1fe803f6281091d1f31f8c95643716f257d9a"
+    },
+    {
+      "path": "video-shrink/src/video_shrink/cli.py",
+      "sha256": "e27fe7b1ab25c9ea84655bd26818e1f9f801c6a30b80c94699d378c9db03dd67"
+    },
+    {
+      "path": "video-shrink/src/video_shrink/config.py",
+      "sha256": "d8e5232b87f76fc6b3d3ae177c47a290c72ec99fb7229819e00990ad694cf1f8"
+    },
+    {
+      "path": "video-shrink/src/video_shrink/discovery.py",
+      "sha256": "8961473a4b4f2045b7895c8a1cd1124fd284427b7862673ffbbda80062269699"
+    },
+    {
+      "path": "video-shrink/src/video_shrink/ffmpeg.py",
+      "sha256": "3bc71f788d34822f143e3d262819b012e7a42ec2fe2b60af3d115b4e33eb8cf2"
+    },
+    {
+      "path": "video-shrink/src/video_shrink/models.py",
+      "sha256": "fbdb70bbf70524a74b1d61243c028d73af66d0ad8959aa41fc83fc33a608e08c"
+    },
+    {
+      "path": "video-shrink/src/video_shrink/output.py",
+      "sha256": "53c648d566da8e415001e13eeb28536f16e5de342afc3ea634b46ed01b0a572f"
+    },
+    {
+      "path": "video-shrink/src/video_shrink/probe.py",
+      "sha256": "1f1401067dbf51ad22978b615e320e1b6ad9d3fb7d7a57a5f366eccf53772391"
+    },
+    {
+      "path": "video-shrink/src/video_shrink/report.py",
+      "sha256": "56b18928d48f0cfcba9df8aa70eea63933fed5eb58206c2861e37a28c1033709"
+    },
+    {
+      "path": "video-shrink/src/video_shrink/runner.py",
+      "sha256": "5f11e734715afa7e328f101e458694d126f34cac4b0cbde75553249608bfd1a1"
+    },
+    {
+      "path": "video-shrink/src/video_shrink/state.py",
+      "sha256": "749b4b019160c7a8dcac891aca36a33b25bc9b8e44a35273650527d847ec583d"
+    },
+    {
+      "path": "video-shrink/src/video_shrink/transform.py",
+      "sha256": "fe3c4fb76894dfb5076a5cf373ab62db41814441a5012480324f93540e3a2df5"
+    },
+    {
+      "path": "video-shrink/src/video_shrink/utils.py",
+      "sha256": "d874873c13f12eaad0013654e551d975a763f1f11cec318bc6d3c891eff4d01c"
+    },
+    {
+      "path": "video-shrink/src/video_shrink/validate.py",
+      "sha256": "2cf0df3a883fd6ea41ebc3129e18995242f42fc1736301d7e8c4c570ea000853"
+    },
+    {
+      "path": "video-shrink/uv.lock",
+      "sha256": "a9c8a535c154a2c960934ac7b589dddf261bd8f37930c6c70a4bb511543f051a"
     }
   ]
 }
