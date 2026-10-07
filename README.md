@@ -1,7 +1,8 @@
 # KaruFile
 
 KaruFileは、フォルダー内のPDFと画像、明示選択したExcel、およびcompact presetで対応する動画を、
-入力原本を変更・削除せず別フォルダーへ一括で軽量化するWindows向けCLIです。
+入力原本を変更・削除せず別フォルダーへ一括で軽量化するWindows向けツールです。
+通常処理はCLIで実行し、ホームページ入稿用の写真・図版には画像専用CLIと日本語GUIも使えます。
 
 文字PDFと画像だけのスキャンPDFを既定で軽量化します。スキャンは300 DPI・グレー・JPEG品質92に変換し、色は失われます。
 文字・画像が混在するPDFや罫線表などは既存の明示指定を使います。原本は残します。
@@ -11,9 +12,6 @@ KaruFileは、フォルダー内のPDFと画像、明示選択したExcel、お�
 ## 利用者向け正本
 
 用途を先に知りたい方は、[事務の仕事の例で読む図入りガイド](docs/KARUFILE_GUIDE.html)から始められます。
-
-ホームページ入稿用の写真・図版には、[Web掲載用マスターのCLI・日本語GUI](MANUAL.md#web掲載用マスターを作る)
-を使えます。担当者用の入口は `media-shrink-tool/run-web-public.cmd` です（初回環境準備が必要）。
 字体統一を使う場面や、できあがりの確認事項も説明しています。
 
 初回準備、安全上の注意、実行手順、出力場所、変換条件、終了コードは
@@ -36,6 +34,30 @@ uv run --script karufile.py -i "C:\作業\スキャン.pdf"
 ```
 
 省略時の出力は `C:\作業\スキャン_軽量化\files\スキャン.pdf` です。詳細はマニュアルを参照してください。
+
+## ホームページ入稿用の写真・図版を作る
+
+**Web掲載用マスター**は、選んだ画像を横幅最大1400px・sRGBのJPEG/PNGに整える機能です。
+写真はJPEG品質90・4:4:4、透過画像や図版はPNGにします。入力のEXIF/GPS等を継承せず、
+新規sRGB情報を付け、中立な名前で実行ごとのフォルダーへ保存します。
+完成画像の確認事項は[マニュアル](MANUAL.md#web掲載用マスターを作る)を参照してください。
+
+初回はSEがリポジトリ直下でGUI環境を準備します。準備後はcmdをダブルクリックして起動できます。
+
+```powershell
+uv sync --project media-shrink-tool --extra gui --extra dev
+.\media-shrink-tool\run-web-public.cmd
+```
+
+CLIでは次のように使います。図版は`--kind graphic`を指定します。
+
+```powershell
+uv run --project media-shrink-tool python -m media_shrink web-public -i "D:\案件\写真" --kind photo
+```
+
+機能の使い分けと処理の流れは[Web掲載用マスターの解説](docs/WEB_PUBLIC.md)、
+操作手順は[マニュアル](MANUAL.md#web掲載用マスターを作る)、
+固定値・保存契約は[技術リファレンス](docs/REFERENCE.md#web-public掲載用マスター)にまとめています。
 
 ## 最短の実行手順
 
@@ -80,7 +102,7 @@ uv run --script karufile.py --preset compact -i "D:\作業\資料" -o "D:\作業
 `--pdf-photo-pattern`で明示選択し、`--pdf-photo-dpi`で150〜300 DPI（既定200）を選べます。
 `--pdf-preview`では原本・完成出力と、任意の追加DPI候補をローカルHTMLで比較できます。
 
-> `--dry-run` でも状態DBとレポートは更新される場合があります。画像のメタデータは
+> 上記の通常圧縮では、`--dry-run` でも状態DBとレポートは更新される場合があります。画像のメタデータは
 > 全削除する機能ではありません。EXIF除去は `--image-strip-exif` で指定できます。実行前に正本マニュアルを確認してください。
 
 ## 構成
@@ -90,7 +112,7 @@ uv run --script karufile.py --preset compact -i "D:\作業\資料" -o "D:\作業
 | `karufile.py` | 通常使うCLI入口 |
 | `orchestrator/` | PDF・画像・指定Excel・compact動画の処理コンポーネントを順に呼び、結果を集計 |
 | `pdf-shrink/` | PDF処理の正本。PyMuPDF、qpdf、SQLiteを使用 |
-| `media-shrink-tool/` | 画像をJPEG・PNG・WebPへ変換する処理コンポーネント |
+| `media-shrink-tool/` | 通常画像のJPEG・PNG・WebP変換と、Web掲載用JPEG/PNGマスターの専用CLI・GUI |
 | `excel-shrink/` | 明示選択したxlsx内の画像を縮小し、画像以外の内容一致を検証 |
 | `video-shrink/` | compact動画を外部FFmpegで変換・検証する処理コンポーネント |
 
@@ -106,6 +128,9 @@ uv run --script karufile.py --preset compact -i "D:\作業\資料" -o "D:\作業
 [AGENTS.md](AGENTS.md)、実装計画と検証記録は [ExecPlan索引](.agent/execplans/README.md) にあります。
 
 ## 開発検証
+
+Web掲載用マスターの2026年10月7日の検証は、画像196件を含む全体1435件成功・4件skipです。
+[検証記録とGUI画面](docs/validation/2026-10-07-web-public/README.md)に、修正内容と実写真・NAS等の未検証範囲を記載しています。
 
 検証コマンドと変更範囲ごとの実行方針は [AGENTS.md](AGENTS.md#validation)を参照してください。
 自動テストは小さな合成データが中心です。写真DPI・比較HTMLの実資料5冊による限定検証は

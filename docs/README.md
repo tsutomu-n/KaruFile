@@ -25,6 +25,7 @@ ExecPlanは当時の判断と検証を残す履歴であり、現行仕様の正
 | [ルートREADME](../README.md) | リポジトリの入口と最短手順 | 正本や主要入口の変更 |
 | [技術リファレンス](REFERENCE.md) | 数値、status、保存先、再利用条件、個別CLI | 製品契約または固定値の変更 |
 | [PDF処理の流れと判断基準](PDF_PROCESSING.md) | PDFの保護判定から候補生成・検証・出力・比較までの説明 | PDFの処理順序、判定、候補、採用条件の変更 |
+| [Web掲載用マスターの解説](WEB_PUBLIC.md) | 通常圧縮との使い分け、画像専用CLI/GUIの処理、出力と再利用、担当範囲 | web-publicの用途、処理の流れ、GUI・保存契約の変更 |
 | [AGENTS.md](../AGENTS.md) | AI・保守者向けの短い作業契約 | 責務境界、正本、検証入口の変更 |
 | [pdf-shrink README](../pdf-shrink/README.md) | PDF個別CLIと内部契約 | PDF処理、status、レポート、依存関係の変更 |
 | [media-shrink-tool README](../media-shrink-tool/README.md) | 画像個別CLIと内部契約 | 画像recipe、再利用、警告、エラーCSVの変更 |
@@ -51,6 +52,8 @@ visual-check receiptで照合します。reviewの9月分は当時の生成・�
 
 画像専用のWeb掲載用CLI/GUIの検証範囲・画面証拠は
 [2026-10-07の検証記録](validation/2026-10-07-web-public/README.md)を参照してください。
+機能の全体像は[Web掲載用マスターの解説](WEB_PUBLIC.md)、
+初回準備と画面操作は[利用者マニュアル](../MANUAL.md#web掲載用マスターを作る)へ案内します。
 
 入門ガイドの本文・埋込図の再生成手順と表示確認の証拠は [guide/README.md](guide/README.md)にあります。
 ガイドは概要説明であり、操作と安全情報の正本は引き続き `MANUAL.md` です。

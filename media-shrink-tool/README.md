@@ -47,6 +47,7 @@ GUI依存はoptionalで、通常CLIはNiceGUIをimportしません。cmdは`.ven
 dry-runは出力もmanifestも書きません。終了0=全画像成功、1=画像/保存/manifest失敗、2=引数/選択不正・0枚。
 詳しい操作・注意は[マニュアル](../MANUAL.md#web掲載用マスターを作る)、
 固定値・manifestは[技術リファレンス](../docs/REFERENCE.md#web-public掲載用マスター)を参照してください。
+通常resizeとの使い分け、処理の流れと責務は[Web掲載用マスターの解説](../docs/WEB_PUBLIC.md)にまとめています。
 
 ### resizeオプション
 
