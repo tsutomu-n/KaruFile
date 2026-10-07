@@ -26,8 +26,9 @@ document in the same change. Do not invent setup, behavior, guarantees, or valid
 - `video-shrink/`: only standalone-video processor; owns video state and reports and calls external FFmpeg tools.
 
 Do not move PDF, Excel or video processing into `media-shrink-tool`. HDR/interlaced/complex-stream video
-conversion, preservation of VFR timing, deduplication, perceptual hashing, source deletion, and a GUI
-are outside the supported scope. Default compact video accepts VFR input and converts it to CFR;
+conversion, preservation of VFR timing, deduplication, perceptual hashing, source deletion, and PDF/Excel/video GUIs
+are outside the supported scope. The image-only web-public CLI and local NiceGUI are supported.
+Default compact video accepts VFR input and converts it to CFR;
 explicit video safe mode rejects VFR input.
 
 The root CLI's `standard` preset does not discover or copy videos. The standalone video CLI's
@@ -46,6 +47,28 @@ The root CLI's `standard` preset does not discover or copy videos. The standalon
   Add machine-specific custom output paths to `.git/info/exclude`; do not broadly ignore media extensions.
 
 ## Required contracts
+
+- Image-only `media_shrink web-public` and `gui` use web_public.py / web_public_batch.py, without root/orchestrator.
+  Do not treat web-public as a preset or change resize contracts. Immutable kind photo/graphic, workers2 (1..4).
+  Orient once; width cap1400 (not long-side), half-up height, no upscale/crop. Photo JPEG q90/444/optimize/progressive;
+  graphic RGB/RGBA PNG level6. New standard sRGB ICC only; no source metadata/marker. Valid ICC uses LittleCMS
+  PERCEPTUAL. Missing ICC on supported 8bit modes yields SRGB_ASSUMED; reject broken ICC, unknown CMYK,
+  contradictory color, HDR and unverified high-depth/NCLX. Inspect actual PNG color chunks, not only Pillow info.
+  Inspect BMP V4/V5 color fields; bounded V5 embedded ICC uses LittleCMS, while linked/calibrated/unknown color
+  is rejected. Check Exif ColorSpace/InteropIndex contradictions. Public recipe v2 invalidates v1 reuse.
+  Transparent photo errors; opaque RGBA allowed. Graphic retains alpha. Limit64MiB/80MP and one frame/page.
+  Default output `<input>_HP掲載用`; repeatable --file is exact relative path, not glob. Zero images/invalid selection
+  exit2, conversion/manifest failure exit1, warnings-only exit0. Dry-run writes nothing at all.
+  New exclusive random run, flat neutral `runs/<run-id>/files/img-<run-id>-NNNN.jpg|png`; never overwrite old runs.
+  Independent schema1 UTF-8 manifest.web-public.json is internal only, bounded16MiB and atomically replaced.
+  Reuse requires source/output SHA, recipe/engines and current output validation; copy bytes to a new run, no hardlinks.
+  Final manifest sweep rehashes source/output (Windows ctime cannot detect same-size/restored-mtime writes).
+  No original fallback. Preserve previous manifest on write failure. Keep successful images and errors distinct.
+  NiceGUI is optional gui extra, loopback127.0.0.1:8080, local Host/Origin checks, no NAS static-directory mount.
+  Background controller prevents double start and survives tab disconnect. Cmd uses prepared .venv, no runtime install.
+  One shared preview decode at a time, exclusive with conversion; release after errors and delete closed dialogs.
+  Clear previous result counts on restart/batch error. Local diagnostics record stage/type without exception text.
+  Real photographs, NAS UNC/mapped-drive/disconnect and downstream AVIF/WebP require separate acceptance evidence.
 
 - Never modify or delete input files.
 - Write completed files to a separate output tree while preserving relative directories.

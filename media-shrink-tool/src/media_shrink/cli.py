@@ -75,7 +75,51 @@ def _build_parser() -> argparse.ArgumentParser:
         "--strip-exif", action="store_true", help="Remove EXIF after applying Orientation",
     )
     resize.set_defaults(func=cmd_resize)
+    public = subparsers.add_parser("web-public", help="掲載用JPEG/PNGマスターを作成")
+    public.add_argument("-i", "--input", required=True, help="入力フォルダー")
+    public.add_argument("-o", "--output", help="出力ルート (既定: <入力名>_HP掲載用)")
+    public.add_argument("--kind", choices=("photo", "graphic"), default="photo")
+    public.add_argument("--file", action="append", help="入力ルート相対の画像ファイル名（繰り返し可）")
+    public.add_argument("-j", "--workers", type=int, choices=range(1, 5), default=2)
+    public.add_argument("--dry-run", action="store_true", help="検査のみ。出力・manifestを書き込まない")
+    public.set_defaults(func=cmd_web_public)
+    gui = subparsers.add_parser("gui", help="掲載用マスターの日本語ローカルGUI")
+    gui.set_defaults(func=cmd_gui)
     return parser
+
+
+def cmd_web_public(args: argparse.Namespace) -> int:
+    from .web_public import WebPublicConfig, run_web_public
+    from .web_public_batch import SelectionError
+    try:
+        result = run_web_public(Path(args.input), Path(args.output) if args.output else None,
+            WebPublicConfig(args.kind, args.workers), selected_files=args.file, dry_run=args.dry_run)
+    except SelectionError as exc:
+        print(f"入力・選択エラー: {exc}")
+        return 2
+    except (OSError, ValueError) as exc:
+        print(f"実行エラー: {exc}")
+        return 1
+    for row in result.results:
+        detail = row["error"]["message"] if row["error"] else ", ".join(row["warnings"])
+        print(f"{row['action']}: {row['source_path']} {detail}")
+    print(f"{'確認' if args.dry_run else '成功'} {result.success_count}枚（うち警告 {result.warning_count}枚）、失敗 {result.error_count}枚")
+    if not args.dry_run:
+        print(f"成功分: {human_size(result.source_bytes)} -> {human_size(result.output_bytes)}")
+    if result.manifest_error:
+        print(f"実行失敗: {result.manifest_error}")
+    elif result.files_dir:
+        print(f"今回の出力: {result.files_dir}")
+    return result.exit_code
+
+
+def cmd_gui(args: argparse.Namespace) -> int:
+    try:
+        from .gui import main as gui_main
+        return gui_main()
+    except ImportError:
+        print("GUI環境が未セットアップです。SEは uv sync --project media-shrink-tool --extra gui --extra dev を実行してください")
+        return 1
 
 
 def cmd_resize(args: argparse.Namespace) -> int:
@@ -149,7 +193,7 @@ def cmd_resize(args: argparse.Namespace) -> int:
 def main(argv: list[str] | None = None) -> int:
     parser = _build_parser()
     args = parser.parse_args(argv)
-    setup_logging(logging.DEBUG if args.verbose else logging.INFO)
+    setup_logging(logging.DEBUG if getattr(args, "verbose", False) else logging.INFO)
     return args.func(args)
 
 

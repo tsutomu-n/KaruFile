@@ -1,7 +1,7 @@
 # media-shrink-tool
 
 KaruFileの画像専用処理コンポーネントです。入力画像を変更・削除せず、別の出力フォルダーへ
-JPEGを保存します。通常の利用手順は [KaruFile 利用者マニュアル](../MANUAL.md)を参照し、
+JPEG・PNG・WebPを保存します。通常の利用手順は [KaruFile 利用者マニュアル](../MANUAL.md)を参照し、
 リポジトリ直下の `karufile.py` を使ってください。
 
 この文書は、画像処理コンポーネントを個別に使う場合と実装を保守する場合の参照です。
@@ -19,7 +19,36 @@ uv run --project media-shrink-tool python -m media_shrink resize `
   -j 4
 ```
 
-公開サブコマンドは `resize` だけです。
+サブコマンドは通常処理`resize`、掲載用マスター`web-public`、ローカル画面`gui`です。
+以下のオプション表・プリセット・CSVは`resize`の契約です。
+
+### Web掲載用マスター
+
+```powershell
+uv run --project media-shrink-tool python -m media_shrink web-public -i "D:\写真" --kind photo
+uv run --project media-shrink-tool python -m media_shrink web-public -i "D:\図版" --kind graphic --file "表紙.png"
+uv run --project media-shrink-tool python -m media_shrink web-public -i "D:\写真" --dry-run
+uv sync --project media-shrink-tool --extra gui --extra dev
+uv run --project media-shrink-tool --extra gui python -m media_shrink gui
+```
+
+担当者は準備済み環境で`run-web-public.cmd`をダブルクリックできます。日本語画面は127.0.0.1:8080のみ。
+GUI依存はoptionalで、通常CLIはNiceGUIをimportしません。cmdは`.venv`を使い、依存を取得・更新しません。
+
+`--kind photo|graphic`（既定photo）、`-o/--output`（既定`<入力名>_HP掲載用`）、
+繰り返し`--file`（globではない相対ファイル名）、`-j/--workers`（既定2、1〜4）、`--dry-run`を受け付けます。
+写真はJPEG q90/4:4:4、図版は透過PNG。向き補正後の横幅1400pxまでで、長辺制限ではありません。
+妥当なICCはsRGBへ変換し、入力metadataと内部markerを持ち出しません。公開用の原本コピーは行いません。
+透明画素を含むphoto、壊れたICC、未対応色/HDR/高bit depth、複数フレーム、64MiB/80MP超過は画像別エラー。
+完成画像を新しい`runs/<run-id>/files`へ中立名で保存し、社内用`manifest.web-public.json`に対応関係を記録します。
+再利用は原本と完成画像のSHA・recipe・engine・出力検証に基づき、新runへのバイトコピーで行います。
+公開用recipe v2はBMP/Exifの色情報検査を含み、v1の記録からは原本を再変換します。
+プレビューは全タブで同時1件、変換との重複を防止します。エラー時のstage/例外種別は起動端末の診断へ出力します。
+dry-runは出力もmanifestも書きません。終了0=全画像成功、1=画像/保存/manifest失敗、2=引数/選択不正・0枚。
+詳しい操作・注意は[マニュアル](../MANUAL.md#web掲載用マスターを作る)、
+固定値・manifestは[技術リファレンス](../docs/REFERENCE.md#web-public掲載用マスター)を参照してください。
+
+### resizeオプション
 
 | オプション | 意味 |
 |---|---|

@@ -6,12 +6,12 @@
   "input": "C:\\Users\\tn\\c_projects\\KaruFile\\docs\\architecture\\karufile-runtime.architecture.json",
   "output": "C:\\Users\\tn\\c_projects\\KaruFile\\docs\\architecture\\karufile-runtime.compact.html",
   "specification": {
-    "sha256": "2b0266b4f50b7ecca0181279427a9ff20343142bfdbd0416037a423430176622",
-    "bytes": 11928
+    "sha256": "14219dd19b48d7f9de7b38c0c2621101b7af27cf6144d926722cdece3391a481",
+    "bytes": 5021
   },
   "artifact": {
-    "sha256": "d12f05d2d2412bb4641d2a0dd1b30cda641e5ff2920870b249b61378097f884e",
-    "bytes": 664144
+    "sha256": "fd65192fdb356acfbd62e98cc9b8ad57c2e16b8eb7ccf1b25fa1893cc30a1c90",
+    "bytes": 649570
   },
   "validation": {
     "checksPassed": 9,
@@ -20,11 +20,5 @@
     "compositionStatus": "pass",
     "errors": 0,
     "warnings": 0
-  },
-  "evidence": {
-    "verified": true,
-    "repository": "https://github.com/tsutomu-n/KaruFile",
-    "revision": "f71cf514dd9716eeafdbebc13a762c82d56ebedd",
-    "references": 10
   }
 }

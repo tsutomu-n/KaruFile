@@ -11,6 +11,9 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = ["pytest"]
+gui = [
+    "nicegui>=3,<4",
+]
 
 [project.scripts]
 media-shrink = "media_shrink.cli:main"

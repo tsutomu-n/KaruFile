@@ -1,3 +1,23 @@
+# 2026-10-07 Web掲載用マスターの構成図確認
+
+基準HEADは`bc88f56a6aadeaa11b0cd6687c45e113ce539547`。未コミットのweb-public実装を含む。
+同日再レビュー後のBMP/Exif検査・GUI排他修正でソースSHA snapshotを再取得した。
+runtime境界と図のJSON/HTMLは変わらず、図の生成・目視証拠は下記を維持する。
+通常のroot CLI→orchestrator→各processorと、画像専用CLI/GUI→batch→公開用変換を別行に配置。
+出力先・独立manifest・任意GUI依存の境界をJSONへ反映し、Archifyで生成した。
+未コミットファイルへの架空のGitHubリンクは作らず、ローカルSHA snapshotを根拠にした。
+
+- validate/deliver: `--repo-root . --quality showcase`、9/9、errors/warnings 0。
+- visual-check: 1440×900、1600×1000、1920×1080、2048×1320でoverflowなし。
+- 1440×900と2048×1320のlight/dark計4枚を開き、文字・経路・カードの欠けや重なりなし。
+- 修正2回: 最初のnode追加時のはみ出し解消、2行の間隔調整。HTML手編集なし。
+- visual_review: passed。自動receiptの`visualReview: pending`は自動判定の境界として維持。
+- [delivery](karufile-runtime.compact.delivery.json)、[visual-check](karufile-runtime.compact.visual-check.json)、
+  [worktree snapshot](karufile-runtime.compact.worktree.json)に現時点のJSON/HTML SHAを記録。
+- [実装の検証記録](../validation/2026-10-07-web-public/README.md)。実写真・NAS・後段サイトは未検証。
+
+以下は過去の確認履歴。SHA・基準commit・ファイル数は当時の値。
+
 # 2026-10-05 監査修正後の構成図確認
 
 基準commitは`f71cf514dd9716eeafdbebc13a762c82d56ebedd`。runtimeは変更せず、

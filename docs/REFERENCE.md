@@ -5,6 +5,99 @@
 
 製品動作とこの文書が矛盾する場合は、コードとテストを正とします。
 
+## web-public掲載用マスター
+
+画像パッケージだけの`python -m media_shrink web-public`と`gui`。root presetは増やさない。
+`web_public.py`は固定recipe・変換・候補検証、`web_public_batch.py`は選択・新run・再利用・manifest、
+`gui.py`は日本語画面とバックグラウンド実行を担当する。既存image.py/utils.pyのfingerprint/path/staged replaceを再利用する。
+
+| 引数 | 契約 |
+|---|---|
+| `-i/--input` | 必須の入力ディレクトリ |
+| `-o/--output` | 既定は兄弟`<入力名>_HP掲載用`。同一・親子・リンク宛先を拒否 |
+| `--kind` | photo（既定）/graphic |
+| `--file` | repeatable、正確な入力相対名。絶対名・`..`・不存在・対象外拡張子を拒否。省略時再帰探索 |
+| `-j/--workers` | 既定2、1..4 |
+| `--dry-run` | デコード/計画/色/寸法検査。完成画像・manifest・report・出力directoryを作成も更新もしない |
+
+終了0は全選択画像成功（警告あり可）、1は変換/出力/manifest失敗、2は引数/選択不正・対象0件。
+PDF/Excel/動画は候補にしない。`--preset/--format/--strip-exif`や任意品質は受け付けない。
+
+### 固定recipeと入力
+
+Orientationを一度だけ適用。適用後(w,h)でw<=1400なら不変、それ以外は幅1400、
+高さ`max(1, (h*2800+w)//(2*w))`。Pillow LANCZOS、拡大/cropなし。
+photoはJPEG q90/subsampling0/optimize/progressive。graphicはRGB/RGBA PNG compress_level6、量子化なし。
+透明画素を含むphotoはTRANSPARENT_PHOTO、全不透明RGBAは許可。graphicはalphaを分離して色変換後に戻しRGBA縮小。
+JPEG寸法65500超は黙って縮めずENCODER_DIMENSIONS。原本より大きい候補も採用しOUTPUT_LARGER_THAN_SOURCE。
+
+対応拡張子/実形式はJPEG、PNG、静止WebP、HEIC/HEIF、BMP、単一TIFF/GIF。
+64MiB/80,000,000画素、複数フレーム/ページは画像別ERROR。Pillowのグローバル安全設定を解除しない。
+HEIFのoriginal_orientationを再適用せず、補助画像を独立フレームと数えない。
+有効ICCはImageCms/LittleCMS PERCEPTUALで新規標準sRGBへ変換。
+未指定の対応8bit RGB/RGBA/L/LA/P等はSRGB_ASSUMED。未知CMYK、破損ICC、明示HDR、未検証高bit depthは拒否。
+HEIF NCLXは8bit sRGB primaries1/transfer13/matrix0,1,6の経路だけ許可。他はUNSUPPORTED_COLOR。
+PNGはIHDRのbit depthと実chunkの長さ・CRC、cICP、iCCP、HDR指定も検査する。
+JPEGの欠損ICC分割も「ICCなし」と見なさない。
+
+新しい画素コンテナから保存し、新規sRGB ICCと必要な構造だけ許可。EXIF/GPS/XMP/IPTC/comment/PNG text/内部markerを継承しない。
+JPEGはscan後を含むsegment allowlist、PNGはIHDR/iCCP/IDAT/IENDのみを検査し、再デコード・寸法・色・alphaを確認する。
+graphicの候補画素は縮小済み画素と一致を検査。禁止情報の混入、保存・検証失敗時に原本へfallbackしない。
+入力の変更と出力安全性を再確認して同じdirectoryの一時ファイルからos.replaceで確定する。
+
+### 新runとmanifest
+
+ランダムUUID hexのrunを排他的に作成。完成画像はflatな`runs/<run-id>/files/img-<run-id>-NNNN.jpg|png`。
+入力相対名のcasefold、元表記順で安定ソートする。run名に案件・日時・ユーザー名を含めず、既存runを上書き/削除しない。
+`manifest.web-public.json`はschema_version1、UTF-8、上限16MiB。社内用で公開/入稿しない。
+
+トップレベルは`schema_version,run_id,input_root,output_root,recipe,recipe_hash,engine_versions,results`。
+結果欄は`source_path,source_sha256,source_size,source_mtime_ns,source_width,source_height,oriented_width,oriented_height,`
+`output_path,output_sha256,output_size,output_width,output_height,output_format,action,warnings,error`。
+actionはCONVERTED/SKIPPED_COMPLETE/ERROR。warningsは短いコード配列、errorは成功null・失敗code/message。
+ERRORのoutput欄はnull。取得できなかったsource情報もnullで、ゼロと混同しない。
+dry-run結果はメモリ内DRY_RUN、予定寸法/形式だけでoutput_path=null。manifestには保存しない。
+
+再利用は前manifest成功行のみ。source相対名/SHA/size、recipe本体/hash、engine_versions、output SHA/size/寸法/形式、
+現在の出力ポリシー検証が必要。前outputの相対path・通常file・非linkを検査し、バイトを新runへコピー、hardlinkは使わない。
+manifestの欠落/旧schema/破損/不適合は原本から再生成。画像内markerだけでは省略しない。
+recipe hashは用途/幅/丸め/拡大crop禁止/形式/JPEG・PNG設定/色alpha metadata/resampling/recipe versionを含む。
+現在はrecipe version2。BMP/Exif色検査の修正前のversion1とは再利用互換性を持たず、原本から再生成する。
+run-id、時刻、sRGB生成時刻はhashに含めない。Pillow/pillow-heif/LittleCMS/libjpeg/zlib/libheif版を別途照合する。
+
+manifest公開前に全成功行のsource/output SHA・size・寸法・pathを検証し、最後に再hashとstat署名を照合する。
+Windowsのctimeだけで同size/同mtime変更を判定しない。一時JSON再読後に原子的置換する。
+確定失敗は終了1、前manifestを保持する。画像ごとの失敗は他の処理を止めない。
+処理後の不適合が見つかった今回自身の出力はfilesから外しERRORにする。過去の出力には触れない。
+ファイルはロックしないため、他プロセスによる同時編集は運用上避ける。
+
+### GUIと配布
+
+NiceGUI3.17.1をgui optional extraへlock。`host=127.0.0.1, port=8080, show=True, reload=False, on_air=False`。
+HTTP Host/OriginとSocket.IO Originをローカルへ制限。選択画像の画素だけをプレビューし、NAS全体を静的公開しない。
+run-web-public.cmdは自身の場所を基準に準備済み`.venv/Scripts/python.exe`を使い、起動時に依存を更新/取得しない。
+GUIは共有controllerのローカルスレッドでバッチを実行し、二重実行を拒否。UIのtimerへ構造化結果を返す。
+プレビューデコードは全タブ共通で同時1件とし、変換との重複を拒否する。実行中は関連ボタンを無効化し、
+例外時も排他状態を解放する。閉じたプレビューダイアログは削除する。
+UIタスクのキャンセル時は、バックグラウンドのデコードが完了するまで排他を維持する。
+再実行開始時・実行全体のエラー時には前回の件数/容量/出力案内を消去する。
+タブ切断後もPythonが存続すれば実行は継続。manifest失敗は通常完了/出力を開く操作に進めない。
+通常resize/rootの引数、stdout、終了コード、manifest、hash定義は変更しない。
+
+### 追加の色情報検査と内部診断
+
+BMPはV4/V5ヘッダーを直接調べる。sRGB/Windows sRGB宣言は許可する。
+V5埋め込みICCは非圧縮/BI_BITFIELDSで、header・画素領域との非重複、ファイル範囲、128 bytes..1 MiBを検査し、
+共通のICC検証とLittleCMS変換へ渡す。外部ICC参照は読み込まず拒否。calibrated RGB・未知宣言・対応外構造も拒否する。
+旧式BMPヘッダーで色情報がない場合は従来どおりsRGB仮定を記録する。
+ExifのColorSpaceとInteropIndexを照合する。R03+ColorSpace1、R98+ColorSpace2、
+標準sRGB ICCとR03/ColorSpace2の矛盾は拒否。ICCなしR03もsRGBと仮定しない。
+
+変換失敗時はローカルloggerへstage、例外クラス、error code、入力相対名を記録する。
+stageはinput/decode_color/source_recheck/output_prepare/reuse/encode/validate/publish。
+新run作成・manifest確定の失敗はcreate_run/manifestと例外クラスを記録する。
+例外メッセージやtracebackは自動記録しない。診断は起動端末の標準エラーで、公開画像や新しいログファイルへ埋め込まない。
+
 ## 自動スキャン画像化と単一PDF入力
 
 root/PDF個別CLIの`--input`はPDF1ファイルも受け付ける。周辺探索・入力コピーを行わず、入力相対名は元ファイル名。
@@ -983,7 +1076,7 @@ KaruFileの対象外:
 - 重複削除
 - 知覚ハッシュ
 - 元ファイル削除
-- GUI
+- PDF・Excel・動画のGUI（画像の掲載用マスターにはローカルGUIあり）
 
 確認済みの未解決事項:
 

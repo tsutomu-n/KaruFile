@@ -5,575 +5,213 @@
     "title": "KaruFile 実行時アーキテクチャ",
     "output": "karufile-runtime.compact.html",
     "quality_profile": "showcase",
-    "repository": {
-      "url": "https://github.com/tsutomu-n/KaruFile",
-      "revision": "f71cf514dd9716eeafdbebc13a762c82d56ebedd"
-    },
     "legend": {
       "mode": "auto",
       "entries": {
         "frontend": {
-          "label": "CLI"
+          "label": "CLI・ローカルGUI"
         },
         "backend": {
           "label": "処理コンポーネント"
         },
         "database": {
-          "label": "状態・レポート"
-        },
-        "external": {
-          "label": "利用者・外部要素"
+          "label": "完成出力・記録"
         }
       }
     }
   },
   "components": [
     {
-      "id": "cli",
+      "id": "root_cli",
       "type": "frontend",
       "label": "karufile.py",
       "sublabel": "standard / compact",
+      "tag": "PDF単体 または 入力フォルダー",
       "pos": [
-        190,
-        410
+        20,
+        80
       ],
       "size": [
-        155,
-        64
-      ],
-      "sources": [
-        {
-          "path": "karufile.py",
-          "label": "CLI入口"
-        }
-      ],
-      "tag": "PowerShellから利用"
+        245,
+        85
+      ]
     },
     {
       "id": "orchestrator",
       "type": "backend",
       "label": "orchestrator",
       "sublabel": "事前検査・順次実行・結果照合",
-      "tag": "PDF → 画像 → Excel → 動画",
+      "tag": "shrink_all.py",
       "pos": [
-        385,
-        401
-      ],
-      "size": [
-        190,
-        82
-      ],
-      "sources": [
-        {
-          "path": "orchestrator/shrink_all.py",
-          "label": "統合処理"
-        }
-      ]
-    },
-    {
-      "id": "input",
-      "type": "external",
-      "label": "入力PDF / フォルダー",
-      "sublabel": "単一PDFは周辺探索なし",
-      "tag": "開始・終了時にSHA照合",
-      "pos": [
-        390,
-        205
-      ],
-      "size": [
-        180,
-        72
-      ]
-    },
-    {
-      "id": "pdf",
-      "type": "backend",
-      "label": "pdf-shrink",
-      "sublabel": "文章・画像だけのPDFを自動圧縮",
-      "pos": [
-        650,
-        215
-      ],
-      "size": [
-        190,
-        76
-      ],
-      "sources": [
-        {
-          "path": "pdf-shrink/src/pdf_shrink/runner.py",
-          "label": "一括処理"
-        },
-        {
-          "path": "pdf-shrink/src/pdf_shrink/worker.py",
-          "label": "1 PDF処理"
-        },
-        {
-          "path": "pdf-shrink/src/pdf_shrink/policy.py",
-          "label": "判定の接続先（基準commit）"
-        }
-      ],
-      "tag": "PyMuPDF・qpdf・任意jpegtran"
-    },
-    {
-      "id": "image",
-      "type": "backend",
-      "label": "media-shrink-tool",
-      "sublabel": "JPEG / PNG / WebP",
-      "pos": [
-        650,
-        400
-      ],
-      "size": [
-        190,
-        76
-      ],
-      "sources": [
-        {
-          "path": "media-shrink-tool/src/media_shrink/cli.py",
-          "label": "画像CLI"
-        },
-        {
-          "path": "media-shrink-tool/src/media_shrink/image.py",
-          "label": "画像処理"
-        }
-      ]
-    },
-    {
-      "id": "video",
-      "type": "backend",
-      "label": "video-shrink",
-      "sublabel": "compact対応動画をAV1化",
-      "tag": "厳格判定・無音化は任意",
-      "pos": [
-        650,
-        590
-      ],
-      "size": [
-        190,
-        82
-      ]
-    },
-    {
-      "id": "video_engines",
-      "type": "external",
-      "label": "動画処理エンジン",
-      "sublabel": "FFmpeg・ffprobe・libvmaf",
-      "tag": "外部tool",
-      "pos": [
-        900,
-        595
-      ],
-      "size": [
-        215,
-        72
-      ]
-    },
-    {
-      "id": "pdf_state",
-      "type": "database",
-      "label": "PDF状態・レポート",
-      "sublabel": ".pdf-shrink / report.csv",
-      "pos": [
-        1140,
-        215
-      ],
-      "size": [
-        215,
-        76
-      ],
-      "sources": [
-        {
-          "path": "pdf-shrink/src/pdf_shrink/state.py",
-          "label": "状態DB"
-        },
-        {
-          "path": "pdf-shrink/src/pdf_shrink/report.py",
-          "label": "CSV"
-        }
-      ]
-    },
-    {
-      "id": "output",
-      "type": "external",
-      "label": "出力フォルダー",
-      "sublabel": "完成ファイルを別ツリーへ",
-      "tag": "単一PDF既定：<stem>_軽量化/files",
-      "pos": [
-        1140,
-        397
-      ],
-      "size": [
-        200,
-        82
-      ]
-    },
-    {
-      "id": "media_state",
-      "type": "database",
-      "label": "画像・Excel・動画の補助情報",
-      "sublabel": "画像manifest・Excel report・動画state",
-      "pos": [
-        1140,
-        580
-      ],
-      "size": [
-        225,
-        82
-      ],
-      "sources": [
-        {
-          "path": "media-shrink-tool/src/media_shrink/image.py",
-          "label": "画像manifest/CSV"
-        }
-      ]
-    },
-    {
-      "label": "任意PDF比較資料",
-      "pos": [
-        650,
-        40
+        440,
+        80
       ],
       "size": [
         245,
-        82
-      ],
-      "sublabel": "原本・採用結果・保護理由",
-      "id": "pdf_preview",
-      "type": "database",
-      "tag": "原本・完成出力・追加DPI"
+        85
+      ]
     },
     {
-      "id": "excel",
+      "id": "processors",
       "type": "backend",
-      "label": "excel-shrink",
-      "sublabel": "指定xlsxの過剰な画像画素を縮小",
-      "tag": "配置・共有参照・Windows GDI",
+      "label": "4つの専用処理",
+      "sublabel": "PDF → 画像 → Excel → 動画",
+      "tag": "Excelは選択時、動画はcompact",
       "pos": [
-        900,
-        150
+        860,
+        80
       ],
       "size": [
-        205,
-        82
+        245,
+        85
       ]
-    }
-  ],
-  "boundaries": [
+    },
     {
-      "kind": "region",
-      "label": "KaruFile",
-      "wraps": [
-        "cli",
-        "orchestrator",
-        "pdf",
-        "image",
-        "video",
-        "excel"
+      "id": "normal_output",
+      "type": "database",
+      "label": "通常の出力・補助情報",
+      "sublabel": "別ツリー / CSV / 状態領域",
+      "tag": "PDF比較資料は指定時のみ",
+      "pos": [
+        1280,
+        80
       ],
-      "pad": 24
+      "size": [
+        245,
+        85
+      ]
+    },
+    {
+      "id": "public_entry",
+      "type": "frontend",
+      "label": "画像CLI / NiceGUI",
+      "sublabel": "web-public / gui",
+      "tag": "担当者PC・127.0.0.1",
+      "pos": [
+        20,
+        540
+      ],
+      "size": [
+        245,
+        85
+      ]
+    },
+    {
+      "id": "public_batch",
+      "type": "backend",
+      "label": "選択・実行・再利用",
+      "sublabel": "web_public_batch.py",
+      "tag": "新run・SHA照合・JSON manifest",
+      "pos": [
+        440,
+        540
+      ],
+      "size": [
+        245,
+        85
+      ]
+    },
+    {
+      "id": "public_core",
+      "type": "backend",
+      "label": "掲載用の画像変換",
+      "sublabel": "web_public.py",
+      "tag": "sRGB・向き・横幅・metadata検査",
+      "pos": [
+        860,
+        540
+      ],
+      "size": [
+        245,
+        85
+      ]
+    },
+    {
+      "id": "public_output",
+      "type": "database",
+      "label": "今回の画像・社内記録",
+      "sublabel": "runs/<run-id>/files",
+      "tag": "manifest.web-public.json",
+      "pos": [
+        1280,
+        540
+      ],
+      "size": [
+        245,
+        85
+      ]
     }
   ],
   "connections": [
     {
-      "id": "cli_delegates",
-      "from": "cli",
+      "id": "root_delegate",
+      "from": "root_cli",
       "to": "orchestrator",
-      "label": "presetとpathを委譲",
-      "labelAt": [
-        370,
-        496
-      ],
-      "route": "straight",
+      "label": "設定と入力を委譲",
       "variant": "emphasis"
     },
     {
-      "id": "input_scanned",
-      "from": "input",
-      "to": "orchestrator",
-      "label": "再帰走査・全出力を事前検査",
-      "labelAt": [
-        480,
-        315
-      ],
-      "fromSide": "bottom",
-      "toSide": "top",
-      "via": [
-        [
-          480,
-          330
-        ]
-      ]
-    },
-    {
-      "id": "run_pdf_first",
+      "id": "child_process",
       "from": "orchestrator",
-      "to": "pdf",
-      "label": "1. PDF処理",
-      "labelAt": [
-        680,
-        325
-      ],
-      "fromSide": "right",
-      "toSide": "left",
-      "via": [
-        [
-          620,
-          442
-        ],
-        [
-          620,
-          253
-        ]
-      ],
+      "to": "processors",
+      "label": "子CLIを順に実行",
       "variant": "emphasis"
     },
     {
-      "id": "run_image_second",
-      "from": "orchestrator",
-      "to": "image",
-      "label": "2. 画像処理",
-      "labelAt": [
-        700,
-        490
-      ],
+      "id": "normal_publish",
+      "from": "processors",
+      "to": "normal_output",
+      "label": "検証後に確定",
       "variant": "emphasis"
     },
     {
-      "id": "run_video_third",
-      "from": "orchestrator",
-      "to": "video",
-      "label": "4. compact動画処理",
-      "labelAt": [
-        610,
-        555
-      ],
-      "fromSide": "right",
-      "toSide": "left",
-      "via": [
-        [
-          620,
-          442
-        ],
-        [
-          620,
-          631
-        ]
-      ],
+      "id": "selected_only",
+      "from": "public_entry",
+      "to": "public_batch",
+      "label": "選択画像を渡す",
       "variant": "emphasis"
     },
     {
-      "id": "video_uses_engines",
-      "from": "video",
-      "to": "video_engines",
-      "label": "encode・probe・VMAF",
-      "labelAt": [
-        870,
-        680
-      ],
-      "route": "straight"
+      "id": "public_convert",
+      "from": "public_batch",
+      "to": "public_core",
+      "label": "原本から直接変換",
+      "variant": "emphasis"
     },
     {
-      "id": "pdf_writes_state",
-      "from": "pdf",
-      "to": "pdf_state",
-      "label": "状態・結果を保存",
-      "labelAt": [
-        990,
-        300
-      ],
-      "route": "straight"
-    },
-    {
-      "id": "pdf_publishes",
-      "from": "pdf",
-      "to": "output",
-      "label": "検証済みPDFを公開",
-      "labelAt": [
-        1030,
-        355
-      ],
-      "fromSide": "right",
-      "toSide": "top",
-      "via": [
-        [
-          870,
-          253
-        ],
-        [
-          870,
-          375
-        ],
-        [
-          1240,
-          375
-        ]
-      ]
-    },
-    {
-      "id": "image_publishes",
-      "from": "image",
-      "to": "output",
-      "label": "画像を原子的に公開",
-      "labelAt": [
-        990,
-        495
-      ],
-      "route": "straight"
-    },
-    {
-      "id": "video_publishes",
-      "from": "video",
-      "to": "output",
-      "fromSide": "bottom",
-      "toSide": "right",
-      "via": [
-        [
-          745,
-          715
-        ],
-        [
-          1380,
-          715
-        ],
-        [
-          1380,
-          438
-        ]
-      ]
-    },
-    {
-      "id": "image_writes_report",
-      "from": "image",
-      "to": "media_state",
-      "label": "manifest・エラーを保存",
-      "labelAt": [
-        1010,
-        550
-      ],
-      "fromSide": "right",
-      "toSide": "top",
-      "via": [
-        [
-          870,
-          438
-        ],
-        [
-          870,
-          555
-        ],
-        [
-          1252.5,
-          555
-        ]
-      ]
-    },
-    {
-      "id": "video_writes_state",
-      "from": "video",
-      "to": "media_state",
-      "label": "状態・結果を保存",
-      "labelAt": [
-        1000,
-        700
-      ],
-      "fromSide": "bottom",
-      "toSide": "bottom",
-      "via": [
-        [
-          745,
-          690
-        ],
-        [
-          1252.5,
-          690
-        ]
-      ]
-    },
-    {
-      "variant": "dashed",
-      "from": "pdf",
-      "label": "指定時だけ比較を生成",
-      "to": "pdf_preview",
-      "id": "pdf_writes_preview",
-      "fromSide": "top",
-      "toSide": "bottom"
-    },
-    {
-      "id": "run_excel_third",
-      "from": "orchestrator",
-      "to": "excel",
-      "label": "3. 明示指定時にExcel処理",
-      "variant": "emphasis",
-      "fromSide": "right",
-      "toSide": "top",
-      "via": [
-        [
-          595,
-          442
-        ],
-        [
-          595,
-          0
-        ],
-        [
-          1002.5,
-          0
-        ]
-      ],
-      "labelAt": [
-        1045,
-        90
-      ]
-    },
-    {
-      "id": "excel_publishes",
-      "from": "excel",
-      "to": "output",
-      "label": "検証済みxlsxを公開",
-      "fromSide": "right",
-      "toSide": "right",
-      "via": [
-        [
-          1390,
-          191
-        ],
-        [
-          1390,
-          438
-        ]
-      ],
-      "labelAt": [
-        1270,
-        160
-      ]
+      "id": "public_publish",
+      "from": "public_core",
+      "to": "public_output",
+      "label": "検証後に確定",
+      "variant": "emphasis"
     }
   ],
   "cards": [
     {
       "dot": "cyan",
-      "title": "主要経路",
+      "title": "通常の専用処理",
       "items": [
-        "利用者 → karufile.py → orchestrator",
-        "PDF、画像、指定Excel、compact動画を順に処理",
-        "現在実行の結果を照合して終了コードを返す"
+        "pdf-shrink：PyMuPDF・qpdf・任意jpegtran",
+        "media-shrink-tool：JPEG / PNG / WebP",
+        "excel-shrink：選択xlsx / video-shrink：FFmpeg"
       ]
     },
     {
       "dot": "emerald",
-      "title": "入力保護",
+      "title": "入力保護と公開用契約",
       "items": [
-        "開始前・終了後に全入力のidentityとSHA-256を照合",
-        "危険なpath・link・hardlinkを起動前に拒否",
-        "検証済み一時ファイルから正式出力へ公開"
+        "path・link・SHAを検査し原本を保全",
+        "掲載写真JPEG、透過PNG、横幅1400まで",
+        "metadataを継承せず、過去runは自動削除しない"
       ]
     },
     {
       "dot": "amber",
-      "title": "PDF単一入力・自動スキャン",
+      "title": "実装と記録の範囲",
       "items": [
-        "画像だけのPDFは300 DPIグレー・品質92",
-        "単一PDFは専用出力、文字PDFは既存処理",
-        "ソースリンクは基準commitに固定"
+        "CLIとGUIは同じ公開用バッチを使用",
+        "JSON manifestは社内用、CMSへ入稿しない",
+        "2026-10-07作業ツリー。未commitの追加を含む"
       ]
     }
   ]

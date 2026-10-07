@@ -17,6 +17,7 @@ htmlcov/
 # KaruFile default output directories (root/PDF CLI and standalone image CLI)
 *_軽量化/
 *_resized/
+*_HP掲載用/
 # Custom --output directories should be added to .git/info/exclude locally.
 # Runtime names below apply at any depth: reports can sit outside output trees.
 
@@ -45,6 +46,10 @@ pdf-preview.dry-run.json
 .*.image-manifest.csv.*.tmp
 .*.image-manifest.dry-run.csv.*.tmp
 
+# Web-public internal manifest and interrupted publication (including custom outputs)
+manifest.web-public.json
+.manifest.web-public.json.*.tmp
+
 # Standalone video state and reports, including dry-run reports
 *.video-state/
 *.video-report.csv
@@ -58,6 +63,10 @@ pdf-preview.dry-run.json
 *.excel-work/
 .*.excel-report.csv.*.tmp
 .*.excel-report.dry-run.csv.*.tmp
+
+# Local browser automation scratch files; curated evidence under docs/ stays versioned.
+/.playwright-cli/
+/output/playwright/
 
 # Keep uv.lock, .python-version, ExecPlans, and architecture/visual-check artifacts.
 # Do not ignore media extensions: source fixtures may be versioned.

@@ -1,12 +1,20 @@
 {
   "schema_version": 1,
-  "captured_utc": "2026-10-05T00:40:29.693587+00:00",
-  "basis": "Committed runtime at f71cf51; diagram and documentation regenerated in the working tree on 2026-10-05.",
-  "base_revision": "f71cf514dd9716eeafdbebc13a762c82d56ebedd",
-  "source_links": "All diagram source links refer to the committed base revision; files below record exact local bytes at capture time.",
-  "specification_sha256": "2b0266b4f50b7ecca0181279427a9ff20343142bfdbd0416037a423430176622",
-  "artifact_sha256": "d12f05d2d2412bb4641d2a0dd1b30cda641e5ff2920870b249b61378097f884e",
+  "captured_utc": "2026-10-07T05:26:41.719769+00:00",
+  "basis": "Working tree after 2026-10-07 web-public review fixes; recipe v2 and GUI preview exclusion. Diagram runtime boundaries unchanged; not committed.",
+  "base_revision": "bc88f56a6aadeaa11b0cd6687c45e113ce539547",
+  "source_links": "Diagram uses local worktree evidence; no remote links are asserted for uncommitted files.",
+  "specification_sha256": "14219dd19b48d7f9de7b38c0c2621101b7af27cf6144d926722cdece3391a481",
+  "artifact_sha256": "fd65192fdb356acfbd62e98cc9b8ad57c2e16b8eb7ccf1b25fa1893cc30a1c90",
   "files": [
+    {
+      "path": ".gitattributes",
+      "sha256": "d1c90c008c0ad1ed171b28a2799581f0663247e1b91309e8066f49ee049ab694"
+    },
+    {
+      "path": "KARUFILE_WEB_PUBLIC_CODEX.md",
+      "sha256": "e738b2edfa39f860d726e34664784ea3bf5bfff5edcbb245b176b0c45d443fce"
+    },
     {
       "path": "excel-shrink/.python-version",
       "sha256": "02e735b3dfe1c32833eb550b7ff8ffa17f5f2bc3fa1e7bae61a8f5a3883ce398"
@@ -89,15 +97,31 @@
     },
     {
       "path": "media-shrink-tool/pyproject.toml",
-      "sha256": "4c7ebc5ba4259f9f8fcda545aa0680988f2fa3282e43a8b89a628d986037e900"
+      "sha256": "80b225f914d462390c91def0d48eedecc8dfcaf79491cdb9d3e174739d6e945a"
+    },
+    {
+      "path": "media-shrink-tool/run-web-public.cmd",
+      "sha256": "3a2c9bdb63d41a3c7737121277bd3c6d60e788e8d69282c970b801edf22c32e0"
+    },
+    {
+      "path": "media-shrink-tool/src/media_shrink/__init__.py",
+      "sha256": "7ef29661dc6f995510a41640be984b87fe50fc7ad9e85a3c160196830016d039"
+    },
+    {
+      "path": "media-shrink-tool/src/media_shrink/__main__.py",
+      "sha256": "5800ed90a95edafc92e9a583d16bd6c6b15d992a3a917aed3906ae121692a4a3"
     },
     {
       "path": "media-shrink-tool/src/media_shrink/cli.py",
-      "sha256": "4a98ebcd4f8a848e10b50e03d95b03711d709919afc12967cdd756dd09fbd019"
+      "sha256": "a5be40b8b6fe9ef55e95ff0cd98a51996a0ce3ee47bddb47d3f1e3fb5411f6c0"
     },
     {
       "path": "media-shrink-tool/src/media_shrink/config.py",
       "sha256": "aecb8a3a1e50a01cbd64c4ddfc97dad4ceb145c3ab902b21d4719d73a64d9202"
+    },
+    {
+      "path": "media-shrink-tool/src/media_shrink/gui.py",
+      "sha256": "501bd9f513706b38763260231c2ebf86397f330b181e8277e30dc040a581c995"
     },
     {
       "path": "media-shrink-tool/src/media_shrink/image.py",
@@ -108,12 +132,32 @@
       "sha256": "6f7fd680831f93398ab8fd9c53afdf146fdad3d4478a559439bc29e17c74d29b"
     },
     {
+      "path": "media-shrink-tool/src/media_shrink/web_public.py",
+      "sha256": "c3f52ce46738236b1c58de99bd53ba095495582dfa57ef5ec10e54dad9305307"
+    },
+    {
+      "path": "media-shrink-tool/src/media_shrink/web_public_batch.py",
+      "sha256": "d6416a3066052d0de495ced89d0021e250855aeca5ade4ef9c5d21787a87a911"
+    },
+    {
       "path": "media-shrink-tool/tests/test_output_formats.py",
       "sha256": "580300c0b44e19cf643b5c0af7360959bfb8172099dae892ff7026a4c1c69275"
     },
     {
+      "path": "media-shrink-tool/tests/test_web_public.py",
+      "sha256": "3d7eb58fe0444299c09ce69cb3bccaab22de27e92aa61b76dc3141bee34a76c1"
+    },
+    {
+      "path": "media-shrink-tool/tests/test_web_public_cli.py",
+      "sha256": "ccab6f9d6bd3932d6fc302630cda7f001d4cb985572b583dc837a4c2e6afa09c"
+    },
+    {
+      "path": "media-shrink-tool/tests/test_web_public_gui.py",
+      "sha256": "7525ac0aee8f9fff7f26f0a96a59ec265c5da697f4a61ff6c9f25dac44db44e4"
+    },
+    {
       "path": "media-shrink-tool/uv.lock",
-      "sha256": "c7f8e80dddd1c4c7abdd17447b2767dce72052f85c2acd628e91e2609e2579d1"
+      "sha256": "7c081d99f6c303fd0a478d7f90dfd7fb032abdffc0fcabae222aa74ce9f2e4f7"
     },
     {
       "path": "orchestrator/shrink_all.py",

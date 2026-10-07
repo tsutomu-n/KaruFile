@@ -28,7 +28,7 @@ ExecPlanは当時の判断と検証を残す履歴であり、現行仕様の正
 | [AGENTS.md](../AGENTS.md) | AI・保守者向けの短い作業契約 | 責務境界、正本、検証入口の変更 |
 | [pdf-shrink README](../pdf-shrink/README.md) | PDF個別CLIと内部契約 | PDF処理、status、レポート、依存関係の変更 |
 | [media-shrink-tool README](../media-shrink-tool/README.md) | 画像個別CLIと内部契約 | 画像recipe、再利用、警告、エラーCSVの変更 |
-| [画像圧縮の内部仕様](image-processing.html) | media-shrink-toolの画像処理ロジックを実装に基づき詳述 | 画像変換、再利用、レポート、安全検査の変更 |
+| [画像圧縮の内部仕様](image-processing.html) | media-shrink-toolの通常resize処理を詳述。web-publicはMANUAL/REFERENCEを参照 | 通常resizeの変換、再利用、レポート、安全検査の変更 |
 | [video-shrink README](../video-shrink/README.md) | 動画個別CLIと内部契約 | 動画適格性、品質gate、状態、レポート、FFmpeg境界の変更 |
 | [excel-shrink README](../excel-shrink/README.md) | 明示選択xlsxの個別CLIと内部契約 | 画像配置の対応範囲、保護、候補検証、レポート、一時領域の変更 |
 | [orchestrator README](../orchestrator/README.md) | 統合CLIと保存先 | 実行順序、集計、環境変数の変更 |
@@ -40,14 +40,17 @@ ExecPlanは当時の判断と検証を残す履歴であり、現行仕様の正
 
 Archify生成HTMLは直接編集しません。Architecture JSONを更新し、Archifyのvalidate、deliver、
 visual-checkを実行してから、light/darkの画像を確認します。
-現行の図は2026-10-05に再生成し、JPEG/PNG/WebP・EXIF設定を含む実装を照合しています。
-ソースリンクは基準commit `f71cf514dd9716eeafdbebc13a762c82d56ebedd` に固定しています。
-単一PDF入力・自動スキャンも収録済みで、未コミットruntimeの参照ではありません。
+現行の図は2026-10-07に再生成し、通常経路と画像専用web-public/GUIの独立経路を示しています。
+基準HEADは`bc88f56a6aadeaa11b0cd6687c45e113ce539547`で、未コミットの公開用処理を含みます。
+未公開コードへの架空のGitHubソースリンクを作らず、根拠はローカル実ファイルのSHAで記録します。
 照合時のローカルパス・SHA-256は[作業ツリーの根拠](architecture/karufile-runtime.compact.worktree.json)に記録しています。
 この記録は取得時点のsnapshotで、後のソース編集に合わせて再取得が必要です。
 現在のJSON・HTMLのSHAはdelivery receiptとsnapshotで、表示確認は同じHTMLを指す
 visual-check receiptで照合します。reviewの9月分は当時の生成・判断の履歴です。
 [実行時アーキテクチャの確認記録](architecture/karufile-runtime.compact.review.md)には、生成・検証と明暗画像の目視結果を記載しています。
+
+画像専用のWeb掲載用CLI/GUIの検証範囲・画面証拠は
+[2026-10-07の検証記録](validation/2026-10-07-web-public/README.md)を参照してください。
 
 入門ガイドの本文・埋込図の再生成手順と表示確認の証拠は [guide/README.md](guide/README.md)にあります。
 ガイドは概要説明であり、操作と安全情報の正本は引き続き `MANUAL.md` です。

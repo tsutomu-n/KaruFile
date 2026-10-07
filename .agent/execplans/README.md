@@ -6,6 +6,7 @@
 
 | 計画 | 状態 | 内容 |
 |---|---|---|
+| [2026-10-07-web-public.md](2026-10-07-web-public.md) | 再レビュー修正・検証完了 | 画像専用CLI/GUI、BMP・Exif色検査、プレビュー排他、recipe v2。1435 passed/4 skipped。実写真・NAS・後段サイトは未検証 |
 | [2026-10-05-document-audit-repairs.md](2026-10-05-document-audit-repairs.md) | 修正・検証完了 | 情報資産監査の5群を局所修正。ガイド・構成図の再生成、参照233件・アンカー27件・SHA照合 |
 | [2026-09-30-image-formats-exif.md](2026-09-30-image-formats-exif.md) | 完了・f71cf51に収録 | 単独画像のJPEG/PNG/WebP出力とEXIF除去、root統合。1347 passed/4 skipped |
 | [2026-09-13-default-scan-compression.md](2026-09-13-default-scan-compression.md) | 完了・c483d9cに収録 | スキャンPDFの既定300 DPIグレー圧縮、単一PDF直接入力、実19ページ68.77%減、9月13日1303 passed/4 skipped |
