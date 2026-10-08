@@ -4,6 +4,6 @@
   "ended": "2026-10-08T13:58:48.3064207+09:00",
   "exit_code": 0,
   "phase": "baseline",
-  "workdir": "C:\\Users\\tn\\c_projects\\KaruFile",
+  "workdir": "<repo-root>",
   "started": "2026-10-08T13:58:36.2368639+09:00"
 }

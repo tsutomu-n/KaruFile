@@ -5,5 +5,5 @@
   "command": "uv run --project pdf-shrink python -m pytest -q -rs pdf-shrink/tests",
   "started": "2026-10-08T14:59:00.2743067+09:00",
   "ended": "2026-10-08T14:59:47.5051334+09:00",
-  "cwd": "C:\\Users\\tn\\c_projects\\KaruFile"
+  "cwd": "<repo-root>"
 }

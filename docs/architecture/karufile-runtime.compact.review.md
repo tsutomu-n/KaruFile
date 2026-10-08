@@ -1,3 +1,20 @@
+# 2026-10-08 Git統合・Windows運用反映時の構成図確認
+
+実装の根拠commitは`61871c6c45edc22e280b57dc2c45ed76af3abdcc`。
+未commitという表示を収録済みcommitへ更新し、JSONからArchifyで再生成した。
+runtime経路・用途・保存契約は変更していない。HTML手編集なし。
+
+- validate/deliver: exit0、showcase9/9、errors/warnings0。
+- visual-check: exit0、4viewport overflowなし。最小/最大light/dark4画像を開き、欠け・重なりなし。
+- correction_rounds: 0、visual_review: passed。自動receiptのpendingとは区別する。
+- JSON SHA-256: `248c91e653d17945bd48b0ab4dacc2c0efd3cd48474cfd0fd442389a11409a74`。
+- HTML SHA-256: `7df545de324a9dbd86a151e6aebf2506329424b1c758899c1c30ea1f322bf3ac`、649617 bytes。
+- [統合記録](../validation/2026-10-08-web-public-integration/README.md)にGitとprepared runtimeの結果を分けて記録。
+- [delivery](karufile-runtime.compact.delivery.json) / [visual-check](karufile-runtime.compact.visual-check.json) /
+  [source snapshot](karufile-runtime.compact.worktree.json)を同じ実ファイルへ照合する。
+
+以下は統合前の履歴であり、各SHAと基準HEADは当時の値。
+
 # 2026-10-08 source identity共通化の構成図確認
 
 基準HEADは`79df924a924808b4aa7601d7aa797d15ecfd4dcc`。未コミットの共通化・局所修正を含む。

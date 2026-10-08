@@ -1,0 +1,589 @@
+{
+  "source_files": [
+    {
+      "path": "excel-shrink/src/excel_shrink/__init__.py",
+      "worktree_sha256": "ec1914a9c880971f3d232792702fbb3803ec32b4a77be2fd78133c53b3508018",
+      "git_blob": "7aea858f54a2d4ed1c007680df79119a9178a744"
+    },
+    {
+      "path": "excel-shrink/src/excel_shrink/__main__.py",
+      "worktree_sha256": "935a1c1166b0c1ea35a82256345000bf2c73ded718d77773bc27a71ecce28f7d",
+      "git_blob": "eb53e2f31b2f703ad32ef64b8a41faa3e7d18e08"
+    },
+    {
+      "path": "excel-shrink/src/excel_shrink/cli.py",
+      "worktree_sha256": "458cc2932beb20c395495426f516440309120c06b99c52be24b3de2457ad1e44",
+      "git_blob": "a2a55e13a53f3ef990a37d59dc7e63e86d7d7490"
+    },
+    {
+      "path": "excel-shrink/src/excel_shrink/config.py",
+      "worktree_sha256": "e9a41ccb5be0f07a01948e1db98d1d3b08f8435e536333a88bc6edd7d6826bb9",
+      "git_blob": "07416e8c9febf7d65188e5d76faf91d730d7fd0e"
+    },
+    {
+      "path": "excel-shrink/src/excel_shrink/core.py",
+      "worktree_sha256": "e95a065b489691a686990877b6b436378225e37779dfbf2ef3858a62507115eb",
+      "git_blob": "e0e3b0e8e06fa937267ab641d22966566e036897"
+    },
+    {
+      "path": "excel-shrink/src/excel_shrink/diagnostics.py",
+      "worktree_sha256": "0545447edda39b4b434f970952edf7dabc9f0a55b2ae04e2b04e832abcaa1c7f",
+      "git_blob": "f5f4c415718fc80fcde1d0a60b53fd2afaec1539"
+    },
+    {
+      "path": "excel-shrink/src/excel_shrink/drawing.py",
+      "worktree_sha256": "b62555d7441a4419c7e9445cb50ec04160bf10ef2d726891b67f5972861c3af0",
+      "git_blob": "116ea27966c70c8a882bcec10e315b74a54c6660"
+    },
+    {
+      "path": "excel-shrink/src/excel_shrink/drawing_extensions.py",
+      "worktree_sha256": "1862bb604c6115dc8011998ab894a478ff19862bc236cdc876511e746e461a8f",
+      "git_blob": "e211072e32a8cd7f7ec23397860a46f4ebead898"
+    },
+    {
+      "path": "excel-shrink/src/excel_shrink/font_metrics.py",
+      "worktree_sha256": "3521ffca58bfcdbd4cbdf7ab7beef93c442239825179e95758e37e4f4f03bb97",
+      "git_blob": "c1949b5d0b296e7d7c87ae1829fb31814e2507ea"
+    },
+    {
+      "path": "excel-shrink/src/excel_shrink/grid.py",
+      "worktree_sha256": "955dc2885f7073c7fcf9497225607867d6ef3bb1a9da12680a56791762c8134f",
+      "git_blob": "14c37af4a94ab63c9199ea2d1230bd851e408b89"
+    },
+    {
+      "path": "excel-shrink/src/excel_shrink/models.py",
+      "worktree_sha256": "b7130196b7f4fa59d5fcf00f7d276f0b441d4f09aba00e4d319767c4d50c90db",
+      "git_blob": "de3730808127b8c454968fc2a42dc2ad02bd43d8"
+    },
+    {
+      "path": "excel-shrink/src/excel_shrink/output.py",
+      "worktree_sha256": "e6afa6594f6a0df26d1e0696345f11c7fa7f6cd569da32559a12c596e52c0afd",
+      "git_blob": "e79e4ee5ee856dec881ecc5ada2a0ac5cd52ca0f"
+    },
+    {
+      "path": "excel-shrink/src/excel_shrink/package.py",
+      "worktree_sha256": "4c01a76d7bda87b48dac49625f108a2fbd8369780b61d369f7c2f7afda8ed248",
+      "git_blob": "d47e7ea037ab95e2a458d1b4f7b7a805e1857a38"
+    },
+    {
+      "path": "excel-shrink/src/excel_shrink/recipe.py",
+      "worktree_sha256": "d4544a5923704e784ef357c59b0d3bcc07233d73d9b2e8a379c7d93597ec32de",
+      "git_blob": "07d2dbb6b7c7c4db5cb3b852f65af452424257ce"
+    },
+    {
+      "path": "excel-shrink/src/excel_shrink/report.py",
+      "worktree_sha256": "c2f4d61bf0e27ec0e9878f996981c0bf40a0c819e8075db410fc32340515ddae",
+      "git_blob": "9ce6bf67d2cde461caaa884540b9dae7ad179e12"
+    },
+    {
+      "path": "excel-shrink/src/excel_shrink/runner.py",
+      "worktree_sha256": "c3d78c8594e72ccf0db5f8c1ff31368004f150ee3df5ba485dc66745fd3a486a",
+      "git_blob": "586c3381f55ff29931efc2a8221fd488b7fc4b0d"
+    },
+    {
+      "path": "excel-shrink/tests/fixtures.py",
+      "worktree_sha256": "a7a29aba0441a697010898b07730a7033662dd14e4520e0ce077af8895de6f28",
+      "git_blob": "49ba922a63c5c7282ab4d692925eead614ae33a2"
+    },
+    {
+      "path": "excel-shrink/tests/test_config_output.py",
+      "worktree_sha256": "5cad3dc03626bc5721a25c4ac0b66ccacd38cc53675fbb36fb6721a247cdb9b9",
+      "git_blob": "34377374115fb465ef5f32fca4ae923a539300fe"
+    },
+    {
+      "path": "excel-shrink/tests/test_core.py",
+      "worktree_sha256": "f26f3df2ddf1b178cb6d40eee048a6b2a1c67b9dd1dbd224a9819afe6efc904a",
+      "git_blob": "cec20a2601e6da5d5ac8acb688d0a4440188c7a4"
+    },
+    {
+      "path": "excel-shrink/tests/test_expansion.py",
+      "worktree_sha256": "a6e72736bdebafd55379fddf89bbd9fc4d1b240fe2e919d1c93f9136979c889e",
+      "git_blob": "8386fe174d6864a8471ef4cbc90ef5da6e0dec4f"
+    },
+    {
+      "path": "excel-shrink/tests/test_pixel_comparison.py",
+      "worktree_sha256": "2b2bbbcbcd28c5ee4142b9a5206dea85227765b406ff74c13e4cd575973d2cbd",
+      "git_blob": "9dc2d51c94dad6b0e2a609db4ce78fd1eae7789f"
+    },
+    {
+      "path": "excel-shrink/tests/test_pixel_recipe.py",
+      "worktree_sha256": "70ebbcbfd65ceec44a20680150b0f7c60877318d6db07f1203557ba71b098333",
+      "git_blob": "d9afbc49898c9ed47e2b7077ffd7eeedf239f1be"
+    },
+    {
+      "path": "excel-shrink/tests/test_review.py",
+      "worktree_sha256": "038a8c98331bcd2fd42a80bd6cbe8d845d2263d76e994c628349363ed0764f42",
+      "git_blob": "c9080f2387f7c237a9bc67ca61e5373539590455"
+    },
+    {
+      "path": "excel-shrink/tests/test_runner.py",
+      "worktree_sha256": "3a31aa7526e6ffd1a448aa29b4c3698736f4383bbf6f47105c62c4ab8645b6a5",
+      "git_blob": "54b960cf47cd7efeaad00f8a79aea66f3564a468"
+    },
+    {
+      "path": "excel-shrink/tests/test_zip_directory.py",
+      "worktree_sha256": "3ab6176b9b607da5c3f10e41346032d49161172c5a1f86693468595f5b1478e2",
+      "git_blob": "6d39be85a44e263167c2f1a536cb1f5716632c92"
+    },
+    {
+      "path": "karufile.py",
+      "worktree_sha256": "d494858a343d88e4715b68eab4e789debff8890bf42a3f22b9796b61a50eac14",
+      "git_blob": "76ad3fd951d35669d49df89ca18600ea50ce9dbf"
+    },
+    {
+      "path": "media-shrink-tool/src/media_shrink/__init__.py",
+      "worktree_sha256": "7ef29661dc6f995510a41640be984b87fe50fc7ad9e85a3c160196830016d039",
+      "git_blob": "672d012d88a440bf9d8eafa8909a238211c7dffb"
+    },
+    {
+      "path": "media-shrink-tool/src/media_shrink/__main__.py",
+      "worktree_sha256": "5800ed90a95edafc92e9a583d16bd6c6b15d992a3a917aed3906ae121692a4a3",
+      "git_blob": "93ce5c6aa9ac614cd45803ed5b979346fb26ff0d"
+    },
+    {
+      "path": "media-shrink-tool/src/media_shrink/cli.py",
+      "worktree_sha256": "a5be40b8b6fe9ef55e95ff0cd98a51996a0ce3ee47bddb47d3f1e3fb5411f6c0",
+      "git_blob": "03b7a7c365e411c09622a090ccf31b29b353d3d9"
+    },
+    {
+      "path": "media-shrink-tool/src/media_shrink/config.py",
+      "worktree_sha256": "aecb8a3a1e50a01cbd64c4ddfc97dad4ceb145c3ab902b21d4719d73a64d9202",
+      "git_blob": "cd694565e334dca00731bfc2414f951b258edfe0"
+    },
+    {
+      "path": "media-shrink-tool/src/media_shrink/file_identity.py",
+      "worktree_sha256": "cf54ea575f82b37c51e1a982740fd85633c195eae33eef066f7a076343b89374",
+      "git_blob": "8a76a7c28e9a762ed468c7c594c4251bd4c11f59"
+    },
+    {
+      "path": "media-shrink-tool/src/media_shrink/gui.py",
+      "worktree_sha256": "501bd9f513706b38763260231c2ebf86397f330b181e8277e30dc040a581c995",
+      "git_blob": "9bc1055483168a3d41dfb6d5b75d4bb5e08d1d3d"
+    },
+    {
+      "path": "media-shrink-tool/src/media_shrink/image.py",
+      "worktree_sha256": "f3507cb443c37124a9b7e8d93d3a05706872b2622b155a2990e0f90524fbcd14",
+      "git_blob": "cf668553e9acfa7195934f67d6cc18828569e577"
+    },
+    {
+      "path": "media-shrink-tool/src/media_shrink/utils.py",
+      "worktree_sha256": "6f7fd680831f93398ab8fd9c53afdf146fdad3d4478a559439bc29e17c74d29b",
+      "git_blob": "22bcac445c003c3940f0568523a70e7ea8361122"
+    },
+    {
+      "path": "media-shrink-tool/src/media_shrink/web_public.py",
+      "worktree_sha256": "65745d85911bfcf365b016fc7aad309a0448cd15b48ae7d3d07ef15c7f3099fb",
+      "git_blob": "f545f9039aa967b7676777c05f598176a1e313e3"
+    },
+    {
+      "path": "media-shrink-tool/src/media_shrink/web_public_batch.py",
+      "worktree_sha256": "696ed6997375013f266214c2102c85865019abb49f85dafec47aaf1bc2e1ad90",
+      "git_blob": "3d890fc3454c3b7b5ebd919752e6a5112e560f95"
+    },
+    {
+      "path": "media-shrink-tool/tests/test_file_identity.py",
+      "worktree_sha256": "ef5b71dbefa4c5ec29181a93306e91c66bdd9469dfcb51cc4870e4a48bb7ebb1",
+      "git_blob": "010e3aa8e808a28d86651d2ac37b0a06579e5916"
+    },
+    {
+      "path": "media-shrink-tool/tests/test_image_contract.py",
+      "worktree_sha256": "b8c19c29baf1e617dc892ff7499ede12a2d824e86c55a4ea717c78cc30da7a0b",
+      "git_blob": "a7f419a8b575c52475d18dda020dee579631a942"
+    },
+    {
+      "path": "media-shrink-tool/tests/test_output_formats.py",
+      "worktree_sha256": "580300c0b44e19cf643b5c0af7360959bfb8172099dae892ff7026a4c1c69275",
+      "git_blob": "2dd272d859cc521187b89cca2628a0f7323a2093"
+    },
+    {
+      "path": "media-shrink-tool/tests/test_web_public.py",
+      "worktree_sha256": "3d7eb58fe0444299c09ce69cb3bccaab22de27e92aa61b76dc3141bee34a76c1",
+      "git_blob": "e61586752d2022062c8b82d3446eba7b1171347c"
+    },
+    {
+      "path": "media-shrink-tool/tests/test_web_public_cli.py",
+      "worktree_sha256": "6008726d6d7bcaa4e0685c9b226214ca55f3aea76f6a15ee5dc6a3007107cffd",
+      "git_blob": "bb478755b868d8b663f4a2e42340aa481170e388"
+    },
+    {
+      "path": "media-shrink-tool/tests/test_web_public_gui.py",
+      "worktree_sha256": "7525ac0aee8f9fff7f26f0a96a59ec265c5da697f4a61ff6c9f25dac44db44e4",
+      "git_blob": "8be2141a81bdb5193ed2a8ecc6db1f65dd35b969"
+    },
+    {
+      "path": "orchestrator/shrink_all.py",
+      "worktree_sha256": "77c29beb7a6de7ac2a17e672a723f59254be99dc0a236429677a5b8b704b5bf8",
+      "git_blob": "46db512c23364b3221b33d10d8c7f8905b8765f0"
+    },
+    {
+      "path": "orchestrator/test_excel.py",
+      "worktree_sha256": "c8f63a6079a80ea6d039654369b6a5d08a0b5786746d06dc14f7387f15b02729",
+      "git_blob": "4cbfe2461522b7e997c31305375ebb48368ee0af"
+    },
+    {
+      "path": "orchestrator/test_font_replace.py",
+      "worktree_sha256": "cb5e77ef5b43fb881e05c3fc020cab43a101301a8f0bf3e30d984825f8d173d7",
+      "git_blob": "f18d51e7aa01d8e584f4eca5364f55f2742fff7e"
+    },
+    {
+      "path": "orchestrator/test_lossless_jpeg_report.py",
+      "worktree_sha256": "808bbd0a04cef83d31078ab033edffe5ad63d7588b7d4ae6b7160b0342d18bd3",
+      "git_blob": "82c08fe59c258d5ee605ba7a2c72d53cbccf1200"
+    },
+    {
+      "path": "orchestrator/test_pdf_protection.py",
+      "worktree_sha256": "66930eec76f5845a0239f8d8485caac489a3df353d342ea5a225e4705362bbb4",
+      "git_blob": "a059dfa83d7e44ca3fc44a87fba2ae4c4fb2dd33"
+    },
+    {
+      "path": "orchestrator/test_photo_preview.py",
+      "worktree_sha256": "bad715defeb5c117cb9a3451c028187aaa51ed46a249d1e1e936396b7063c4e7",
+      "git_blob": "1e55fae8a78557606974b38b742fa806532b41f2"
+    },
+    {
+      "path": "orchestrator/test_shrink_all.py",
+      "worktree_sha256": "ecc83c89f105fd694ec4765cc0c48172b406cbd8a239cde8e04db77e8b61ee0d",
+      "git_blob": "9d19b091a88f260d85be1a1511031a65ed6b88d9"
+    },
+    {
+      "path": "orchestrator/test_single_pdf.py",
+      "worktree_sha256": "3e1c6714393a0d8b3a4384534345da50adc189e3896283abe5ce97d795cce247",
+      "git_blob": "5de73be0f5ad75e27fa649d330321dad22f375c4"
+    },
+    {
+      "path": "pdf-shrink/src/pdf_shrink/__init__.py",
+      "worktree_sha256": "8c0633402c90e972872fd5e08b2e408a4c7d46d0a95e5b38184a316a30baf62c",
+      "git_blob": "0316dcf79dd211c6a9a265b55415517aa2d55ae6"
+    },
+    {
+      "path": "pdf-shrink/src/pdf_shrink/__main__.py",
+      "worktree_sha256": "38e4369b27289449b5d93b25f7ad88ff2457859213624321d25cb07ac1a0fcdf",
+      "git_blob": "2def92b58f23c6101ea3b46349203d343ae63db3"
+    },
+    {
+      "path": "pdf-shrink/src/pdf_shrink/cli.py",
+      "worktree_sha256": "9ef2ce26c67dd0bbbbf1074323d08fde5b46d8f4e892ec6a3b9367742eaa71a2",
+      "git_blob": "750cb522c0f43781e7ef9eae45b9615c98bbf568"
+    },
+    {
+      "path": "pdf-shrink/src/pdf_shrink/config.py",
+      "worktree_sha256": "813122f30d8f9813b7b2d83d63685f94437b88f7b2e76a66c4374bb74cb9eace",
+      "git_blob": "a410d07be3291763b4d76475c6749ac166dbaa01"
+    },
+    {
+      "path": "pdf-shrink/src/pdf_shrink/discovery.py",
+      "worktree_sha256": "00e6194455dc2639fe0be40aab5aa70ed199cd14404f83463b201fa400edeec8",
+      "git_blob": "442dd961d158843fbc01dee97fafc440a1f8365a"
+    },
+    {
+      "path": "pdf-shrink/src/pdf_shrink/font_pipeline.py",
+      "worktree_sha256": "09a6a0703dda574789cb408639a79bcb9ff4f11b4a999a861bf2cc8f84dc6fdf",
+      "git_blob": "a1c842adc9a13c6da3b97144f71da8bf3d471e20"
+    },
+    {
+      "path": "pdf-shrink/src/pdf_shrink/font_replace.py",
+      "worktree_sha256": "01786edb82e4af6381a78f07e70d4404994ed63e033d4d4e0cac41f83c2a7dda",
+      "git_blob": "f6c9d44459fd7fa2b0e7dff8b380d346ebc55902"
+    },
+    {
+      "path": "pdf-shrink/src/pdf_shrink/font_replace_parse.py",
+      "worktree_sha256": "08e13d31918b3a14ccc4c3c7bbc7fcde6b12d9e6537656daa0725afe729703da",
+      "git_blob": "f23738241786fd299edd26235e1ed06816e09a28"
+    },
+    {
+      "path": "pdf-shrink/src/pdf_shrink/font_validate.py",
+      "worktree_sha256": "0efff29a8c1135af2a449fc4413e3d3e6617655a980384fffe3b04e1efe687cd",
+      "git_blob": "05d20a176fb51d69af17fdde1494ec780f7f5e25"
+    },
+    {
+      "path": "pdf-shrink/src/pdf_shrink/inspect_pdf.py",
+      "worktree_sha256": "239f6e830b01ac41e4b81a58223d2e0ee3a17b1c9735b190a958f2ade6094280",
+      "git_blob": "a2a68a7269e337b01add986d16486a8dad6944f1"
+    },
+    {
+      "path": "pdf-shrink/src/pdf_shrink/lossless_jpeg.py",
+      "worktree_sha256": "3619ea2e05393016c5df61c441227e22798c9bd11d82616f6874c06aafaeaf03",
+      "git_blob": "08f2a724a35201f35f410b63427af04074468488"
+    },
+    {
+      "path": "pdf-shrink/src/pdf_shrink/models.py",
+      "worktree_sha256": "27f3724aa8bdf786ceb6efe58303f0cc306adf4497e90a7c26d19e954e55383e",
+      "git_blob": "c13146a9cd599de341612e4b2421bc6efcb5e3ea"
+    },
+    {
+      "path": "pdf-shrink/src/pdf_shrink/output.py",
+      "worktree_sha256": "b8d1887abc0f70cba89b058fca5ff7628599b527e7d17af43fd2b8af4d5fd926",
+      "git_blob": "e36076ba1dee3fa55d8d068a1cd16971781af36a"
+    },
+    {
+      "path": "pdf-shrink/src/pdf_shrink/policy.py",
+      "worktree_sha256": "7b30e105adae78c5e34848cd236d59a5cd82e3dfdc95f6e12595cf1026190b7f",
+      "git_blob": "4a546827e7a3a7785e23e9683dbb6693e9db0d84"
+    },
+    {
+      "path": "pdf-shrink/src/pdf_shrink/preview.py",
+      "worktree_sha256": "2ed9a6fe8c3876e054dbe46794ef11d48f122ffe24a4ca8a59c947eba698a7ec",
+      "git_blob": "cef5035091f1263f5de0ed255ad3a963637c8e98"
+    },
+    {
+      "path": "pdf-shrink/src/pdf_shrink/qpdf.py",
+      "worktree_sha256": "f51ec6988eb5bcf5a72bac4f323386c7505e657af6a3f0c6ed58bc705e108348",
+      "git_blob": "0f3c8c7c4f20dde7d300015c2b8d45616383b325"
+    },
+    {
+      "path": "pdf-shrink/src/pdf_shrink/raster_scan.py",
+      "worktree_sha256": "b4af076a7edc7712d7af39620c936b1ae6a78d909b155c0ea08aaf022b80392b",
+      "git_blob": "dce9605d79824f2c8c058a6bc425a08e7d5141d2"
+    },
+    {
+      "path": "pdf-shrink/src/pdf_shrink/report.py",
+      "worktree_sha256": "46f94ef75407eba6e4864ddec320e751a69f2162fbe8234afe797c10b106557d",
+      "git_blob": "80b6e0adf701b1c1192aa305cdc16fd65a99a0b3"
+    },
+    {
+      "path": "pdf-shrink/src/pdf_shrink/runner.py",
+      "worktree_sha256": "02f4ba819145fa62d9de4ea751fa3f01d7005154d5061e5182c28e848dc71235",
+      "git_blob": "0298845877e44ebafbfe557c8163239fbccbc593"
+    },
+    {
+      "path": "pdf-shrink/src/pdf_shrink/state.py",
+      "worktree_sha256": "dbef6791f574660d2bbb57c5fdfce04a6b3a25ad06e80dd4109b5edba68e3701",
+      "git_blob": "4dadcc12c024f71b78378409fd59410ed19fdca2"
+    },
+    {
+      "path": "pdf-shrink/src/pdf_shrink/text_optimize.py",
+      "worktree_sha256": "c8baa990fe5b0446a1a796ae37648a2445417b07216810b5ecc30f926aeb7232",
+      "git_blob": "0d28a33f4b23cb81b7a589ff3e2f74c2e724557e"
+    },
+    {
+      "path": "pdf-shrink/src/pdf_shrink/transform.py",
+      "worktree_sha256": "c76227d763982dcddb2ed891d9a3bfd4b44ff1600fbbb4db7e40b88aac390d1f",
+      "git_blob": "0a847a2d6595eadb6b7708064161e4579eba20fc"
+    },
+    {
+      "path": "pdf-shrink/src/pdf_shrink/utils.py",
+      "worktree_sha256": "8b334b56cad079d3f774d330a4b66f2f075ccf0e4859ba18531006a2af165d2d",
+      "git_blob": "62e0859c65621ce0e7814d3216c815090b56762c"
+    },
+    {
+      "path": "pdf-shrink/src/pdf_shrink/validate.py",
+      "worktree_sha256": "53f0233133ae8462dea1ec90fab6dd06d41e965c8f8fa6355e3641ecf076abca",
+      "git_blob": "0454306b3ac0c817dea32cc30bea46898afdd679"
+    },
+    {
+      "path": "pdf-shrink/src/pdf_shrink/worker.py",
+      "worktree_sha256": "3fd623c28a62d360c90219ef59103f9c919e27fecc3ef8f84aa1c8734e2e7bdd",
+      "git_blob": "05225b4c72a2d1adfe9d80965f93798db076995a"
+    },
+    {
+      "path": "pdf-shrink/tests/conftest.py",
+      "worktree_sha256": "799a9d3d82682f466506c536d88e46933d296453d07acbfdb443f681f601e034",
+      "git_blob": "618a0cc1b24428c04925fb39a0535aa50e21700d"
+    },
+    {
+      "path": "pdf-shrink/tests/test_automatic_scan.py",
+      "worktree_sha256": "c7848ef90c1c79522b65039afac72bdf78a005c06c545a271b0ed0c47683b06a",
+      "git_blob": "23c4d2f6daeaeb16c011a23f396c417754f71a26"
+    },
+    {
+      "path": "pdf-shrink/tests/test_candidate_diagnostics.py",
+      "worktree_sha256": "f49e06e896780bdae263af21026b6f46a56fede40cd9b398276a0e273ec91270",
+      "git_blob": "2fcb3279a2a0ebe4390d9bad7000372d947ba14c"
+    },
+    {
+      "path": "pdf-shrink/tests/test_font_family.py",
+      "worktree_sha256": "7564fe70e7b822d7eb7f4d7c4dfd5b12889e4bef46b1606982d7fd8f3f3f7bc0",
+      "git_blob": "96fdfeb4216081132a27bfc7c6b34a918963e046"
+    },
+    {
+      "path": "pdf-shrink/tests/test_font_integration.py",
+      "worktree_sha256": "54a6772582274d17d4c8ef5c4dbdc24b2e9ff3fdaf7bf56fd9415fbcb2af1542",
+      "git_blob": "ef5f676d4dd0b390a804724d71b16552f589ef96"
+    },
+    {
+      "path": "pdf-shrink/tests/test_font_preserved_structures.py",
+      "worktree_sha256": "0712e78f35d7aa9cb7db7a204751f3ab956572ebf77268576e0ceca6b3d1d299",
+      "git_blob": "266e599be5cc5a712b90c3105595783346808395"
+    },
+    {
+      "path": "pdf-shrink/tests/test_font_replace.py",
+      "worktree_sha256": "142354d468aa6e80e684f05fa4d74eb0a9941ead55a9ad6ed0360c15f3663e30",
+      "git_blob": "d9bdaf40479359967a64ac2884945813214da2fb"
+    },
+    {
+      "path": "pdf-shrink/tests/test_font_validation.py",
+      "worktree_sha256": "92a863914aaeab2801a4a44b7c73e1a453bd7f911dfb1039c5afc4f186dc82dd",
+      "git_blob": "ed799d6b2ac3ce6772dbce819d917175935111b0"
+    },
+    {
+      "path": "pdf-shrink/tests/test_lossless_jpeg.py",
+      "worktree_sha256": "d27d668c37d7314c669231d002da1a1bff871a2a1fe9199a7f8d344c01c7d84f",
+      "git_blob": "d66c7463fbb0c9800627367223caedb8cbb12b2f"
+    },
+    {
+      "path": "pdf-shrink/tests/test_lossy_placed_dpi.py",
+      "worktree_sha256": "3ebad6aadde86869c5531769572e5dc96b579b742d83b0324c181ad91a919965",
+      "git_blob": "a5963aebb5478c0a03c6b92922ed59f15e189eb0"
+    },
+    {
+      "path": "pdf-shrink/tests/test_pdf_shrink.py",
+      "worktree_sha256": "d15235c4b318df1c69de5e259372312b4ab2d6aec7cbb4ad02ad25c7e892b2af",
+      "git_blob": "dd2a3b3ac6260a1d7d5ec71d53f1a6b211559ed4"
+    },
+    {
+      "path": "pdf-shrink/tests/test_photo_dpi_contracts.py",
+      "worktree_sha256": "66e15bc6d430b75a16c2a0c01a22a44c51e05e67bff9eecb589fcb089598e771",
+      "git_blob": "7a1dfe130886f4f4e1b5719acda9c44be58b8fd2"
+    },
+    {
+      "path": "pdf-shrink/tests/test_photo_transform.py",
+      "worktree_sha256": "01b15d6cf376ee073bdf36978d01090296004591ba93fbcf93adccfcf14fc3ed",
+      "git_blob": "ea289e4bda3b1c1df0821e5e821930031168bb5d"
+    },
+    {
+      "path": "pdf-shrink/tests/test_photo_worker.py",
+      "worktree_sha256": "d63e397a23d1822367ed21256b4421c90fe2ecd7bcc6281345f4dd079d8c4d84",
+      "git_blob": "80f2bfdba9e315ec2a501bcf77ac7f46a4bf3224"
+    },
+    {
+      "path": "pdf-shrink/tests/test_preview.py",
+      "worktree_sha256": "ba892f6403c1ed421a50332500fd991a44bdd7aa9c3cc12d39eac3e5442af1f6",
+      "git_blob": "d723cd0f5c8eb49f5c0220c2bd3ae5d64c64f356"
+    },
+    {
+      "path": "pdf-shrink/tests/test_preview_runner.py",
+      "worktree_sha256": "4d5dfbf80b6dfe0890b04470682b3a779ea8bb38a861f2f376021d7e512ac97e",
+      "git_blob": "c429f056bc611e58d15ad80229eefac707526677"
+    },
+    {
+      "path": "pdf-shrink/tests/test_protection_text.py",
+      "worktree_sha256": "bbda71b69e16f0fb6f50f1dbc6ee6fa7c32aa75fce15808ba7e6275b5d59ce52",
+      "git_blob": "27395c39715225d0d6a0e51f4bf610b0a7743295"
+    },
+    {
+      "path": "pdf-shrink/tests/test_refactor_contracts.py",
+      "worktree_sha256": "89c750ad8fb7d51e5d708b5893285170596b2d97971c2433b810d8c24039d081",
+      "git_blob": "b1946c953190c3af95eed3c67fc10785faefd243"
+    },
+    {
+      "path": "pdf-shrink/tests/test_scan_bilevel.py",
+      "worktree_sha256": "89e43d00575de1d6f4ce38d9d7610a9a467b3cca7d77db152e36e79e9b4d5b5b",
+      "git_blob": "4136e8b4f6e480fcd3f9a646c7f93eb6ad3f452a"
+    },
+    {
+      "path": "video-shrink/src/video_shrink/__init__.py",
+      "worktree_sha256": "70dabcb06d1d1199f9c5562b2c4b85d630e58a47592eb0ba9d5230a388c89383",
+      "git_blob": "87bd4fa49bd207de935b5663a55d71ac77268645"
+    },
+    {
+      "path": "video-shrink/src/video_shrink/__main__.py",
+      "worktree_sha256": "3d2438ae92f4746e9ffaa1f837b1fe803f6281091d1f31f8c95643716f257d9a",
+      "git_blob": "a049ad7aea97f34e4aab96cc8d30e116fa89790d"
+    },
+    {
+      "path": "video-shrink/src/video_shrink/cli.py",
+      "worktree_sha256": "e27fe7b1ab25c9ea84655bd26818e1f9f801c6a30b80c94699d378c9db03dd67",
+      "git_blob": "1a784d474c3ba4bbbce5423639ee70eadb9b5062"
+    },
+    {
+      "path": "video-shrink/src/video_shrink/config.py",
+      "worktree_sha256": "d8e5232b87f76fc6b3d3ae177c47a290c72ec99fb7229819e00990ad694cf1f8",
+      "git_blob": "789f68b3e5dfc1880b121823e13676dec373773a"
+    },
+    {
+      "path": "video-shrink/src/video_shrink/discovery.py",
+      "worktree_sha256": "8961473a4b4f2045b7895c8a1cd1124fd284427b7862673ffbbda80062269699",
+      "git_blob": "285a474da3769be03cd7851a54976771ac74a5f4"
+    },
+    {
+      "path": "video-shrink/src/video_shrink/ffmpeg.py",
+      "worktree_sha256": "3bc71f788d34822f143e3d262819b012e7a42ec2fe2b60af3d115b4e33eb8cf2",
+      "git_blob": "5ec2ba5029437a393aaa216c685846649cb18b4a"
+    },
+    {
+      "path": "video-shrink/src/video_shrink/models.py",
+      "worktree_sha256": "fbdb70bbf70524a74b1d61243c028d73af66d0ad8959aa41fc83fc33a608e08c",
+      "git_blob": "98e1859ab594c00f2517f7fcf8e44e175bb3e133"
+    },
+    {
+      "path": "video-shrink/src/video_shrink/output.py",
+      "worktree_sha256": "53c648d566da8e415001e13eeb28536f16e5de342afc3ea634b46ed01b0a572f",
+      "git_blob": "381392c07174b3e3c5bf732a3a9b8295cdc2eed3"
+    },
+    {
+      "path": "video-shrink/src/video_shrink/probe.py",
+      "worktree_sha256": "1f1401067dbf51ad22978b615e320e1b6ad9d3fb7d7a57a5f366eccf53772391",
+      "git_blob": "15985b18c05e3f83515847996113ac6bee98bbd9"
+    },
+    {
+      "path": "video-shrink/src/video_shrink/report.py",
+      "worktree_sha256": "56b18928d48f0cfcba9df8aa70eea63933fed5eb58206c2861e37a28c1033709",
+      "git_blob": "819d735abb0553a36901a90a93b3c69e7efa1fb5"
+    },
+    {
+      "path": "video-shrink/src/video_shrink/runner.py",
+      "worktree_sha256": "5f11e734715afa7e328f101e458694d126f34cac4b0cbde75553249608bfd1a1",
+      "git_blob": "1467fddaf87dcc71f257db54fc5aab79f52c3a35"
+    },
+    {
+      "path": "video-shrink/src/video_shrink/state.py",
+      "worktree_sha256": "749b4b019160c7a8dcac891aca36a33b25bc9b8e44a35273650527d847ec583d",
+      "git_blob": "963ea52b04cc9096d135a8c7163241582309e66a"
+    },
+    {
+      "path": "video-shrink/src/video_shrink/transform.py",
+      "worktree_sha256": "fe3c4fb76894dfb5076a5cf373ab62db41814441a5012480324f93540e3a2df5",
+      "git_blob": "88a89d07556275f7530d0e0f351d63baef105f41"
+    },
+    {
+      "path": "video-shrink/src/video_shrink/utils.py",
+      "worktree_sha256": "d874873c13f12eaad0013654e551d975a763f1f11cec318bc6d3c891eff4d01c",
+      "git_blob": "6714c6f0b531b02c53feda7a36a0e59a1ea818e4"
+    },
+    {
+      "path": "video-shrink/src/video_shrink/validate.py",
+      "worktree_sha256": "2cf0df3a883fd6ea41ebc3129e18995242f42fc1736301d7e8c4c570ea000853",
+      "git_blob": "b4c80792d9dd73e5b672c3a4f55367ac776d5014"
+    },
+    {
+      "path": "video-shrink/tests/conftest.py",
+      "worktree_sha256": "140a55ee6d185352ff79d42fb7901b4498f65bed20f62615346d307bd2678e91",
+      "git_blob": "e93f9760364634a1e4d8de5e75e3155dbf8ffe22"
+    },
+    {
+      "path": "video-shrink/tests/test_ffmpeg_boundary.py",
+      "worktree_sha256": "3560494787bfd3e8ff89e9ca2bd4cd71ecfff0824f49312a2d0b7b2aadbd283b",
+      "git_blob": "4b721ad8790a6ac1d0b87285dfcc7bdc68eeb035"
+    },
+    {
+      "path": "video-shrink/tests/test_file_races.py",
+      "worktree_sha256": "b99002a4015880aa84bc561bf3cb40ae88ba051a1c7ebfcddc9fbfbc841a790a",
+      "git_blob": "92cfb48b22b55077089cdf4ac3a976b618cedaca"
+    },
+    {
+      "path": "video-shrink/tests/test_probe_contract.py",
+      "worktree_sha256": "f0366cf47efd44067618639f003d3f1b732a17ea21951baa77b4c413d83cb7c3",
+      "git_blob": "4b1a65f56e38dc73ce0d4f6ba5e223b48134a70f"
+    },
+    {
+      "path": "video-shrink/tests/test_runner_contract.py",
+      "worktree_sha256": "6d82a4f19f5c25996498609876156b9a98da7a20961b46b1f0143eda30aaed18",
+      "git_blob": "de84cd874339b47a5e9cd4b69920486e464ad2f2"
+    },
+    {
+      "path": "video-shrink/tests/test_state_contract.py",
+      "worktree_sha256": "f9e68d5e48ad5ccef7423456498a945865f9e0b59a8334f186cfe1cfc73121f9",
+      "git_blob": "cd018714b455aa7fafcd022030b1ff31d78f79f0"
+    },
+    {
+      "path": "video-shrink/tests/test_transform_and_validation.py",
+      "worktree_sha256": "a1bf0da85e31e439858a731ae934bd5bcb69a778eaada8f1a9e8e3a8998de826",
+      "git_blob": "550157934e45285879638fdced7040e60026fc45"
+    },
+    {
+      "path": "video-shrink/tests/test_video_policy_audio.py",
+      "worktree_sha256": "64362daa12ae1686d00579f0134e40e73b389adfaa2b9cf17851493908ceb8c4",
+      "git_blob": "38830ae846b2d55ab90eea11f60d8de252424126"
+    }
+  ]
+}

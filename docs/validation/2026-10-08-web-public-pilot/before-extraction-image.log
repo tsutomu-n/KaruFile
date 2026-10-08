@@ -3,115 +3,115 @@
 .....................................................                    [100%]
 ============================== warnings summary ===============================
 tests/test_output_formats.py::test_root_cli_integration_and_manifest_policy[standard-jpeg]
-  C:\Users\tn\c_projects\KaruFile\media-shrink-tool\.venv\Lib\site-packages\_pytest\threadexception.py:58: PytestUnhandledThreadExceptionWarning: Exception in thread Thread-11 (_readerthread)
-  
+  <repo-root>\media-shrink-tool\.venv\Lib\site-packages\_pytest\threadexception.py:58: PytestUnhandledThreadExceptionWarning: Exception in thread Thread-11 (_readerthread)
+
   Traceback (most recent call last):
-    File "C:\Users\tn\AppData\Roaming\uv\python\cpython-3.13-windows-x86_64-none\Lib\threading.py", line 1043, in _bootstrap_inner
+    File "<user-home>\AppData\Roaming\uv\python\cpython-3.13-windows-x86_64-none\Lib\threading.py", line 1043, in _bootstrap_inner
       self.run()
       ~~~~~~~~^^
-    File "C:\Users\tn\AppData\Roaming\uv\python\cpython-3.13-windows-x86_64-none\Lib\threading.py", line 994, in run
+    File "<user-home>\AppData\Roaming\uv\python\cpython-3.13-windows-x86_64-none\Lib\threading.py", line 994, in run
       self._target(*self._args, **self._kwargs)
       ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-    File "C:\Users\tn\AppData\Roaming\uv\python\cpython-3.13-windows-x86_64-none\Lib\subprocess.py", line 1615, in _readerthread
+    File "<user-home>\AppData\Roaming\uv\python\cpython-3.13-windows-x86_64-none\Lib\subprocess.py", line 1615, in _readerthread
       buffer.append(fh.read())
                     ~~~~~~~^^
   UnicodeDecodeError: 'cp932' codec can't decode byte 0x83 in position 1424: illegal multibyte sequence
-  
+
   Enable tracemalloc to get traceback where the object was allocated.
   See https://docs.pytest.org/en/stable/how-to/capture-warnings.html#resource-warnings for more info.
     warnings.warn(pytest.PytestUnhandledThreadExceptionWarning(msg))
 
 tests/test_output_formats.py::test_root_cli_integration_and_manifest_policy[standard-png]
-  C:\Users\tn\c_projects\KaruFile\media-shrink-tool\.venv\Lib\site-packages\_pytest\threadexception.py:58: PytestUnhandledThreadExceptionWarning: Exception in thread Thread-17 (_readerthread)
-  
+  <repo-root>\media-shrink-tool\.venv\Lib\site-packages\_pytest\threadexception.py:58: PytestUnhandledThreadExceptionWarning: Exception in thread Thread-17 (_readerthread)
+
   Traceback (most recent call last):
-    File "C:\Users\tn\AppData\Roaming\uv\python\cpython-3.13-windows-x86_64-none\Lib\threading.py", line 1043, in _bootstrap_inner
+    File "<user-home>\AppData\Roaming\uv\python\cpython-3.13-windows-x86_64-none\Lib\threading.py", line 1043, in _bootstrap_inner
       self.run()
       ~~~~~~~~^^
-    File "C:\Users\tn\AppData\Roaming\uv\python\cpython-3.13-windows-x86_64-none\Lib\threading.py", line 994, in run
+    File "<user-home>\AppData\Roaming\uv\python\cpython-3.13-windows-x86_64-none\Lib\threading.py", line 994, in run
       self._target(*self._args, **self._kwargs)
       ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-    File "C:\Users\tn\AppData\Roaming\uv\python\cpython-3.13-windows-x86_64-none\Lib\subprocess.py", line 1615, in _readerthread
+    File "<user-home>\AppData\Roaming\uv\python\cpython-3.13-windows-x86_64-none\Lib\subprocess.py", line 1615, in _readerthread
       buffer.append(fh.read())
                     ~~~~~~~^^
   UnicodeDecodeError: 'cp932' codec can't decode byte 0x83 in position 1428: illegal multibyte sequence
-  
+
   Enable tracemalloc to get traceback where the object was allocated.
   See https://docs.pytest.org/en/stable/how-to/capture-warnings.html#resource-warnings for more info.
     warnings.warn(pytest.PytestUnhandledThreadExceptionWarning(msg))
 
 tests/test_output_formats.py::test_root_cli_integration_and_manifest_policy[standard-webp]
-  C:\Users\tn\c_projects\KaruFile\media-shrink-tool\.venv\Lib\site-packages\_pytest\threadexception.py:58: PytestUnhandledThreadExceptionWarning: Exception in thread Thread-23 (_readerthread)
-  
+  <repo-root>\media-shrink-tool\.venv\Lib\site-packages\_pytest\threadexception.py:58: PytestUnhandledThreadExceptionWarning: Exception in thread Thread-23 (_readerthread)
+
   Traceback (most recent call last):
-    File "C:\Users\tn\AppData\Roaming\uv\python\cpython-3.13-windows-x86_64-none\Lib\threading.py", line 1043, in _bootstrap_inner
+    File "<user-home>\AppData\Roaming\uv\python\cpython-3.13-windows-x86_64-none\Lib\threading.py", line 1043, in _bootstrap_inner
       self.run()
       ~~~~~~~~^^
-    File "C:\Users\tn\AppData\Roaming\uv\python\cpython-3.13-windows-x86_64-none\Lib\threading.py", line 994, in run
+    File "<user-home>\AppData\Roaming\uv\python\cpython-3.13-windows-x86_64-none\Lib\threading.py", line 994, in run
       self._target(*self._args, **self._kwargs)
       ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-    File "C:\Users\tn\AppData\Roaming\uv\python\cpython-3.13-windows-x86_64-none\Lib\subprocess.py", line 1615, in _readerthread
+    File "<user-home>\AppData\Roaming\uv\python\cpython-3.13-windows-x86_64-none\Lib\subprocess.py", line 1615, in _readerthread
       buffer.append(fh.read())
                     ~~~~~~~^^
   UnicodeDecodeError: 'cp932' codec can't decode byte 0x83 in position 1429: illegal multibyte sequence
-  
+
   Enable tracemalloc to get traceback where the object was allocated.
   See https://docs.pytest.org/en/stable/how-to/capture-warnings.html#resource-warnings for more info.
     warnings.warn(pytest.PytestUnhandledThreadExceptionWarning(msg))
 
 tests/test_output_formats.py::test_root_cli_integration_and_manifest_policy[compact-jpeg]
-  C:\Users\tn\c_projects\KaruFile\media-shrink-tool\.venv\Lib\site-packages\_pytest\threadexception.py:58: PytestUnhandledThreadExceptionWarning: Exception in thread Thread-29 (_readerthread)
-  
+  <repo-root>\media-shrink-tool\.venv\Lib\site-packages\_pytest\threadexception.py:58: PytestUnhandledThreadExceptionWarning: Exception in thread Thread-29 (_readerthread)
+
   Traceback (most recent call last):
-    File "C:\Users\tn\AppData\Roaming\uv\python\cpython-3.13-windows-x86_64-none\Lib\threading.py", line 1043, in _bootstrap_inner
+    File "<user-home>\AppData\Roaming\uv\python\cpython-3.13-windows-x86_64-none\Lib\threading.py", line 1043, in _bootstrap_inner
       self.run()
       ~~~~~~~~^^
-    File "C:\Users\tn\AppData\Roaming\uv\python\cpython-3.13-windows-x86_64-none\Lib\threading.py", line 994, in run
+    File "<user-home>\AppData\Roaming\uv\python\cpython-3.13-windows-x86_64-none\Lib\threading.py", line 994, in run
       self._target(*self._args, **self._kwargs)
       ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-    File "C:\Users\tn\AppData\Roaming\uv\python\cpython-3.13-windows-x86_64-none\Lib\subprocess.py", line 1615, in _readerthread
+    File "<user-home>\AppData\Roaming\uv\python\cpython-3.13-windows-x86_64-none\Lib\subprocess.py", line 1615, in _readerthread
       buffer.append(fh.read())
                     ~~~~~~~^^
   UnicodeDecodeError: 'cp932' codec can't decode byte 0x83 in position 1423: illegal multibyte sequence
-  
+
   Enable tracemalloc to get traceback where the object was allocated.
   See https://docs.pytest.org/en/stable/how-to/capture-warnings.html#resource-warnings for more info.
     warnings.warn(pytest.PytestUnhandledThreadExceptionWarning(msg))
 
 tests/test_output_formats.py::test_root_cli_integration_and_manifest_policy[compact-png]
-  C:\Users\tn\c_projects\KaruFile\media-shrink-tool\.venv\Lib\site-packages\_pytest\threadexception.py:58: PytestUnhandledThreadExceptionWarning: Exception in thread Thread-35 (_readerthread)
-  
+  <repo-root>\media-shrink-tool\.venv\Lib\site-packages\_pytest\threadexception.py:58: PytestUnhandledThreadExceptionWarning: Exception in thread Thread-35 (_readerthread)
+
   Traceback (most recent call last):
-    File "C:\Users\tn\AppData\Roaming\uv\python\cpython-3.13-windows-x86_64-none\Lib\threading.py", line 1043, in _bootstrap_inner
+    File "<user-home>\AppData\Roaming\uv\python\cpython-3.13-windows-x86_64-none\Lib\threading.py", line 1043, in _bootstrap_inner
       self.run()
       ~~~~~~~~^^
-    File "C:\Users\tn\AppData\Roaming\uv\python\cpython-3.13-windows-x86_64-none\Lib\threading.py", line 994, in run
+    File "<user-home>\AppData\Roaming\uv\python\cpython-3.13-windows-x86_64-none\Lib\threading.py", line 994, in run
       self._target(*self._args, **self._kwargs)
       ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-    File "C:\Users\tn\AppData\Roaming\uv\python\cpython-3.13-windows-x86_64-none\Lib\subprocess.py", line 1615, in _readerthread
+    File "<user-home>\AppData\Roaming\uv\python\cpython-3.13-windows-x86_64-none\Lib\subprocess.py", line 1615, in _readerthread
       buffer.append(fh.read())
                     ~~~~~~~^^
   UnicodeDecodeError: 'cp932' codec can't decode byte 0x83 in position 1427: illegal multibyte sequence
-  
+
   Enable tracemalloc to get traceback where the object was allocated.
   See https://docs.pytest.org/en/stable/how-to/capture-warnings.html#resource-warnings for more info.
     warnings.warn(pytest.PytestUnhandledThreadExceptionWarning(msg))
 
 tests/test_output_formats.py::test_root_cli_integration_and_manifest_policy[compact-webp]
-  C:\Users\tn\c_projects\KaruFile\media-shrink-tool\.venv\Lib\site-packages\_pytest\threadexception.py:58: PytestUnhandledThreadExceptionWarning: Exception in thread Thread-41 (_readerthread)
-  
+  <repo-root>\media-shrink-tool\.venv\Lib\site-packages\_pytest\threadexception.py:58: PytestUnhandledThreadExceptionWarning: Exception in thread Thread-41 (_readerthread)
+
   Traceback (most recent call last):
-    File "C:\Users\tn\AppData\Roaming\uv\python\cpython-3.13-windows-x86_64-none\Lib\threading.py", line 1043, in _bootstrap_inner
+    File "<user-home>\AppData\Roaming\uv\python\cpython-3.13-windows-x86_64-none\Lib\threading.py", line 1043, in _bootstrap_inner
       self.run()
       ~~~~~~~~^^
-    File "C:\Users\tn\AppData\Roaming\uv\python\cpython-3.13-windows-x86_64-none\Lib\threading.py", line 994, in run
+    File "<user-home>\AppData\Roaming\uv\python\cpython-3.13-windows-x86_64-none\Lib\threading.py", line 994, in run
       self._target(*self._args, **self._kwargs)
       ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-    File "C:\Users\tn\AppData\Roaming\uv\python\cpython-3.13-windows-x86_64-none\Lib\subprocess.py", line 1615, in _readerthread
+    File "<user-home>\AppData\Roaming\uv\python\cpython-3.13-windows-x86_64-none\Lib\subprocess.py", line 1615, in _readerthread
       buffer.append(fh.read())
                     ~~~~~~~^^
   UnicodeDecodeError: 'cp932' codec can't decode byte 0x83 in position 1428: illegal multibyte sequence
-  
+
   Enable tracemalloc to get traceback where the object was allocated.
   See https://docs.pytest.org/en/stable/how-to/capture-warnings.html#resource-warnings for more info.
     warnings.warn(pytest.PytestUnhandledThreadExceptionWarning(msg))
