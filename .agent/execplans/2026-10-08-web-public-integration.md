@@ -66,7 +66,7 @@ remote変更・unexpected差分・検証失敗は調査して解決する。保�
 - Recovery: 原ログ保持の上で局所修正。source変更なら影響suiteを再実行。
 
 ### CP-003: commit・push・merge
-- Status: In progress
+- Status: Complete
 - Objective: feature commitをpushし、mainに実際のmergeを作って同期。
 - Dependencies: CP-002。
 - Files: Git index/refsとorigin。
@@ -77,7 +77,7 @@ remote変更・unexpected差分・検証失敗は調査して解決する。保�
 - Recovery: fetchして差分調査。force pushはしない。
 
 ### CP-004: 運用反映・最終証拠
-- Status: Not started (反映先は確定)
+- Status: Complete
 - Objective: 指定運用先に新source/環境が使われることを確認。
 - Dependencies: CP-003と反映先指定。
 - Files: 指定checkout/.venv、構成図・文書のcommit根拠、integration evidence。
@@ -91,8 +91,8 @@ remote変更・unexpected差分・検証失敗は調査して解決する。保�
 
 - [x] CP-001
 - [x] CP-002
-- [ ] CP-003
-- [ ] CP-004
+- [x] CP-003
+- [x] CP-004
 
 ## Discoveries / Decision Log
 
@@ -105,9 +105,19 @@ remote変更・unexpected差分・検証失敗は調査して解決する。保�
   112 filesの実装/検証資料とZIP/展開資料が含まれる。原本・履歴を保全し、commitを上書きしない。
 - 2026-10-08：公開用ログの改行変換によるdouble CRを検出し、UTF-8/LFと末尾paddingを正規化。
   原ログは保管済み、117 Python sourceのSHAはfresh試験時から不変。
+- 2026-10-08：main checkout時のGit改行変換で構成図のraw SHAがreceiptとずれた。
+  JSON sourceはLFへ固定、生成HTMLは-textで生成byte列をそのまま保持する。
+  同じJSONからArchify deliverを実行し、先の目視済みartifact SHAと一致することを再確認する。
 
 ## Validation Evidence / Outcomes / Remaining Issues
 
 証拠はdocs/validation/2026-10-08-web-public-integration/に保存する。
-作業中。Git統合と指定運用先の状態を実行後に追記する。
+feature commitは67c6b292dac0bb3a798d495c7473c450e533bf98。
+branchをpushし、mainへno-ff mergeしたcde62c9e2d38bf9a067515260ddd0e0ad9163c66をpushした。
+mergeの2親は61871c6と67c6b29で、treeは検証済みfeature treeと完全一致。ls-remoteも一致。
+2026-10-08 15:27（東京、日本）に現在のWindows PCのprepared環境からsourceを再確認した。
+117 source/test filesはfresh suite時のSHAとmergeのGit blobに一致し、5 moduleのimport元は同checkout。
+GUI cmdのprepared環境参照、identity単独importの依存境界、web-public help exit0、元ZIPのSHA保持を確認。
+uv sync --lockedはexit0。稼働中GUIがなかったため停止・restartは不要だった。
+文書・証拠の最終追記は後続のscoped documentation commitで収録する。
 実写真/NAS/下流サイトは先行報告どおりBLOCKED/PENDING。

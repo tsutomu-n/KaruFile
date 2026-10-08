@@ -1,0 +1,172 @@
+{
+  "captured_utc": "2026-10-08T06:26:01.556465+00:00",
+  "implementation_commit": "61871c6c45edc22e280b57dc2c45ed76af3abdcc",
+  "feature_branch": "fix/web-public-integration-20261008",
+  "feature_commit": "67c6b292dac0bb3a798d495c7473c450e533bf98",
+  "merge_commit": "cde62c9e2d38bf9a067515260ddd0e0ad9163c66",
+  "merge_parents": [
+    "61871c6c45edc22e280b57dc2c45ed76af3abdcc",
+    "67c6b292dac0bb3a798d495c7473c450e533bf98"
+  ],
+  "merge_tree": "7bbb8d4eea83d2afc258f1e1151896b3fe64d5d6",
+  "merge_matches_verified_feature_tree": true,
+  "main_push_confirmed": true,
+  "remote_main_at_confirmation": "cde62c9e2d38bf9a067515260ddd0e0ad9163c66",
+  "worktree_clean_before_receipt": true,
+  "target": "Current Windows PC KaruFile checkout",
+  "records": [
+    {
+      "args": [
+        "rev-parse",
+        "HEAD"
+      ],
+      "exit_code": 0,
+      "stdout": "67c6b292dac0bb3a798d495c7473c450e533bf98\n",
+      "stderr": ""
+    },
+    {
+      "args": [
+        "status",
+        "--porcelain=v1"
+      ],
+      "exit_code": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "args": [
+        "push",
+        "-u",
+        "origin",
+        "fix/web-public-integration-20261008"
+      ],
+      "exit_code": 0,
+      "stdout": "branch 'fix/web-public-integration-20261008' set up to track 'origin/fix/web-public-integration-20261008'.\n",
+      "stderr": "remote: \nremote: Create a pull request for 'fix/web-public-integration-20261008' on GitHub by visiting:        \nremote:      https://github.com/tsutomu-n/KaruFile/pull/new/fix/web-public-integration-20261008        \nremote: \nTo https://github.com/tsutomu-n/KaruFile.git\n * [new branch]      fix/web-public-integration-20261008 -> fix/web-public-integration-20261008\n"
+    },
+    {
+      "args": [
+        "fetch",
+        "origin"
+      ],
+      "exit_code": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "args": [
+        "rev-parse",
+        "origin/main"
+      ],
+      "exit_code": 0,
+      "stdout": "61871c6c45edc22e280b57dc2c45ed76af3abdcc\n",
+      "stderr": ""
+    },
+    {
+      "args": [
+        "rev-parse",
+        "main"
+      ],
+      "exit_code": 0,
+      "stdout": "61871c6c45edc22e280b57dc2c45ed76af3abdcc\n",
+      "stderr": ""
+    },
+    {
+      "args": [
+        "switch",
+        "main"
+      ],
+      "exit_code": 0,
+      "stdout": "Your branch is up to date with 'origin/main'.\n",
+      "stderr": "Switched to branch 'main'\n"
+    },
+    {
+      "args": [
+        "merge",
+        "--no-ff",
+        "fix/web-public-integration-20261008",
+        "-m",
+        "Merge verified web-public integration and Windows runtime evidence"
+      ],
+      "exit_code": 0,
+      "stdout": "Merge made by the 'ort' strategy.\n .../execplans/2026-10-08-web-public-integration.md |  23 +-\n docs/README.md                                     |   4 +-\n .../karufile-runtime.architecture.json             |   2 +-\n .../karufile-runtime.compact.delivery.json         |   8 +-\n docs/architecture/karufile-runtime.compact.html    |   2 +-\n .../karufile-runtime.compact.review.md             |  17 +\n ...-runtime.compact.visual-check.1440x900.dark.png | Bin 98194 -> 98121 bytes\n ...runtime.compact.visual-check.1440x900.light.png | Bin 85638 -> 85398 bytes\n ...runtime.compact.visual-check.2048x1320.dark.png | Bin 120069 -> 119996 bytes\n ...untime.compact.visual-check.2048x1320.light.png | Bin 118745 -> 118660 bytes\n .../karufile-runtime.compact.visual-check.json     |   4 +-\n .../karufile-runtime.compact.worktree.json         |  39 +-\n .../2026-10-08-web-public-integration/README.md    |  56 ++\n .../architecture-delivery.json                     |  24 +\n .../architecture-validation.json                   |  89 ++++\n .../architecture-visual-check.json                 | 143 +++++\n .../diff-check.log                                 |  71 +++\n .../2026-10-08-web-public-integration/excel.json   |   2 +-\n .../2026-10-08-web-public-integration/image.json   |   2 +-\n .../orchestrator.json                              |   2 +-\n .../2026-10-08-web-public-integration/pdf.json     |   2 +-\n .../2026-10-08-web-public-integration/pdf.log      |   2 +-\n .../pre-integration-architecture.worktree.json     | 411 ++++++++++++++\n .../production-preflight.json                      |  10 +\n .../production-runtime.json                        |  39 ++\n .../production-sync.log                            |   2 +\n .../production-web-public-help.txt                 |  12 +\n .../public-normalization.json                      | 116 ++++\n .../scope-review.json                              |  74 +++\n .../tested-source-sha256.json                      | 589 +++++++++++++++++++++\n .../2026-10-08-web-public-integration/video.json   |   2 +-\n .../2026-10-08-web-public-pilot/FINAL_REPORT.md    |   3 +\n .../2026-10-08-web-public-pilot/README.md          |  16 +-\n .../architecture-visual-check.log                  |   2 +-\n .../baseline-excel.json                            |   4 +-\n .../baseline-image.json                            |   4 +-\n .../baseline-orchestrator.json                     |   4 +-\n .../2026-10-08-web-public-pilot/baseline-pdf.json  |   4 +-\n .../2026-10-08-web-public-pilot/baseline-pdf.log   |   2 +-\n .../baseline-source-sha256.json                    |   2 +-\n .../baseline-synthetic.log                         |   4 +-\n .../baseline-video.json                            |   4 +-\n .../baseline-web-public-help.txt                   |   8 +-\n .../before-extraction-image.log                    |  72 +--\n .../before-extraction-synthetic.log                |  54 +-\n .../2026-10-08-web-public-pilot/final-excel.json   |   4 +-\n .../2026-10-08-web-public-pilot/final-image.json   |   4 +-\n .../final-orchestrator.json                        |   4 +-\n .../2026-10-08-web-public-pilot/final-pdf.json     |   4 +-\n .../2026-10-08-web-public-pilot/final-pdf.log      |   2 +-\n .../final-synthetic.log                            |  54 +-\n .../2026-10-08-web-public-pilot/final-video.json   |   4 +-\n .../2026-10-08-web-public-pilot/identity-red.log   |   4 +-\n .../2026-10-08-web-public-pilot/reuse-red.log      |  12 +-\n 54 files changed, 1858 insertions(+), 164 deletions(-)\n create mode 100644 docs/validation/2026-10-08-web-public-integration/README.md\n create mode 100644 docs/validation/2026-10-08-web-public-integration/architecture-delivery.json\n create mode 100644 docs/validation/2026-10-08-web-public-integration/architecture-validation.json\n create mode 100644 docs/validation/2026-10-08-web-public-integration/architecture-visual-check.json\n create mode 100644 docs/validation/2026-10-08-web-public-integration/diff-check.log\n create mode 100644 docs/validation/2026-10-08-web-public-integration/pre-integration-architecture.worktree.json\n create mode 100644 docs/validation/2026-10-08-web-public-integration/production-preflight.json\n create mode 100644 docs/validation/2026-10-08-web-public-integration/production-runtime.json\n create mode 100644 docs/validation/2026-10-08-web-public-integration/production-sync.log\n create mode 100644 docs/validation/2026-10-08-web-public-integration/production-web-public-help.txt\n create mode 100644 docs/validation/2026-10-08-web-public-integration/public-normalization.json\n create mode 100644 docs/validation/2026-10-08-web-public-integration/scope-review.json\n create mode 100644 docs/validation/2026-10-08-web-public-integration/tested-source-sha256.json\n",
+      "stderr": ""
+    },
+    {
+      "args": [
+        "rev-parse",
+        "HEAD"
+      ],
+      "exit_code": 0,
+      "stdout": "cde62c9e2d38bf9a067515260ddd0e0ad9163c66\n",
+      "stderr": ""
+    },
+    {
+      "args": [
+        "show",
+        "-s",
+        "--format=%P",
+        "HEAD"
+      ],
+      "exit_code": 0,
+      "stdout": "61871c6c45edc22e280b57dc2c45ed76af3abdcc 67c6b292dac0bb3a798d495c7473c450e533bf98\n",
+      "stderr": ""
+    },
+    {
+      "args": [
+        "rev-parse",
+        "HEAD^{tree}"
+      ],
+      "exit_code": 0,
+      "stdout": "7bbb8d4eea83d2afc258f1e1151896b3fe64d5d6\n",
+      "stderr": ""
+    },
+    {
+      "args": [
+        "rev-parse",
+        "67c6b292dac0bb3a798d495c7473c450e533bf98^{tree}"
+      ],
+      "exit_code": 0,
+      "stdout": "7bbb8d4eea83d2afc258f1e1151896b3fe64d5d6\n",
+      "stderr": ""
+    },
+    {
+      "args": [
+        "push",
+        "origin",
+        "main"
+      ],
+      "exit_code": 0,
+      "stdout": "",
+      "stderr": "To https://github.com/tsutomu-n/KaruFile.git\n   61871c6..cde62c9  main -> main\n"
+    },
+    {
+      "args": [
+        "ls-remote",
+        "origin",
+        "refs/heads/main"
+      ],
+      "exit_code": 0,
+      "stdout": "cde62c9e2d38bf9a067515260ddd0e0ad9163c66\trefs/heads/main\n",
+      "stderr": ""
+    },
+    {
+      "args": [
+        "rev-parse",
+        "origin/main"
+      ],
+      "exit_code": 0,
+      "stdout": "cde62c9e2d38bf9a067515260ddd0e0ad9163c66\n",
+      "stderr": ""
+    },
+    {
+      "args": [
+        "status",
+        "--porcelain=v1"
+      ],
+      "exit_code": 0,
+      "stdout": "",
+      "stderr": ""
+    }
+  ]
+}

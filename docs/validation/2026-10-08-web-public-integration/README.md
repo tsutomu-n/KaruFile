@@ -39,18 +39,42 @@ skip4は手動準備のjpegtran 3.2.0未設定、PDFのwarning1件は既存合�
 
 ## Git結果と運用反映
 
-commit・feature push・main merge/pushは作業中。終了時に実際のSHA/tree/parentsを追記する。
+commit・feature push・main merge/pushを完了した。[実行記録](integration-result.json)
+
+| 項目 | 結果 |
+|---|---|
+| 既存実装commit | `61871c6c45edc22e280b57dc2c45ed76af3abdcc`（別更新によるcommit/pushを保持） |
+| 今回のfeature commit | `67c6b292dac0bb3a798d495c7473c450e533bf98` |
+| pushしたbranch | `fix/web-public-integration-20261008` |
+| mainの実merge | `cde62c9e2d38bf9a067515260ddd0e0ad9163c66` |
+| merge parents | 上記61871c6と67c6b29の2親 |
+| merge tree | `7bbb8d4eea83d2afc258f1e1151896b3fe64d5d6`、検証済みfeature treeと完全一致 |
+| main push後の確認 | HEAD・origin/main・live ls-remoteが上記merge SHAで一致 |
+
+この結果と運用確認の文書追記は、後続のscoped documentation commitで収録する。
+PRは作成せずlocal Gitで実mergeした。force push・履歴改変・branch削除は行っていない。
 反映先は現在のWindows PC checkoutと明示指定された。
 [運用preflight](production-preflight.json)では対象GUIプロセスと8080 listenerは0件で、稼働中GUIの停止は不要。
-main統合後、lockを変えずGUI/dev環境を同期し、prepared Pythonのimport元・public API・help・起動経路を確認する。
+lockを変えずGUI/dev環境を同期し、prepared Pythonのimport元・public API・help・起動経路を確認した。
 
 既存実装commit61871c6の運用確認として、`uv sync --locked --project media-shrink-tool --extra gui --extra dev`はexit0。
 prepared Pythonを`-I -B`で起動し、外部PYTHONPATHなしでidentity/image/web-public/batch/guiがこのcheckoutのsourceを読むこと、
 旧alias/公開import、NiceGUI3.17.1、cmdのprepared環境参照、web-public help exit0を確認した。
 [production-runtime.json](production-runtime.json)に記録。実写真/NASの変換やGUI画面の手動操作は行っていない。
-統合後も実装のGit blobと運用sourceを再照合する。
+統合後15:27（東京、日本）にも[production-final.json](production-final.json)で再確認した。
+fresh suite対象117 source/test filesがworktree SHAとmergeのGit blobに一致し、
+identity/image/web-public/batch/guiのimport元は現在のcheckoutだった。
+`-I -X utf8 -B`で実行した[web-public help](production-final-help.txt)はexit0。
+元ZIPのSHAも一致。現在のWindows PCで新コードを使える状態になった。
+実写真/NASの変換、GUIの手動操作、別サイトのbuild/公開は未実施。
 
 構成図は実装commit61871c6へ根拠を更新して再生成。validate/deliver9/9、errors/warnings0、
 4viewport containmentと最小/最大light/dark4画像の目視が成功した。
+main checkout時のGit改行変換でraw SHAが変わったため、構成図JSONは`text eol=lf`、
+compact HTMLは`-text`を指定した。同じJSONからArchify deliverを実行し、目視済み生成byte列を保持する。
+生成HTMLを手編集せず、今後の通常checkoutでも同じbyte列と検証根拠を保つ。
+HTMLの通常CRLFは改行として扱い、末尾空白・末尾空行・space-before-tabの検査は維持する。
 
 記録日：2026-10-08（東京、日本）。
+
+同梱テンプレートに沿った最新の[完了・引継ぎ報告](FINAL_REPORT.md)を参照。

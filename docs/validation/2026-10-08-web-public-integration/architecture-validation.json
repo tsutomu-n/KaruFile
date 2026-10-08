@@ -3,7 +3,7 @@
   "ok": true,
   "command": "validate",
   "type": "architecture",
-  "input": "<repo-root>\\docs\\architecture\\karufile-runtime.architecture.json",
+  "input": "C:\\Users\\tn\\c_projects\\KaruFile\\docs\\architecture\\karufile-runtime.architecture.json",
   "checks": [
     {
       "name": "single_svg",

@@ -1,15 +1,15 @@
 {
   "schema_version": 1,
-  "captured_utc": "2026-10-08T06:16:24.362756+00:00",
-  "basis": "Integration worktree: runtime sources committed at 61871c6; local documentation/receipts captured before integration commit.",
-  "base_revision": "61871c6c45edc22e280b57dc2c45ed76af3abdcc",
-  "source_links": "Committed runtime revision plus local worktree SHA evidence; source hashes are raw bytes at capture time.",
+  "captured_utc": "2026-10-08T06:35:44.234731+00:00",
+  "basis": "Final documentation receipt worktree after the verified two-parent merge; runtime sources unchanged from 61871c6.",
+  "base_revision": "cde62c9e2d38bf9a067515260ddd0e0ad9163c66",
+  "source_links": "Committed runtime revision and post-merge local documentation SHA evidence; hashes are raw bytes at capture time.",
   "specification_sha256": "248c91e653d17945bd48b0ab4dacc2c0efd3cd48474cfd0fd442389a11409a74",
   "artifact_sha256": "7df545de324a9dbd86a151e6aebf2506329424b1c758899c1c30ea1f322bf3ac",
   "files": [
     {
       "path": ".agent/execplans/2026-10-08-web-public-integration.md",
-      "sha256": "199606213710f31ae9322baec23dbc39ec3af2a76a14bb0ab72a66399c8125b6"
+      "sha256": "6209b3e5abf09eae1b51cf95f2be45e463d0bf1edb0415fd69465a5d590e62b7"
     },
     {
       "path": ".agent/execplans/2026-10-08-web-public-pilot.md",
@@ -17,11 +17,11 @@
     },
     {
       "path": ".agent/execplans/README.md",
-      "sha256": "1f5314a6ce11bb82e1fd2f6a23e70e8ed452f22eb0a32a2ce070f07911df132f"
+      "sha256": "2c5bb371e40863020af9ee6ea13d07480eaf757f7a00b69b53021e949ccb51a9"
     },
     {
       "path": ".gitattributes",
-      "sha256": "d1c90c008c0ad1ed171b28a2799581f0663247e1b91309e8066f49ee049ab694"
+      "sha256": "5e83df01fe6d01a2ef1bce8666d8d596f17e155d48f8d2e92ac2cae535851a70"
     },
     {
       "path": "AGENTS.md",
@@ -37,7 +37,7 @@
     },
     {
       "path": "docs/README.md",
-      "sha256": "46e279413758d4720d90262805208e47d5e6b07b134532a392c59dadfb78a443"
+      "sha256": "39ec57eed7dac6c287cfc36f78252d06c2d144e3268f4a330efaed09e83930a7"
     },
     {
       "path": "docs/REFERENCE.md",
@@ -48,16 +48,32 @@
       "sha256": "945bb17d3d203b9fd1d61333495f9e4f5c9ab9ac330e44f0a02f3e2d8a6c27eb"
     },
     {
+      "path": "docs/validation/2026-10-08-web-public-integration/FINAL_REPORT.md",
+      "sha256": "ec371559f18f6a67c9a845337894f2d55e249b0c08ca39a1116a8145bb703ccf"
+    },
+    {
       "path": "docs/validation/2026-10-08-web-public-integration/README.md",
-      "sha256": "d35e7813727e80c2058ced6e5712e474dd415c2d8491f14799c78b19d7f3b04a"
+      "sha256": "d9fe26a0fb102c3413e07617c253f68e7eea382d890078e30a3c6525be9b77ff"
+    },
+    {
+      "path": "docs/validation/2026-10-08-web-public-integration/integration-result.json",
+      "sha256": "aa544c7b0ed8d5db7c1059b3e7afc69229d6f62f64e04492d9af09e394c3a877"
+    },
+    {
+      "path": "docs/validation/2026-10-08-web-public-integration/production-final-help.txt",
+      "sha256": "38fb3dde51815f5af4f15c3c33a759af9ee51681749455675ba5738029c8cc6f"
+    },
+    {
+      "path": "docs/validation/2026-10-08-web-public-integration/production-final.json",
+      "sha256": "9767202a8ae315b1bebf9209df583b60b4903ae0afe1b0f29bcd1db5d3f995ab"
     },
     {
       "path": "docs/validation/2026-10-08-web-public-integration/production-runtime.json",
-      "sha256": "bba5f6a4c1edff01ff8dd8fd144ffd0f02eff7eb4916c2ee37ef907e9adfa5a2"
+      "sha256": "772ee2564eb64174d721d1acd84fa5e6a61272eb32366ae78a353476de094954"
     },
     {
       "path": "docs/validation/2026-10-08-web-public-integration/tested-source-sha256.json",
-      "sha256": "d9945333931d8f8341461402ee3ccd9c60c6203147a077fbbd14c7f8afc1131e"
+      "sha256": "1ac9289b0f24cda0c24a0cf889e542ea20b56a6d80a1f81fb76a11ec9f5514f6"
     },
     {
       "path": "docs/validation/2026-10-08-web-public-pilot/DOWNSTREAM_HANDOFF.md",
@@ -65,7 +81,7 @@
     },
     {
       "path": "docs/validation/2026-10-08-web-public-pilot/FINAL_REPORT.md",
-      "sha256": "ad1f1e2847f96c1e2d9152909c371bd990f65cb09d579a3c083688fdcaf21dcc"
+      "sha256": "adf9c44abc604d148d33422a95d0d2706ced5195002b58f717ed8b5ca152d78e"
     },
     {
       "path": "docs/validation/2026-10-08-web-public-pilot/PILOT_CASES.csv",
@@ -73,7 +89,7 @@
     },
     {
       "path": "docs/validation/2026-10-08-web-public-pilot/README.md",
-      "sha256": "9e067bc0747b87400b7c4d79018e6fe9c208b74b14acc86cff680cf1262e84dd"
+      "sha256": "bce3264fef819d0d3c34aa083c2cc8b1a5794d85e5990bcf1d4ecf2dbe9150f4"
     },
     {
       "path": "docs/validation/2026-10-08-web-public-pilot/compare_synthetic.py",

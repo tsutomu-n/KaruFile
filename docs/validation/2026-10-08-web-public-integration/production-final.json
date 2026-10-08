@@ -1,0 +1,43 @@
+{
+  "captured_jst": "2026-10-08T15:27:14.481395+09:00",
+  "target": "Current Windows PC checkout",
+  "checkout": "<repo-root>",
+  "merge_commit": "cde62c9e2d38bf9a067515260ddd0e0ad9163c66",
+  "tested_source_files": 117,
+  "tested_sources_match_worktree_and_merge": true,
+  "isolated_import": true,
+  "identity_dependency_independent": true,
+  "prepared_environment": true,
+  "python_executable": "<repo-root>/media-shrink-tool/.venv/Scripts/python.exe",
+  "python": "3.13.5",
+  "nicegui": "3.17.1",
+  "gui_cmd_prepared_environment": true,
+  "web_public_help_exit": 0,
+  "zip_preserved_sha256": "008d8d9f2dd3229a3bff1b755dd0585e04c7070a2becf7eeb9d6271fe1bcc341",
+  "modules": {
+    "media_shrink.file_identity": {
+      "path": "media-shrink-tool/src/media_shrink/file_identity.py",
+      "sha256": "cf54ea575f82b37c51e1a982740fd85633c195eae33eef066f7a076343b89374"
+    },
+    "media_shrink.image": {
+      "path": "media-shrink-tool/src/media_shrink/image.py",
+      "sha256": "f3507cb443c37124a9b7e8d93d3a05706872b2622b155a2990e0f90524fbcd14"
+    },
+    "media_shrink.web_public": {
+      "path": "media-shrink-tool/src/media_shrink/web_public.py",
+      "sha256": "65745d85911bfcf365b016fc7aad309a0448cd15b48ae7d3d07ef15c7f3099fb"
+    },
+    "media_shrink.web_public_batch": {
+      "path": "media-shrink-tool/src/media_shrink/web_public_batch.py",
+      "sha256": "696ed6997375013f266214c2102c85865019abb49f85dafec47aaf1bc2e1ad90"
+    },
+    "media_shrink.gui": {
+      "path": "media-shrink-tool/src/media_shrink/gui.py",
+      "sha256": "501bd9f513706b38763260231c2ebf86397f330b181e8277e30dc040a581c995"
+    }
+  },
+  "running_gui_restart_required": false,
+  "user_data_processed": false,
+  "real_photo_nas": "NOT_RUN",
+  "downstream_website": "PENDING"
+}
