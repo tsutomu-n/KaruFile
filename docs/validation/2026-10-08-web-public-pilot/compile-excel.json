@@ -1,0 +1,5 @@
+{
+  "log": "compile-excel.log",
+  "command": "uv run --project excel-shrink python -m compileall -q excel-shrink/src excel-shrink/tests",
+  "exit_code": 0
+}

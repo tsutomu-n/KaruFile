@@ -1,0 +1,9 @@
+{
+  "python_io_encoding": "utf-8",
+  "ended": "2026-10-08T14:59:22.9384714+09:00",
+  "cwd": "C:\\Users\\tn\\c_projects\\KaruFile",
+  "exit_code": 0,
+  "python_utf8": "1",
+  "started": "2026-10-08T14:59:00.2434522+09:00",
+  "command": "uv run --project media-shrink-tool --extra dev --extra gui python -m pytest -q -rs media-shrink-tool/tests"
+}

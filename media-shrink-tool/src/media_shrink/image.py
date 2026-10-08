@@ -15,7 +15,14 @@ from typing import Any, Mapping, cast
 from PIL import Image, ImageOps
 from PIL.PngImagePlugin import PngInfo
 
+from . import file_identity
 from .config import ImageConfig, ImagePreset, image_preset_for_recipe_hash
+from .file_identity import (
+    SourceChangedError,
+    SourceFingerprint,
+    sha256_file as _sha256_file,
+    stat_signature as _stat_signature,
+)
 from .utils import (
     PathValidationError,
     is_link_like,
@@ -84,27 +91,11 @@ class OutputCollisionError(RuntimeError):
     """固定8桁hashでも出力を一意にできない場合のエラー。"""
 
 
-class SourceChangedError(OSError):
-    """処理中に入力画像の内容またはファイル同一性が変化した。"""
-
-
 @dataclass(frozen=True, slots=True)
 class ImagePlan:
     source: Path
     relative_source: Path
     output: Path
-
-
-@dataclass(frozen=True, slots=True)
-class SourceFingerprint:
-    """入力画像の1時点における安定したstatと内容SHA-256。"""
-
-    stat: os.stat_result
-    sha256: str
-
-    @property
-    def stat_signature(self) -> tuple[int, int, int, int, int]:
-        return _stat_signature(self.stat)
 
 
 @dataclass(frozen=True, slots=True)
@@ -378,35 +369,10 @@ def _without_karufile_marker_lines(comment: bytes) -> bytes:
     )
 
 
-def _sha256_file(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as stream:
-        while chunk := stream.read(1024 * 1024):
-            digest.update(chunk)
-    return digest.hexdigest()
-
-
-def _stat_signature(file_stat: os.stat_result) -> tuple[int, int, int, int, int]:
-    """置換と同一サイズ・mtime偽装も検知できるsource identity。"""
-
-    return (
-        file_stat.st_dev,
-        file_stat.st_ino,
-        file_stat.st_size,
-        file_stat.st_mtime_ns,
-        file_stat.st_ctime_ns,
-    )
-
-
 def _capture_source_fingerprint(source: Path) -> SourceFingerprint:
-    """hash中にstatが変わらなかった入力のfingerprintだけを返す。"""
+    """旧private名とimage._sha256_fileの呼出し互換を維持する。"""
 
-    before = source.stat()
-    source_sha256 = _sha256_file(source)
-    after = source.stat()
-    if _stat_signature(before) != _stat_signature(after):
-        raise SourceChangedError(f"Source changed while hashing: {source}")
-    return SourceFingerprint(stat=after, sha256=source_sha256)
+    return file_identity._capture_with_hash(source, _sha256_file)
 
 
 def _assert_source_unchanged(
@@ -414,22 +380,9 @@ def _assert_source_unchanged(
     expected: SourceFingerprint,
     input_root: Path,
 ) -> None:
-    """公開または再利用確定の直前に入力の同一性と内容を再検証する。"""
+    """旧private名とimage._capture_source_fingerprintの呼出し互換を維持する。"""
 
-    try:
-        validate_source_path(input_root, source)
-        observed = _capture_source_fingerprint(source)
-        validate_source_path(input_root, source)
-    except SourceChangedError:
-        raise
-    except (OSError, RuntimeError, ValueError, PathValidationError) as exc:
-        raise SourceChangedError(f"Source changed during processing: {source}") from exc
-
-    if (
-        observed.sha256 != expected.sha256
-        or observed.stat_signature != expected.stat_signature
-    ):
-        raise SourceChangedError(f"Source changed during processing: {source}")
+    file_identity._assert_with_capture(source, expected, input_root, _capture_source_fingerprint)
 
 
 def _marker_for(

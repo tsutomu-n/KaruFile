@@ -1,0 +1,9 @@
+{
+  "command": "uv run --project video-shrink python -m pytest -q -rs video-shrink/tests",
+  "python_utf8": "1",
+  "cwd": "C:\\Users\\tn\\c_projects\\KaruFile",
+  "ended": "2026-10-08T14:59:04.7094165+09:00",
+  "started": "2026-10-08T14:59:00.3520059+09:00",
+  "exit_code": 0,
+  "python_io_encoding": "utf-8"
+}

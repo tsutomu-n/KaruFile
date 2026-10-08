@@ -6,6 +6,8 @@
 
 | 計画 | 状態 | 内容 |
 |---|---|---|
+| [2026-10-08-web-public-integration.md](2026-10-08-web-public-integration.md) | Git統合・運用反映の作業中 | ユーザー承認後のscoped commit/push/実merge。運用先の指定とGit反映を分けて検証 |
+| [2026-10-08-web-public-pilot.md](2026-10-08-web-public-pilot.md) | 実行可能なローカル作業完了・実環境未提供 | atime再利用の局所修正、source identity共通化、1454 passed/4 skipped、合成比較一致。実写真/NASはBLOCKED、下流はPENDING |
 | [2026-10-07-web-public.md](2026-10-07-web-public.md) | 再レビュー修正・検証完了 | 画像専用CLI/GUI、BMP・Exif色検査、プレビュー排他、recipe v2。1435 passed/4 skipped。実写真・NAS・後段サイトは未検証 |
 | [2026-10-05-document-audit-repairs.md](2026-10-05-document-audit-repairs.md) | 修正・検証完了 | 情報資産監査の5群を局所修正。ガイド・構成図の再生成、参照233件・アンカー27件・SHA照合 |
 | [2026-09-30-image-formats-exif.md](2026-09-30-image-formats-exif.md) | 完了・f71cf51に収録 | 単独画像のJPEG/PNG/WebP出力とEXIF除去、root統合。1347 passed/4 skipped |

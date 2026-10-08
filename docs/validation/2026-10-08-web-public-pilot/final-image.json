@@ -1,0 +1,11 @@
+{
+  "log": "final-image.log",
+  "python_utf8": "1",
+  "workdir": "C:\\Users\\tn\\c_projects\\KaruFile",
+  "exit_code": 0,
+  "command": "uv run --project media-shrink-tool --extra dev --extra gui python -m pytest -q -rs media-shrink-tool/tests",
+  "phase": "final",
+  "started": "2026-10-08T14:13:50.8290884+09:00",
+  "ended": "2026-10-08T14:14:11.8011299+09:00",
+  "python_io_encoding": "utf-8"
+}

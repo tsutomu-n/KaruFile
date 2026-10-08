@@ -1,0 +1,16 @@
+web-public failure stage=decode_color exception=PublicImageError code=TRANSPARENT_PHOTO source='alpha.png'
+web-public failure stage=decode_color exception=UnidentifiedImageError code=CONVERSION_FAILED source='broken.jpg'
+web-public failure stage=decode_color exception=PublicImageError code=UNSUPPORTED_COLOR source='cmyk.jpg'
+web-public failure stage=decode_color exception=PublicImageError code=TRANSPARENT_PHOTO source='alpha.png'
+web-public failure stage=decode_color exception=UnidentifiedImageError code=CONVERSION_FAILED source='broken.jpg'
+web-public failure stage=decode_color exception=PublicImageError code=UNSUPPORTED_COLOR source='cmyk.jpg'
+web-public failure stage=decode_color exception=PublicImageError code=TRANSPARENT_PHOTO source='alpha.png'
+web-public failure stage=decode_color exception=UnidentifiedImageError code=CONVERSION_FAILED source='broken.jpg'
+web-public failure stage=decode_color exception=PublicImageError code=UNSUPPORTED_COLOR source='cmyk.jpg'
+Traceback (most recent call last):
+  File "C:\Users\tn\c_projects\KaruFile\docs\validation\2026-10-08-web-public-pilot\compare_synthetic.py", line 160, in <module>
+    result = snapshot(args.workspace, args.phase)
+  File "C:\Users\tn\c_projects\KaruFile\docs\validation\2026-10-08-web-public-pilot\compare_synthetic.py", line 114, in snapshot
+    assert b["action"] == "SKIPPED_COMPLETE"
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError

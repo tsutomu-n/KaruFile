@@ -86,18 +86,29 @@ NiceGUIは任意の`gui` extraとして導入します。通常の画像CLIにGU
 | [gui.py](../media-shrink-tool/src/media_shrink/gui.py) | 日本語画面、実行状態、進捗・プレビュー・排他制御 |
 | [web_public_batch.py](../media-shrink-tool/src/media_shrink/web_public_batch.py) | 選択、新run、再利用、manifestの検証・確定 |
 | [web_public.py](../media-shrink-tool/src/media_shrink/web_public.py) | 固定recipe、色・向き・寸法の処理、候補検証、1画像の確定 |
+| [file_identity.py](../media-shrink-tool/src/media_shrink/file_identity.py) | 通常resizeとweb-publicで共有するSHA・stat・処理中の原本変更検知 |
 
-共通のパス検査・原本の変更検知・一時保存には既存helperを使います。
+パス検査と一時保存には既存helperを使い、原本の変更検知だけを`file_identity.py`へ移しました。
+このmoduleは画像変換やGUIに依存せず、旧`image.py`の名前・例外型と既存テストの呼出し互換を保ちます。
+将来の別用途でも同じ原本検証を使える構成ですが、未使用のプラグインや汎用recipe/publish層は追加していません。
 通常の`resize`を一度通してから公開用へ再圧縮する経路はありません。
 全体の関係は[実行時アーキテクチャ](architecture/karufile-runtime.compact.html)でも確認できます。
 
 ## 検証済みの範囲と後段の作業
 
-2026年10月7日の修正後検証では、画像196件を含む全体1435件が成功し、既存4件はskipでした。
-Windows上のGUI操作、部分失敗、処理中の画面再読込み、プレビュー開閉、再実行時の表示を確認しています。
-色情報の拒否・変換、metadata、原本保全、再利用、保存失敗、GUIの排他制御は合成画像等のテストで検証しています。
-[検証記録と画面証拠](validation/2026-10-07-web-public/README.md)に、初回実装と修正後の結果を分けて記載しています。
+2026年10月8日の新規全回帰では、画像215件を含む全体1454件が成功し、既存4件はskipでした。
+再利用時の読取りだけでatimeが変化し、前回画像を再エンコードしてしまう問題を合成画像で再現し、
+SHAとstat署名の比較へ局所修正しました。recipe v2とmanifest schema1は維持しています。
+source fingerprintの共通化前後で、同じ合成画像10枚の画素・寸法・色・metadata・manifestの意味が一致しました。
+原本SHA、前回run、再利用バイト、dry-run、CLI終了コード、通常resizeも照合しました。
+[今回の検証記録](validation/2026-10-08-web-public-pilot/README.md)に、実行コマンドと各検証の限界を記載しています。
+
+Windows上のGUI操作、部分失敗、画面再読込み、プレビュー開閉の目視は
+[2026-10-07の画面証拠](validation/2026-10-07-web-public/README.md)です。
+今回GUIの自動テストは再実行しましたが、ブラウザー操作・OSフォルダー選択・Explorerの新規実機確認は行っていません。
 
 実写真の画質・端末由来HEIC・実NASのUNC/割当ドライブ/切断・後段AVIF/WebPの最終表示は未検証です。
 KaruFileが生成するのはJPEG/PNGマスターで、サイト側のAVIF/WebP生成・配信・公開操作は今回の機能に含みません。
+実写真・NASが未提供のため`BLOCKED_REAL_PHOTOS` / `BLOCKED_REAL_NAS`、サイト側は`PENDING_DOWNSTREAM`です。
+同じマスターからAVIF優先・WebP最終fallbackを検証する[下流引継ぎ資料](validation/2026-10-08-web-public-pilot/DOWNSTREAM_HANDOFF.md)を用意しました。
 素材の編集と入稿前確認は[マニュアル](../MANUAL.md#web掲載用マスターを作る)に従って行います。

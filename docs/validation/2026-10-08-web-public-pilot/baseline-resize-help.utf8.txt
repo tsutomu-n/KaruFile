@@ -1,0 +1,18 @@
+usage: media-shrink resize [-h] -i INPUT [-o OUTPUT] [-n] [-j WORKERS]
+                           [--preset {standard,compact}] [-v]
+                           [--format {jpeg,png,webp}] [--strip-exif]
+
+options:
+  -h, --help            show this help message and exit
+  -i, --input INPUT     Input directory
+  -o, --output OUTPUT   Separate output directory (default: <input>_resized)
+  -n, --dry-run         Decode and plan without writing image outputs; reports
+                        are refreshed
+  -j, --workers WORKERS
+                        Number of parallel workers (default: 4)
+  --preset {standard,compact}
+                        Compression preset (default: standard)
+  -v, --verbose         Verbose logging
+  --format {jpeg,png,webp}
+                        Output format (default: jpeg)
+  --strip-exif          Remove EXIF after applying Orientation

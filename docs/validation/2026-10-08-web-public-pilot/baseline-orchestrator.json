@@ -1,0 +1,9 @@
+{
+  "ended": "2026-10-08T13:58:50.2454141+09:00",
+  "exit_code": 0,
+  "started": "2026-10-08T13:58:36.3201886+09:00",
+  "command": "uv run --with pytest python -m pytest -q",
+  "workdir": "C:\\Users\\tn\\c_projects\\KaruFile\\orchestrator",
+  "phase": "baseline",
+  "log": "baseline-orchestrator.log"
+}

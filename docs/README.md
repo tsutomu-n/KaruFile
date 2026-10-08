@@ -41,17 +41,18 @@ ExecPlanは当時の判断と検証を残す履歴であり、現行仕様の正
 
 Archify生成HTMLは直接編集しません。Architecture JSONを更新し、Archifyのvalidate、deliver、
 visual-checkを実行してから、light/darkの画像を確認します。
-現行の図は2026-10-07に再生成し、通常経路と画像専用web-public/GUIの独立経路を示しています。
-基準HEADは`bc88f56a6aadeaa11b0cd6687c45e113ce539547`で、未コミットの公開用処理を含みます。
+現行の図は2026-10-08に再生成し、通常経路と画像専用web-public/GUIの独立経路、画像のSHA/stat共有を示しています。
+基準HEADは`79df924a924808b4aa7601d7aa797d15ecfd4dcc`で、未コミットの共通化・局所修正を含みます。
 未公開コードへの架空のGitHubソースリンクを作らず、根拠はローカル実ファイルのSHAで記録します。
 照合時のローカルパス・SHA-256は[作業ツリーの根拠](architecture/karufile-runtime.compact.worktree.json)に記録しています。
 この記録は取得時点のsnapshotで、後のソース編集に合わせて再取得が必要です。
 現在のJSON・HTMLのSHAはdelivery receiptとsnapshotで、表示確認は同じHTMLを指す
-visual-check receiptで照合します。reviewの9月分は当時の生成・判断の履歴です。
+visual-check receiptで照合します。reviewの過去の日付は当時の生成・判断の履歴です。
 [実行時アーキテクチャの確認記録](architecture/karufile-runtime.compact.review.md)には、生成・検証と明暗画像の目視結果を記載しています。
 
-画像専用のWeb掲載用CLI/GUIの検証範囲・画面証拠は
-[2026-10-07の検証記録](validation/2026-10-07-web-public/README.md)を参照してください。
+画像専用のWeb掲載用CLI/GUIとsource identity共通化の最新自動検証・未提供Pilot・下流引継ぎは
+[2026-10-08の検証記録](validation/2026-10-08-web-public-pilot/README.md)を参照してください。
+過去のWindows画面確認は[2026-10-07の検証記録](validation/2026-10-07-web-public/README.md)に保持しています。
 機能の全体像は[Web掲載用マスターの解説](WEB_PUBLIC.md)、
 初回準備と画面操作は[利用者マニュアル](../MANUAL.md#web掲載用マスターを作る)へ案内します。
 

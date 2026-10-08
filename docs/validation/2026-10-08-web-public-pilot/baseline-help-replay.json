@@ -1,0 +1,7 @@
+{
+  "resize_exit": 0,
+  "python_utf8": "1",
+  "web_public_exit": 0,
+  "command": "prepared media .venv python -B -m media_shrink {web-public,resize} --help with baseline PYTHONPATH",
+  "basis": "Git 79df924a source copied into an exclusive local temporary tree; original checkout unchanged"
+}

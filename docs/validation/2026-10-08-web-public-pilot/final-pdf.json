@@ -1,0 +1,11 @@
+{
+  "ended": "2026-10-08T14:14:35.5107582+09:00",
+  "python_utf8": "1",
+  "command": "uv run --project pdf-shrink python -m pytest -q -rs pdf-shrink/tests",
+  "log": "final-pdf.log",
+  "python_io_encoding": "utf-8",
+  "started": "2026-10-08T14:13:50.8467311+09:00",
+  "exit_code": 0,
+  "phase": "final",
+  "workdir": "C:\\Users\\tn\\c_projects\\KaruFile"
+}

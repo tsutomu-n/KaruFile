@@ -1,0 +1,17 @@
+{
+  "synthetic_inputs": 10,
+  "comparison_equal": true,
+  "originals_unchanged": true,
+  "reuse_bytes_equal": true,
+  "previous_runs_unchanged": true,
+  "cli_exit_codes": [
+    0,
+    1,
+    2
+  ],
+  "web_public_help_equal": true,
+  "resize_help_equal": true,
+  "help_baseline": "Git 79df924a UTF-8 replay; original capture had encoding differences",
+  "python_3_11_syntax": true,
+  "python_3_11_runtime": "not executed"
+}

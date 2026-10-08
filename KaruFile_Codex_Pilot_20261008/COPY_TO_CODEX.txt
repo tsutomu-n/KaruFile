@@ -1,0 +1,7 @@
+# Codex CLI に送る本文（必要に応じそのまま貼る）
+
+現在の `tsutomu-n/KaruFile` の作業リポジトリで、添付ZIPを作業用の参照フォルダーへ展開し、`README_FIRST.md` → `01_CODEX_PROMPT.md` → `02_IMPLEMENTATION_STEPS.md` → `03_REAL_PHOTO_NAS_PILOT.md` → `04_ACCEPTANCE.md` → `05_ASTRO_AVIF_WEBP_HANDOFF.md` → `06_FUTURE_REUSE_BOUNDARIES.md` の順に読んで実施してください。既存のAGENTS.md・正本ドキュメント・コード・テストを優先し、HEADや差分は自分の環境で検証してください。
+
+作業は「既存web-publicの実写真Pilot、実NAS試験、再現欠陥のみ局所修正、source fingerprintの最小共通化、全回帰、文書更新」までです。将来の別用途追加に備えて、共通化対象はまずsource identityだけに限定します。プラグイン基盤は作らないでください。サイト側のAVIF/WebP検証は別担当へ正確にhandoffし、KaruFileでの完成と区別します。素材・NAS試験環境がなければ未検証と明記し、できる実装/自動試験だけを完了してください。
+
+既存原本や無関係な変更の破棄、git clean/reset、NAS・本番公開の破壊的操作、無断push、顧客写真の外部アップロードは許可しません。最後は `templates/FINAL_REPORT_TEMPLATE.md` の形式で、今回の実測と保留項目を根拠付きで報告してください。

@@ -6,12 +6,12 @@
   "input": "C:\\Users\\tn\\c_projects\\KaruFile\\docs\\architecture\\karufile-runtime.architecture.json",
   "output": "C:\\Users\\tn\\c_projects\\KaruFile\\docs\\architecture\\karufile-runtime.compact.html",
   "specification": {
-    "sha256": "14219dd19b48d7f9de7b38c0c2621101b7af27cf6144d926722cdece3391a481",
-    "bytes": 5021
+    "sha256": "479acc53faea7a2ddbef71a0d5833c813b21009e71d7ab9ac5d02164092b4654",
+    "bytes": 5054
   },
   "artifact": {
-    "sha256": "fd65192fdb356acfbd62e98cc9b8ad57c2e16b8eb7ccf1b25fa1893cc30a1c90",
-    "bytes": 649570
+    "sha256": "ecb0dcd0aca7f19bd9ba3c89d2300f838913fdf3754b0d8fa87b4816aa762ba5",
+    "bytes": 649623
   },
   "validation": {
     "checksPassed": 9,

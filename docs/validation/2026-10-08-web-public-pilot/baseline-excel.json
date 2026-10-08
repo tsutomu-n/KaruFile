@@ -1,0 +1,9 @@
+{
+  "command": "uv run --project excel-shrink python -m pytest -q excel-shrink/tests",
+  "log": "baseline-excel.log",
+  "ended": "2026-10-08T13:58:48.3064207+09:00",
+  "exit_code": 0,
+  "phase": "baseline",
+  "workdir": "C:\\Users\\tn\\c_projects\\KaruFile",
+  "started": "2026-10-08T13:58:36.2368639+09:00"
+}

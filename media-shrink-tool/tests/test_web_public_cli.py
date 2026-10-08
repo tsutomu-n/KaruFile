@@ -33,6 +33,50 @@ def snapshot(root):
             for p in root.rglob("*")}
 
 
+def test_reuse_ignores_read_access_time_when_identity_and_bytes_match(inputs, monkeypatch):
+    root, out = inputs
+    config = wp.WebPublicConfig(workers=1)
+    first = batch.run_batch(root, out, config, selected_files=["前/private.png"])
+    previous = out / first.results[0]["output_path"]
+    previous_bytes = previous.read_bytes()
+    original_capture = batch.capture_source_fingerprint
+    original_copy = batch.shutil.copyfile
+    copied = False
+
+    def copy(source, destination):
+        nonlocal copied
+        original_copy(source, destination)
+        if source == previous:
+            copied = True
+
+    def capture(path):
+        fingerprint = original_capture(path)
+        if path == previous and copied:
+            # Isolate an atime-only filesystem update without changing ctime on POSIX.
+            fields = list(fingerprint.stat)
+            fields[7] += 3600
+            observed_stat = os.stat_result(fields, {
+                "st_atime_ns": fingerprint.stat.st_atime_ns + 3_600_000_000_000,
+                "st_mtime_ns": fingerprint.stat.st_mtime_ns,
+                "st_ctime_ns": fingerprint.stat.st_ctime_ns,
+            })
+            return type(fingerprint)(stat=observed_stat, sha256=fingerprint.sha256)
+        return fingerprint
+
+    def forbid_encode(*args):
+        raise RuntimeError("A validated identical file must be reused")
+
+    monkeypatch.setattr(batch.shutil, "copyfile", copy)
+    monkeypatch.setattr(batch, "capture_source_fingerprint", capture)
+    monkeypatch.setattr(wp, "_save_public", forbid_encode)
+    second = batch.run_batch(root, out, config, selected_files=["前/private.png"])
+    row = second.results[0]
+    assert row["action"] == "SKIPPED_COMPLETE", row
+    assert second.exit_code == 0
+    assert (out / row["output_path"]).read_bytes() == previous_bytes
+    assert previous.read_bytes() == previous_bytes
+
+
 def test_cli_selected_and_reuse(inputs, monkeypatch):
     root, out = inputs
     first = cli(root, out, "--file", "前/private.png")

@@ -1,3 +1,23 @@
+# 2026-10-08 source identity共通化の構成図確認
+
+基準HEADは`79df924a924808b4aa7601d7aa797d15ecfd4dcc`。未コミットの共通化・局所修正を含む。
+既存の安全カードへ「画像のSHA/stat共有：file_identity.py」を追記し、現在の根拠日付を更新した。
+root→orchestrator→各processor、画像専用CLI/GUI→batch→web-publicの2行と保存契約は維持した。
+JSONを正本にArchifyで再生成し、HTMLは手編集していない。旧karufile-runtime.htmlは保全した。
+
+- validate/deliver: `--repo-root . --quality showcase`、exit0、9/9、errors/warnings 0。
+- visual-check: exit0。1440×900、1600×1000、1920×1080、2048×1320でoverflowなし。
+- 最小/最大のlight/dark計4画像を開き、文字・カード・矢印の欠けや重なりなしを確認した。
+- 今回のcorrection_rounds: 0、visual_review: passed。自動receiptのvisualReview: pendingは維持。
+- JSON SHA-256: `479acc53faea7a2ddbef71a0d5833c813b21009e71d7ab9ac5d02164092b4654`。
+- HTML SHA-256: `ecb0dcd0aca7f19bd9ba3c89d2300f838913fdf3754b0d8fa87b4816aa762ba5`、649623 bytes。
+- [delivery](karufile-runtime.compact.delivery.json)、[visual-check](karufile-runtime.compact.visual-check.json)、
+  [worktree snapshot](karufile-runtime.compact.worktree.json)を実ファイルのSHAと照合した。
+- 今回の画像215件を含むfresh全回帰1454/4と、実写真・NAS未提供の境界は
+  [検証記録](../validation/2026-10-08-web-public-pilot/README.md)に記載する。
+
+以下は過去の確認履歴。SHA・基準commit・ファイル数・sidecarへの言及は当時の値。
+
 # 2026-10-07 Web掲載用マスターの構成図確認
 
 基準HEADは`bc88f56a6aadeaa11b0cd6687c45e113ce539547`。未コミットのweb-public実装を含む。

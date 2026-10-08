@@ -1,0 +1,9 @@
+{
+  "cwd": "C:\\Users\\tn\\c_projects\\KaruFile\\orchestrator",
+  "python_io_encoding": "utf-8",
+  "exit_code": 0,
+  "ended": "2026-10-08T14:59:13.8533661+09:00",
+  "command": "uv run --with pytest python -m pytest -q -rs",
+  "started": "2026-10-08T14:59:00.4066600+09:00",
+  "python_utf8": "1"
+}

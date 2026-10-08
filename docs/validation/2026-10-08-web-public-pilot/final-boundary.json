@@ -1,0 +1,201 @@
+{
+  "captured_jst": "2026-10-08T14:57:09.364185+09:00",
+  "branch": "main",
+  "start_head": "79df924a924808b4aa7601d7aa797d15ecfd4dcc",
+  "end_head": "79df924a924808b4aa7601d7aa797d15ecfd4dcc",
+  "baseline_tracked_files": 410,
+  "modified_files": [
+    {
+      "path": ".agent/execplans/README.md",
+      "before_sha256": "477c682c42bd77b9dfbc7985d4ce2bb8e81f7f01b72c7d8b28fd45381f8eae81",
+      "after_sha256": "9dd3682831b031dee0da1524c0300ee224addf11f57552399c74d2a22bea79fb"
+    },
+    {
+      "path": "AGENTS.md",
+      "before_sha256": "b655980fe7d5f29424db1abb6bc099889d0171da3345e3fad64ad645cc498587",
+      "after_sha256": "28dc58708db575b30163a53dd16ed4d00d5d77324cd4464f927568cd8ef6cdc6"
+    },
+    {
+      "path": "MANUAL.md",
+      "before_sha256": "1b66d423cb23b4d80a38b18b1f5d38bd3c745dddc819dfa029de7b3643224f7c",
+      "after_sha256": "9031df0a9e78fe2117a1b7f83349c39dbcc959778d3583677c6fe6f5c9d208af"
+    },
+    {
+      "path": "docs/README.md",
+      "before_sha256": "48326b16c7ebb9450ad07e8ca1dd01ed512f3f574773fa97e8892698adf72059",
+      "after_sha256": "a4fb9440a9b3b63d03521815e78ec8d2b4a1df4d73a25dc97536e94b0a205f2c"
+    },
+    {
+      "path": "docs/REFERENCE.md",
+      "before_sha256": "ffca45fef461c2d0a5aeabb8dd5706f2d44ccf0aeb943903fc9ef236ec7565c2",
+      "after_sha256": "a21d1045a57bc604abb7d96f90bedc09d9a137567c9eb32acfd1c2cfd71754fe"
+    },
+    {
+      "path": "docs/WEB_PUBLIC.md",
+      "before_sha256": "425ca8b66d5eb49405a81fa9e77a680272bbdabbc08c45d73bd85b9f6d77a97e",
+      "after_sha256": "945bb17d3d203b9fd1d61333495f9e4f5c9ab9ac330e44f0a02f3e2d8a6c27eb"
+    },
+    {
+      "path": "docs/architecture/karufile-runtime.architecture.json",
+      "before_sha256": "14219dd19b48d7f9de7b38c0c2621101b7af27cf6144d926722cdece3391a481",
+      "after_sha256": "479acc53faea7a2ddbef71a0d5833c813b21009e71d7ab9ac5d02164092b4654"
+    },
+    {
+      "path": "docs/architecture/karufile-runtime.compact.delivery.json",
+      "before_sha256": "35e89d7341915ef748d21d628886a447c2280fb685a142e9d188b3191c18c1a6",
+      "after_sha256": "760be91857536d7dabb355e2fc346da30d9a2eef72d6b2d0be069b5853eb15c5"
+    },
+    {
+      "path": "docs/architecture/karufile-runtime.compact.html",
+      "before_sha256": "fd65192fdb356acfbd62e98cc9b8ad57c2e16b8eb7ccf1b25fa1893cc30a1c90",
+      "after_sha256": "ecb0dcd0aca7f19bd9ba3c89d2300f838913fdf3754b0d8fa87b4816aa762ba5"
+    },
+    {
+      "path": "docs/architecture/karufile-runtime.compact.review.md",
+      "before_sha256": "43a7ae6a40fe1be731f66d43367c693d3c69b5ebfe61aa09ae2b18182cfc421a",
+      "after_sha256": "dee6fb8ae6c9a71ad11d03004d55584ad7519cf70e1261cf5eda6f9eb84dff11"
+    },
+    {
+      "path": "docs/architecture/karufile-runtime.compact.visual-check.1440x900.dark.png",
+      "before_sha256": "77d3e73557c92878c1903365e93444f83ec1744e359c185788ec0753026fe833",
+      "after_sha256": "98ff3a02e5c60f4a51b953b7e36542c87e1eb727041edad7488d5768c6bf1ef2"
+    },
+    {
+      "path": "docs/architecture/karufile-runtime.compact.visual-check.1440x900.light.png",
+      "before_sha256": "b3ae099c4ef82873d4a802960f7685ae8e307e443ddb0e5542e6cbf47eccf514",
+      "after_sha256": "7d566e5dc93981166da91a37b9ed588bf88a30c1904929705afcb0a710ff9509"
+    },
+    {
+      "path": "docs/architecture/karufile-runtime.compact.visual-check.2048x1320.dark.png",
+      "before_sha256": "100a066987e8735980f741fb13798fefc8ccef8b64a37a1f130e16d03897bc3a",
+      "after_sha256": "800a8d0b4186015ae89eeb5d9ae2b18de798bbf50b7a69aba6a01b02c43a0244"
+    },
+    {
+      "path": "docs/architecture/karufile-runtime.compact.visual-check.2048x1320.light.png",
+      "before_sha256": "a92962a9b159873e651af6ad0f6d0bca52c0c7c693dd853473c459b935fecb40",
+      "after_sha256": "0afd237cd388cfa4681b262ede9fb71ae22d05b07a7212307cfdce0cb3838ffd"
+    },
+    {
+      "path": "docs/architecture/karufile-runtime.compact.visual-check.json",
+      "before_sha256": "6a535e6bb83ecbce320218ec0b652b36657d0233f3ecb9261c5a4969c0b410d4",
+      "after_sha256": "4fc8d5a0e7dceda5c74b62410e73a551323282ba2c467e81197f92bdf900eb90"
+    },
+    {
+      "path": "docs/architecture/karufile-runtime.compact.worktree.json",
+      "before_sha256": "f6f390acc39d10c8277a014b1b7ba2e59c9d25917356c4f46661f32324d58a5a",
+      "after_sha256": "3784c8a37a41005fce029551990492935818d268fc16978b239c267cecbe146f"
+    },
+    {
+      "path": "media-shrink-tool/src/media_shrink/image.py",
+      "before_sha256": "4b2ca297f351e4be8c14b351ec63455480ad8094cd8afafcf71d0c2256698fd5",
+      "after_sha256": "f3507cb443c37124a9b7e8d93d3a05706872b2622b155a2990e0f90524fbcd14"
+    },
+    {
+      "path": "media-shrink-tool/src/media_shrink/web_public.py",
+      "before_sha256": "c3f52ce46738236b1c58de99bd53ba095495582dfa57ef5ec10e54dad9305307",
+      "after_sha256": "65745d85911bfcf365b016fc7aad309a0448cd15b48ae7d3d07ef15c7f3099fb"
+    },
+    {
+      "path": "media-shrink-tool/src/media_shrink/web_public_batch.py",
+      "before_sha256": "d6416a3066052d0de495ced89d0021e250855aeca5ade4ef9c5d21787a87a911",
+      "after_sha256": "696ed6997375013f266214c2102c85865019abb49f85dafec47aaf1bc2e1ad90"
+    },
+    {
+      "path": "media-shrink-tool/tests/test_web_public_cli.py",
+      "before_sha256": "ccab6f9d6bd3932d6fc302630cda7f001d4cb985572b583dc837a4c2e6afa09c",
+      "after_sha256": "6008726d6d7bcaa4e0685c9b226214ca55f3aea76f6a15ee5dc6a3007107cffd"
+    }
+  ],
+  "unchanged_tracked_files": 390,
+  "new_files": [
+    ".agent/execplans/2026-10-08-web-public-pilot.md",
+    "KaruFile_Codex_Pilot_20261008.zip",
+    "KaruFile_Codex_Pilot_20261008/01_CODEX_PROMPT.md",
+    "KaruFile_Codex_Pilot_20261008/02_IMPLEMENTATION_STEPS.md",
+    "KaruFile_Codex_Pilot_20261008/03_REAL_PHOTO_NAS_PILOT.md",
+    "KaruFile_Codex_Pilot_20261008/04_ACCEPTANCE.md",
+    "KaruFile_Codex_Pilot_20261008/05_ASTRO_AVIF_WEBP_HANDOFF.md",
+    "KaruFile_Codex_Pilot_20261008/06_FUTURE_REUSE_BOUNDARIES.md",
+    "KaruFile_Codex_Pilot_20261008/COPY_TO_CODEX.txt",
+    "KaruFile_Codex_Pilot_20261008/README_FIRST.md",
+    "KaruFile_Codex_Pilot_20261008/templates/FINAL_REPORT_TEMPLATE.md",
+    "KaruFile_Codex_Pilot_20261008/templates/PILOT_CASES.csv",
+    "docs/validation/2026-10-08-web-public-pilot/DOWNSTREAM_HANDOFF.md",
+    "docs/validation/2026-10-08-web-public-pilot/FINAL_REPORT.md",
+    "docs/validation/2026-10-08-web-public-pilot/PILOT_CASES.csv",
+    "docs/validation/2026-10-08-web-public-pilot/README.md",
+    "docs/validation/2026-10-08-web-public-pilot/architecture-visual-check.log",
+    "docs/validation/2026-10-08-web-public-pilot/baseline-checks.json",
+    "docs/validation/2026-10-08-web-public-pilot/baseline-excel.json",
+    "docs/validation/2026-10-08-web-public-pilot/baseline-excel.log",
+    "docs/validation/2026-10-08-web-public-pilot/baseline-help-replay.json",
+    "docs/validation/2026-10-08-web-public-pilot/baseline-image.json",
+    "docs/validation/2026-10-08-web-public-pilot/baseline-image.log",
+    "docs/validation/2026-10-08-web-public-pilot/baseline-lock.log",
+    "docs/validation/2026-10-08-web-public-pilot/baseline-orchestrator.json",
+    "docs/validation/2026-10-08-web-public-pilot/baseline-orchestrator.log",
+    "docs/validation/2026-10-08-web-public-pilot/baseline-pdf.json",
+    "docs/validation/2026-10-08-web-public-pilot/baseline-pdf.log",
+    "docs/validation/2026-10-08-web-public-pilot/baseline-resize-help.txt",
+    "docs/validation/2026-10-08-web-public-pilot/baseline-resize-help.utf8.txt",
+    "docs/validation/2026-10-08-web-public-pilot/baseline-reuse-diagnostic.log",
+    "docs/validation/2026-10-08-web-public-pilot/baseline-source-sha256.json",
+    "docs/validation/2026-10-08-web-public-pilot/baseline-synthetic.json",
+    "docs/validation/2026-10-08-web-public-pilot/baseline-synthetic.log",
+    "docs/validation/2026-10-08-web-public-pilot/baseline-video.json",
+    "docs/validation/2026-10-08-web-public-pilot/baseline-video.log",
+    "docs/validation/2026-10-08-web-public-pilot/baseline-web-public-help.txt",
+    "docs/validation/2026-10-08-web-public-pilot/baseline-web-public-help.utf8.txt",
+    "docs/validation/2026-10-08-web-public-pilot/before-extraction-image.log",
+    "docs/validation/2026-10-08-web-public-pilot/before-extraction-synthetic.log",
+    "docs/validation/2026-10-08-web-public-pilot/code-review.md",
+    "docs/validation/2026-10-08-web-public-pilot/compare_synthetic.py",
+    "docs/validation/2026-10-08-web-public-pilot/comparison.json",
+    "docs/validation/2026-10-08-web-public-pilot/compile-excel.json",
+    "docs/validation/2026-10-08-web-public-pilot/compile-excel.log",
+    "docs/validation/2026-10-08-web-public-pilot/compile-image.json",
+    "docs/validation/2026-10-08-web-public-pilot/compile-image.log",
+    "docs/validation/2026-10-08-web-public-pilot/compile-pdf.json",
+    "docs/validation/2026-10-08-web-public-pilot/compile-pdf.log",
+    "docs/validation/2026-10-08-web-public-pilot/compile-root-orchestrator.log",
+    "docs/validation/2026-10-08-web-public-pilot/compile-video.json",
+    "docs/validation/2026-10-08-web-public-pilot/compile-video.log",
+    "docs/validation/2026-10-08-web-public-pilot/environment.json",
+    "docs/validation/2026-10-08-web-public-pilot/final-boundary.json",
+    "docs/validation/2026-10-08-web-public-pilot/final-checks.json",
+    "docs/validation/2026-10-08-web-public-pilot/final-excel.json",
+    "docs/validation/2026-10-08-web-public-pilot/final-excel.log",
+    "docs/validation/2026-10-08-web-public-pilot/final-image.json",
+    "docs/validation/2026-10-08-web-public-pilot/final-image.log",
+    "docs/validation/2026-10-08-web-public-pilot/final-lock.log",
+    "docs/validation/2026-10-08-web-public-pilot/final-orchestrator.json",
+    "docs/validation/2026-10-08-web-public-pilot/final-orchestrator.log",
+    "docs/validation/2026-10-08-web-public-pilot/final-pdf.json",
+    "docs/validation/2026-10-08-web-public-pilot/final-pdf.log",
+    "docs/validation/2026-10-08-web-public-pilot/final-resize-help.txt",
+    "docs/validation/2026-10-08-web-public-pilot/final-root-help.txt",
+    "docs/validation/2026-10-08-web-public-pilot/final-synthetic.json",
+    "docs/validation/2026-10-08-web-public-pilot/final-synthetic.log",
+    "docs/validation/2026-10-08-web-public-pilot/final-video.json",
+    "docs/validation/2026-10-08-web-public-pilot/final-video.log",
+    "docs/validation/2026-10-08-web-public-pilot/final-web-public-help.txt",
+    "docs/validation/2026-10-08-web-public-pilot/identity-green.log",
+    "docs/validation/2026-10-08-web-public-pilot/identity-initial-errors.log",
+    "docs/validation/2026-10-08-web-public-pilot/identity-red.log",
+    "docs/validation/2026-10-08-web-public-pilot/reuse-green.log",
+    "docs/validation/2026-10-08-web-public-pilot/reuse-red.log",
+    "docs/validation/2026-10-08-web-public-pilot/static-checks.json",
+    "docs/validation/2026-10-08-web-public-pilot/verify_final.py",
+    "media-shrink-tool/src/media_shrink/file_identity.py",
+    "media-shrink-tool/tests/test_file_identity.py"
+  ],
+  "unexpected_changes": [],
+  "staged_changes": false,
+  "original_zip_sha256": "008d8d9f2dd3229a3bff1b755dd0585e04c7070a2becf7eeb9d6271fe1bcc341",
+  "zip_members_unchanged": 10,
+  "protected_components_and_locks_unchanged": true,
+  "commit": "NOT_RUN",
+  "push": "NOT_RUN",
+  "pr": "NOT_RUN",
+  "production_publish": "NOT_RUN"
+}

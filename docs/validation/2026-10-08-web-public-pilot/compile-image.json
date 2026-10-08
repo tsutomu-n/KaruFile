@@ -1,0 +1,5 @@
+{
+  "command": "uv run --project media-shrink-tool python -m compileall -q media-shrink-tool/src media-shrink-tool/tests",
+  "log": "compile-image.log",
+  "exit_code": 0
+}

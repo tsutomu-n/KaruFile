@@ -1,0 +1,36 @@
+{
+  "captured_jst": "2026-10-08T14:58:38.933964+09:00",
+  "repository": {
+    "full_name": "tsutomu-n/KaruFile",
+    "private": false,
+    "default_branch": "main",
+    "html_url": "https://github.com/tsutomu-n/KaruFile"
+  },
+  "main": {
+    "sha": "79df924a924808b4aa7601d7aa797d15ecfd4dcc",
+    "protected": false
+  },
+  "rulesets": [],
+  "workflows": {
+    "total_count": 0,
+    "workflows": []
+  },
+  "runs": {
+    "total_count": 0,
+    "runs": []
+  },
+  "open_prs": [],
+  "deployments": [],
+  "releases": [],
+  "environments": {
+    "total_count": 0,
+    "environments": []
+  },
+  "start_head": "79df924a924808b4aa7601d7aa797d15ecfd4dcc",
+  "origin_main": "79df924a924808b4aa7601d7aa797d15ecfd4dcc",
+  "worktrees": 1,
+  "stashes": [],
+  "tags": [],
+  "source_zip_will_remain_local": true,
+  "production_target": "AWAITING_USER_TARGET"
+}

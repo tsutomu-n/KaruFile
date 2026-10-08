@@ -1,0 +1,2467 @@
+{
+  "fixture_kind": "synthetic-only",
+  "input_count": 10,
+  "source_sha256": {
+    "alpha.png": "f61250cfdd63a0fc6d827fa3e3c9fd4b2e44d92e01e71d4c1ec838c127204bd3",
+    "broken.jpg": "5464533c9647b67eb320c40ccc5959537c09102ae75388f6a7675b433e745c9d",
+    "cmyk.jpg": "6f7ffc769488e2a11812ca73e8ed2f831174597937a836f5a41dfe5889a47621",
+    "lab.tiff": "fe9bfe7760d4ee691df61a77412b50d3329266a611203b775d3252c601802869",
+    "landscape.jpg": "e39a9e1352b328437ac299b14ae5c5fc985de7eb285a3ea5e7655ceefd21db0d",
+    "lines.png": "ad1e8aeae89e39f5c4c0f53f3662ad5e22e8e3557ec132def1fd0a5e17b8b214",
+    "orientation.png": "555274130315a5c0b8f20a6467993978705164096ce098481acffe8f55fabd99",
+    "portrait.png": "5638e5ea9fe08f6a14178c256b3daea7fb22393e030a4eca262020c80fa2fb59",
+    "small.png": "3be1bba13305062496158dad3d0f5c311371b49e5a2974ec00bc6a98cbfa2e4e",
+    "synthetic.heic": "eabe06811362ee534c124f6958e6f850307fa7f0190b3f4cbd4182e3afda3dfd"
+  },
+  "public": {
+    "photo": {
+      "recipe": {
+        "version": 2,
+        "kind": "photo",
+        "width": 1400,
+        "rounding": "half-up-min1",
+        "upscale": false,
+        "crop": false,
+        "format": "JPEG",
+        "jpeg": {
+          "quality": 90,
+          "subsampling": 0,
+          "optimize": true,
+          "progressive": true
+        },
+        "png": {
+          "compress_level": 6
+        },
+        "color": "8bit-sRGB-perceptual",
+        "alpha": "preserve-or-reject-photo",
+        "metadata": "new-sRGB-only",
+        "resampling": "Pillow-LANCZOS"
+      },
+      "recipe_hash": "f07789345215b38e45c02de945b31ed20e8deea481422f0ec86a222fa49c4602",
+      "engine_versions": {
+        "Pillow": "12.3.0",
+        "pillow-heif": "1.5.0",
+        "LittleCMS": "2.19",
+        "libjpeg": "8.0",
+        "zlib": "1.3.1.zlib-ng",
+        "libheif": "1.23.1"
+      },
+      "schema_version": 1,
+      "first_exit": 1,
+      "reuse_exit": 1,
+      "dry_exit": 1,
+      "dry_no_writes": true,
+      "old_run_unchanged": true,
+      "reuse_bytes_equal": true,
+      "first": [
+        {
+          "source_path": "alpha.png",
+          "source_sha256": "f61250cfdd63a0fc6d827fa3e3c9fd4b2e44d92e01e71d4c1ec838c127204bd3",
+          "source_size": 8567,
+          "source_width": null,
+          "source_height": null,
+          "oriented_width": null,
+          "oriented_height": null,
+          "output_size": null,
+          "output_width": null,
+          "output_height": null,
+          "output_format": null,
+          "action": "ERROR",
+          "warnings": [],
+          "error": {
+            "code": "TRANSPARENT_PHOTO",
+            "message": "透明な画素があります。「透過画像・図版」を選択してください"
+          }
+        },
+        {
+          "source_path": "broken.jpg",
+          "source_sha256": "5464533c9647b67eb320c40ccc5959537c09102ae75388f6a7675b433e745c9d",
+          "source_size": 12,
+          "source_width": null,
+          "source_height": null,
+          "oriented_width": null,
+          "oriented_height": null,
+          "output_size": null,
+          "output_width": null,
+          "output_height": null,
+          "output_format": null,
+          "action": "ERROR",
+          "warnings": [],
+          "error": {
+            "code": "CONVERSION_FAILED",
+            "message": "画像の読込み・変換・検証・保存に失敗しました"
+          }
+        },
+        {
+          "source_path": "cmyk.jpg",
+          "source_sha256": "6f7ffc769488e2a11812ca73e8ed2f831174597937a836f5a41dfe5889a47621",
+          "source_size": 384,
+          "source_width": null,
+          "source_height": null,
+          "oriented_width": null,
+          "oriented_height": null,
+          "output_size": null,
+          "output_width": null,
+          "output_height": null,
+          "output_format": null,
+          "action": "ERROR",
+          "warnings": [],
+          "error": {
+            "code": "UNSUPPORTED_COLOR",
+            "message": "色情報を安全に変換できません。sRGBのJPEG/PNGとして編集ソフトから書き出してください"
+          }
+        },
+        {
+          "source_path": "lab.tiff",
+          "source_sha256": "fe9bfe7760d4ee691df61a77412b50d3329266a611203b775d3252c601802869",
+          "source_size": 90724,
+          "source_width": 200,
+          "source_height": 150,
+          "oriented_width": 200,
+          "oriented_height": 150,
+          "output_size": 1678,
+          "output_width": 200,
+          "output_height": 150,
+          "output_format": "JPEG",
+          "action": "CONVERTED",
+          "warnings": [],
+          "error": null,
+          "image": {
+            "format": "JPEG",
+            "dimensions": [
+              200,
+              150
+            ],
+            "mode": "RGB",
+            "pixels_sha256": "e5920ffc091ef8bb6381b01fc6d5ba29656eac9b8784f4dc980873d67e3acf4a",
+            "icc_color_sha256": "215d9fadbfc938862a82f2633b51fee128b58767f7d7ac55d32cb7e00031bb0d",
+            "metadata_keys": [
+              "icc_profile",
+              "jfif",
+              "jfif_density",
+              "jfif_unit",
+              "jfif_version",
+              "progression",
+              "progressive"
+            ],
+            "exif": [],
+            "text": {},
+            "sampling": 0,
+            "progressive": true
+          }
+        },
+        {
+          "source_path": "landscape.jpg",
+          "source_sha256": "e39a9e1352b328437ac299b14ae5c5fc985de7eb285a3ea5e7655ceefd21db0d",
+          "source_size": 264323,
+          "source_width": 2801,
+          "source_height": 1500,
+          "oriented_width": 2801,
+          "oriented_height": 1500,
+          "output_size": 27678,
+          "output_width": 1400,
+          "output_height": 750,
+          "output_format": "JPEG",
+          "action": "CONVERTED",
+          "warnings": [
+            "SRGB_ASSUMED"
+          ],
+          "error": null,
+          "image": {
+            "format": "JPEG",
+            "dimensions": [
+              1400,
+              750
+            ],
+            "mode": "RGB",
+            "pixels_sha256": "f7876b9042c0f7a41698ea5515b36b4bce93506a62055a0cfcbd84eb35e1a1e9",
+            "icc_color_sha256": "215d9fadbfc938862a82f2633b51fee128b58767f7d7ac55d32cb7e00031bb0d",
+            "metadata_keys": [
+              "icc_profile",
+              "jfif",
+              "jfif_density",
+              "jfif_unit",
+              "jfif_version",
+              "progression",
+              "progressive"
+            ],
+            "exif": [],
+            "text": {},
+            "sampling": 0,
+            "progressive": true
+          }
+        },
+        {
+          "source_path": "lines.png",
+          "source_sha256": "ad1e8aeae89e39f5c4c0f53f3662ad5e22e8e3557ec132def1fd0a5e17b8b214",
+          "source_size": 8648,
+          "source_width": 2800,
+          "source_height": 800,
+          "oriented_width": 2800,
+          "oriented_height": 800,
+          "output_size": 79060,
+          "output_width": 1400,
+          "output_height": 400,
+          "output_format": "JPEG",
+          "action": "CONVERTED",
+          "warnings": [
+            "SRGB_ASSUMED",
+            "OUTPUT_LARGER_THAN_SOURCE"
+          ],
+          "error": null,
+          "image": {
+            "format": "JPEG",
+            "dimensions": [
+              1400,
+              400
+            ],
+            "mode": "RGB",
+            "pixels_sha256": "de91392a0c30cf4874c7ffe289bf60288c9d641b255f7dd0c8cb8204ac6b4998",
+            "icc_color_sha256": "215d9fadbfc938862a82f2633b51fee128b58767f7d7ac55d32cb7e00031bb0d",
+            "metadata_keys": [
+              "icc_profile",
+              "jfif",
+              "jfif_density",
+              "jfif_unit",
+              "jfif_version",
+              "progression",
+              "progressive"
+            ],
+            "exif": [],
+            "text": {},
+            "sampling": 0,
+            "progressive": true
+          }
+        },
+        {
+          "source_path": "orientation.png",
+          "source_sha256": "555274130315a5c0b8f20a6467993978705164096ce098481acffe8f55fabd99",
+          "source_size": 11692,
+          "source_width": 2800,
+          "source_height": 1000,
+          "oriented_width": 1000,
+          "oriented_height": 2800,
+          "output_size": 82653,
+          "output_width": 1000,
+          "output_height": 2800,
+          "output_format": "JPEG",
+          "action": "CONVERTED",
+          "warnings": [
+            "SRGB_ASSUMED",
+            "OUTPUT_LARGER_THAN_SOURCE"
+          ],
+          "error": null,
+          "image": {
+            "format": "JPEG",
+            "dimensions": [
+              1000,
+              2800
+            ],
+            "mode": "RGB",
+            "pixels_sha256": "eac4009110e64d112874f1f3eddd173aa544ad259d9a6437bdadc31d0aa4aa39",
+            "icc_color_sha256": "215d9fadbfc938862a82f2633b51fee128b58767f7d7ac55d32cb7e00031bb0d",
+            "metadata_keys": [
+              "icc_profile",
+              "jfif",
+              "jfif_density",
+              "jfif_unit",
+              "jfif_version",
+              "progression",
+              "progressive"
+            ],
+            "exif": [],
+            "text": {},
+            "sampling": 0,
+            "progressive": true
+          }
+        },
+        {
+          "source_path": "portrait.png",
+          "source_sha256": "5638e5ea9fe08f6a14178c256b3daea7fb22393e030a4eca262020c80fa2fb59",
+          "source_size": 10881,
+          "source_width": 800,
+          "source_height": 2400,
+          "oriented_width": 800,
+          "oriented_height": 2400,
+          "output_size": 23635,
+          "output_width": 800,
+          "output_height": 2400,
+          "output_format": "JPEG",
+          "action": "CONVERTED",
+          "warnings": [
+            "SRGB_ASSUMED",
+            "OUTPUT_LARGER_THAN_SOURCE"
+          ],
+          "error": null,
+          "image": {
+            "format": "JPEG",
+            "dimensions": [
+              800,
+              2400
+            ],
+            "mode": "RGB",
+            "pixels_sha256": "bf40cf2db2d7f84a82af4ee2c054cb4100ce2a100aa8ae515e64bc0f0ee0630c",
+            "icc_color_sha256": "215d9fadbfc938862a82f2633b51fee128b58767f7d7ac55d32cb7e00031bb0d",
+            "metadata_keys": [
+              "icc_profile",
+              "jfif",
+              "jfif_density",
+              "jfif_unit",
+              "jfif_version",
+              "progression",
+              "progressive"
+            ],
+            "exif": [],
+            "text": {},
+            "sampling": 0,
+            "progressive": true
+          }
+        },
+        {
+          "source_path": "small.png",
+          "source_sha256": "3be1bba13305062496158dad3d0f5c311371b49e5a2974ec00bc6a98cbfa2e4e",
+          "source_size": 1586,
+          "source_width": 600,
+          "source_height": 400,
+          "oriented_width": 600,
+          "oriented_height": 400,
+          "output_size": 3949,
+          "output_width": 600,
+          "output_height": 400,
+          "output_format": "JPEG",
+          "action": "CONVERTED",
+          "warnings": [
+            "SRGB_ASSUMED",
+            "OUTPUT_LARGER_THAN_SOURCE"
+          ],
+          "error": null,
+          "image": {
+            "format": "JPEG",
+            "dimensions": [
+              600,
+              400
+            ],
+            "mode": "RGB",
+            "pixels_sha256": "5bf4e35ef83e3018b59e7312dbe8f76efcc20b9e0692674b9c85265433e0aaa9",
+            "icc_color_sha256": "215d9fadbfc938862a82f2633b51fee128b58767f7d7ac55d32cb7e00031bb0d",
+            "metadata_keys": [
+              "icc_profile",
+              "jfif",
+              "jfif_density",
+              "jfif_unit",
+              "jfif_version",
+              "progression",
+              "progressive"
+            ],
+            "exif": [],
+            "text": {},
+            "sampling": 0,
+            "progressive": true
+          }
+        },
+        {
+          "source_path": "synthetic.heic",
+          "source_sha256": "eabe06811362ee534c124f6958e6f850307fa7f0190b3f4cbd4182e3afda3dfd",
+          "source_size": 1225,
+          "source_width": 320,
+          "source_height": 180,
+          "oriented_width": 320,
+          "oriented_height": 180,
+          "output_size": 1826,
+          "output_width": 320,
+          "output_height": 180,
+          "output_format": "JPEG",
+          "action": "CONVERTED",
+          "warnings": [
+            "OUTPUT_LARGER_THAN_SOURCE"
+          ],
+          "error": null,
+          "image": {
+            "format": "JPEG",
+            "dimensions": [
+              320,
+              180
+            ],
+            "mode": "RGB",
+            "pixels_sha256": "75cce7bbc04caae72602d81b641630f187fe656af500d10baceb293251b79d2b",
+            "icc_color_sha256": "215d9fadbfc938862a82f2633b51fee128b58767f7d7ac55d32cb7e00031bb0d",
+            "metadata_keys": [
+              "icc_profile",
+              "jfif",
+              "jfif_density",
+              "jfif_unit",
+              "jfif_version",
+              "progression",
+              "progressive"
+            ],
+            "exif": [],
+            "text": {},
+            "sampling": 0,
+            "progressive": true
+          }
+        }
+      ],
+      "reuse": [
+        {
+          "source_path": "alpha.png",
+          "source_sha256": "f61250cfdd63a0fc6d827fa3e3c9fd4b2e44d92e01e71d4c1ec838c127204bd3",
+          "source_size": 8567,
+          "source_width": null,
+          "source_height": null,
+          "oriented_width": null,
+          "oriented_height": null,
+          "output_size": null,
+          "output_width": null,
+          "output_height": null,
+          "output_format": null,
+          "action": "ERROR",
+          "warnings": [],
+          "error": {
+            "code": "TRANSPARENT_PHOTO",
+            "message": "透明な画素があります。「透過画像・図版」を選択してください"
+          }
+        },
+        {
+          "source_path": "broken.jpg",
+          "source_sha256": "5464533c9647b67eb320c40ccc5959537c09102ae75388f6a7675b433e745c9d",
+          "source_size": 12,
+          "source_width": null,
+          "source_height": null,
+          "oriented_width": null,
+          "oriented_height": null,
+          "output_size": null,
+          "output_width": null,
+          "output_height": null,
+          "output_format": null,
+          "action": "ERROR",
+          "warnings": [],
+          "error": {
+            "code": "CONVERSION_FAILED",
+            "message": "画像の読込み・変換・検証・保存に失敗しました"
+          }
+        },
+        {
+          "source_path": "cmyk.jpg",
+          "source_sha256": "6f7ffc769488e2a11812ca73e8ed2f831174597937a836f5a41dfe5889a47621",
+          "source_size": 384,
+          "source_width": null,
+          "source_height": null,
+          "oriented_width": null,
+          "oriented_height": null,
+          "output_size": null,
+          "output_width": null,
+          "output_height": null,
+          "output_format": null,
+          "action": "ERROR",
+          "warnings": [],
+          "error": {
+            "code": "UNSUPPORTED_COLOR",
+            "message": "色情報を安全に変換できません。sRGBのJPEG/PNGとして編集ソフトから書き出してください"
+          }
+        },
+        {
+          "source_path": "lab.tiff",
+          "source_sha256": "fe9bfe7760d4ee691df61a77412b50d3329266a611203b775d3252c601802869",
+          "source_size": 90724,
+          "source_width": 200,
+          "source_height": 150,
+          "oriented_width": 200,
+          "oriented_height": 150,
+          "output_size": 1678,
+          "output_width": 200,
+          "output_height": 150,
+          "output_format": "JPEG",
+          "action": "SKIPPED_COMPLETE",
+          "warnings": [],
+          "error": null,
+          "image": {
+            "format": "JPEG",
+            "dimensions": [
+              200,
+              150
+            ],
+            "mode": "RGB",
+            "pixels_sha256": "e5920ffc091ef8bb6381b01fc6d5ba29656eac9b8784f4dc980873d67e3acf4a",
+            "icc_color_sha256": "215d9fadbfc938862a82f2633b51fee128b58767f7d7ac55d32cb7e00031bb0d",
+            "metadata_keys": [
+              "icc_profile",
+              "jfif",
+              "jfif_density",
+              "jfif_unit",
+              "jfif_version",
+              "progression",
+              "progressive"
+            ],
+            "exif": [],
+            "text": {},
+            "sampling": 0,
+            "progressive": true
+          }
+        },
+        {
+          "source_path": "landscape.jpg",
+          "source_sha256": "e39a9e1352b328437ac299b14ae5c5fc985de7eb285a3ea5e7655ceefd21db0d",
+          "source_size": 264323,
+          "source_width": 2801,
+          "source_height": 1500,
+          "oriented_width": 2801,
+          "oriented_height": 1500,
+          "output_size": 27678,
+          "output_width": 1400,
+          "output_height": 750,
+          "output_format": "JPEG",
+          "action": "SKIPPED_COMPLETE",
+          "warnings": [
+            "SRGB_ASSUMED"
+          ],
+          "error": null,
+          "image": {
+            "format": "JPEG",
+            "dimensions": [
+              1400,
+              750
+            ],
+            "mode": "RGB",
+            "pixels_sha256": "f7876b9042c0f7a41698ea5515b36b4bce93506a62055a0cfcbd84eb35e1a1e9",
+            "icc_color_sha256": "215d9fadbfc938862a82f2633b51fee128b58767f7d7ac55d32cb7e00031bb0d",
+            "metadata_keys": [
+              "icc_profile",
+              "jfif",
+              "jfif_density",
+              "jfif_unit",
+              "jfif_version",
+              "progression",
+              "progressive"
+            ],
+            "exif": [],
+            "text": {},
+            "sampling": 0,
+            "progressive": true
+          }
+        },
+        {
+          "source_path": "lines.png",
+          "source_sha256": "ad1e8aeae89e39f5c4c0f53f3662ad5e22e8e3557ec132def1fd0a5e17b8b214",
+          "source_size": 8648,
+          "source_width": 2800,
+          "source_height": 800,
+          "oriented_width": 2800,
+          "oriented_height": 800,
+          "output_size": 79060,
+          "output_width": 1400,
+          "output_height": 400,
+          "output_format": "JPEG",
+          "action": "SKIPPED_COMPLETE",
+          "warnings": [
+            "SRGB_ASSUMED",
+            "OUTPUT_LARGER_THAN_SOURCE"
+          ],
+          "error": null,
+          "image": {
+            "format": "JPEG",
+            "dimensions": [
+              1400,
+              400
+            ],
+            "mode": "RGB",
+            "pixels_sha256": "de91392a0c30cf4874c7ffe289bf60288c9d641b255f7dd0c8cb8204ac6b4998",
+            "icc_color_sha256": "215d9fadbfc938862a82f2633b51fee128b58767f7d7ac55d32cb7e00031bb0d",
+            "metadata_keys": [
+              "icc_profile",
+              "jfif",
+              "jfif_density",
+              "jfif_unit",
+              "jfif_version",
+              "progression",
+              "progressive"
+            ],
+            "exif": [],
+            "text": {},
+            "sampling": 0,
+            "progressive": true
+          }
+        },
+        {
+          "source_path": "orientation.png",
+          "source_sha256": "555274130315a5c0b8f20a6467993978705164096ce098481acffe8f55fabd99",
+          "source_size": 11692,
+          "source_width": 2800,
+          "source_height": 1000,
+          "oriented_width": 1000,
+          "oriented_height": 2800,
+          "output_size": 82653,
+          "output_width": 1000,
+          "output_height": 2800,
+          "output_format": "JPEG",
+          "action": "SKIPPED_COMPLETE",
+          "warnings": [
+            "SRGB_ASSUMED",
+            "OUTPUT_LARGER_THAN_SOURCE"
+          ],
+          "error": null,
+          "image": {
+            "format": "JPEG",
+            "dimensions": [
+              1000,
+              2800
+            ],
+            "mode": "RGB",
+            "pixels_sha256": "eac4009110e64d112874f1f3eddd173aa544ad259d9a6437bdadc31d0aa4aa39",
+            "icc_color_sha256": "215d9fadbfc938862a82f2633b51fee128b58767f7d7ac55d32cb7e00031bb0d",
+            "metadata_keys": [
+              "icc_profile",
+              "jfif",
+              "jfif_density",
+              "jfif_unit",
+              "jfif_version",
+              "progression",
+              "progressive"
+            ],
+            "exif": [],
+            "text": {},
+            "sampling": 0,
+            "progressive": true
+          }
+        },
+        {
+          "source_path": "portrait.png",
+          "source_sha256": "5638e5ea9fe08f6a14178c256b3daea7fb22393e030a4eca262020c80fa2fb59",
+          "source_size": 10881,
+          "source_width": 800,
+          "source_height": 2400,
+          "oriented_width": 800,
+          "oriented_height": 2400,
+          "output_size": 23635,
+          "output_width": 800,
+          "output_height": 2400,
+          "output_format": "JPEG",
+          "action": "SKIPPED_COMPLETE",
+          "warnings": [
+            "SRGB_ASSUMED",
+            "OUTPUT_LARGER_THAN_SOURCE"
+          ],
+          "error": null,
+          "image": {
+            "format": "JPEG",
+            "dimensions": [
+              800,
+              2400
+            ],
+            "mode": "RGB",
+            "pixels_sha256": "bf40cf2db2d7f84a82af4ee2c054cb4100ce2a100aa8ae515e64bc0f0ee0630c",
+            "icc_color_sha256": "215d9fadbfc938862a82f2633b51fee128b58767f7d7ac55d32cb7e00031bb0d",
+            "metadata_keys": [
+              "icc_profile",
+              "jfif",
+              "jfif_density",
+              "jfif_unit",
+              "jfif_version",
+              "progression",
+              "progressive"
+            ],
+            "exif": [],
+            "text": {},
+            "sampling": 0,
+            "progressive": true
+          }
+        },
+        {
+          "source_path": "small.png",
+          "source_sha256": "3be1bba13305062496158dad3d0f5c311371b49e5a2974ec00bc6a98cbfa2e4e",
+          "source_size": 1586,
+          "source_width": 600,
+          "source_height": 400,
+          "oriented_width": 600,
+          "oriented_height": 400,
+          "output_size": 3949,
+          "output_width": 600,
+          "output_height": 400,
+          "output_format": "JPEG",
+          "action": "SKIPPED_COMPLETE",
+          "warnings": [
+            "SRGB_ASSUMED",
+            "OUTPUT_LARGER_THAN_SOURCE"
+          ],
+          "error": null,
+          "image": {
+            "format": "JPEG",
+            "dimensions": [
+              600,
+              400
+            ],
+            "mode": "RGB",
+            "pixels_sha256": "5bf4e35ef83e3018b59e7312dbe8f76efcc20b9e0692674b9c85265433e0aaa9",
+            "icc_color_sha256": "215d9fadbfc938862a82f2633b51fee128b58767f7d7ac55d32cb7e00031bb0d",
+            "metadata_keys": [
+              "icc_profile",
+              "jfif",
+              "jfif_density",
+              "jfif_unit",
+              "jfif_version",
+              "progression",
+              "progressive"
+            ],
+            "exif": [],
+            "text": {},
+            "sampling": 0,
+            "progressive": true
+          }
+        },
+        {
+          "source_path": "synthetic.heic",
+          "source_sha256": "eabe06811362ee534c124f6958e6f850307fa7f0190b3f4cbd4182e3afda3dfd",
+          "source_size": 1225,
+          "source_width": 320,
+          "source_height": 180,
+          "oriented_width": 320,
+          "oriented_height": 180,
+          "output_size": 1826,
+          "output_width": 320,
+          "output_height": 180,
+          "output_format": "JPEG",
+          "action": "SKIPPED_COMPLETE",
+          "warnings": [
+            "OUTPUT_LARGER_THAN_SOURCE"
+          ],
+          "error": null,
+          "image": {
+            "format": "JPEG",
+            "dimensions": [
+              320,
+              180
+            ],
+            "mode": "RGB",
+            "pixels_sha256": "75cce7bbc04caae72602d81b641630f187fe656af500d10baceb293251b79d2b",
+            "icc_color_sha256": "215d9fadbfc938862a82f2633b51fee128b58767f7d7ac55d32cb7e00031bb0d",
+            "metadata_keys": [
+              "icc_profile",
+              "jfif",
+              "jfif_density",
+              "jfif_unit",
+              "jfif_version",
+              "progression",
+              "progressive"
+            ],
+            "exif": [],
+            "text": {},
+            "sampling": 0,
+            "progressive": true
+          }
+        }
+      ],
+      "dry": [
+        {
+          "source_path": "alpha.png",
+          "source_sha256": "f61250cfdd63a0fc6d827fa3e3c9fd4b2e44d92e01e71d4c1ec838c127204bd3",
+          "source_size": 8567,
+          "source_width": null,
+          "source_height": null,
+          "oriented_width": null,
+          "oriented_height": null,
+          "output_size": null,
+          "output_width": null,
+          "output_height": null,
+          "output_format": null,
+          "action": "ERROR",
+          "warnings": [],
+          "error": {
+            "code": "TRANSPARENT_PHOTO",
+            "message": "透明な画素があります。「透過画像・図版」を選択してください"
+          }
+        },
+        {
+          "source_path": "broken.jpg",
+          "source_sha256": "5464533c9647b67eb320c40ccc5959537c09102ae75388f6a7675b433e745c9d",
+          "source_size": 12,
+          "source_width": null,
+          "source_height": null,
+          "oriented_width": null,
+          "oriented_height": null,
+          "output_size": null,
+          "output_width": null,
+          "output_height": null,
+          "output_format": null,
+          "action": "ERROR",
+          "warnings": [],
+          "error": {
+            "code": "CONVERSION_FAILED",
+            "message": "画像の読込み・変換・検証・保存に失敗しました"
+          }
+        },
+        {
+          "source_path": "cmyk.jpg",
+          "source_sha256": "6f7ffc769488e2a11812ca73e8ed2f831174597937a836f5a41dfe5889a47621",
+          "source_size": 384,
+          "source_width": null,
+          "source_height": null,
+          "oriented_width": null,
+          "oriented_height": null,
+          "output_size": null,
+          "output_width": null,
+          "output_height": null,
+          "output_format": null,
+          "action": "ERROR",
+          "warnings": [],
+          "error": {
+            "code": "UNSUPPORTED_COLOR",
+            "message": "色情報を安全に変換できません。sRGBのJPEG/PNGとして編集ソフトから書き出してください"
+          }
+        },
+        {
+          "source_path": "lab.tiff",
+          "source_sha256": "fe9bfe7760d4ee691df61a77412b50d3329266a611203b775d3252c601802869",
+          "source_size": 90724,
+          "source_width": 200,
+          "source_height": 150,
+          "oriented_width": 200,
+          "oriented_height": 150,
+          "output_size": null,
+          "output_width": 200,
+          "output_height": 150,
+          "output_format": "JPEG",
+          "action": "DRY_RUN",
+          "warnings": [],
+          "error": null
+        },
+        {
+          "source_path": "landscape.jpg",
+          "source_sha256": "e39a9e1352b328437ac299b14ae5c5fc985de7eb285a3ea5e7655ceefd21db0d",
+          "source_size": 264323,
+          "source_width": 2801,
+          "source_height": 1500,
+          "oriented_width": 2801,
+          "oriented_height": 1500,
+          "output_size": null,
+          "output_width": 1400,
+          "output_height": 750,
+          "output_format": "JPEG",
+          "action": "DRY_RUN",
+          "warnings": [
+            "SRGB_ASSUMED"
+          ],
+          "error": null
+        },
+        {
+          "source_path": "lines.png",
+          "source_sha256": "ad1e8aeae89e39f5c4c0f53f3662ad5e22e8e3557ec132def1fd0a5e17b8b214",
+          "source_size": 8648,
+          "source_width": 2800,
+          "source_height": 800,
+          "oriented_width": 2800,
+          "oriented_height": 800,
+          "output_size": null,
+          "output_width": 1400,
+          "output_height": 400,
+          "output_format": "JPEG",
+          "action": "DRY_RUN",
+          "warnings": [
+            "SRGB_ASSUMED"
+          ],
+          "error": null
+        },
+        {
+          "source_path": "orientation.png",
+          "source_sha256": "555274130315a5c0b8f20a6467993978705164096ce098481acffe8f55fabd99",
+          "source_size": 11692,
+          "source_width": 2800,
+          "source_height": 1000,
+          "oriented_width": 1000,
+          "oriented_height": 2800,
+          "output_size": null,
+          "output_width": 1000,
+          "output_height": 2800,
+          "output_format": "JPEG",
+          "action": "DRY_RUN",
+          "warnings": [
+            "SRGB_ASSUMED"
+          ],
+          "error": null
+        },
+        {
+          "source_path": "portrait.png",
+          "source_sha256": "5638e5ea9fe08f6a14178c256b3daea7fb22393e030a4eca262020c80fa2fb59",
+          "source_size": 10881,
+          "source_width": 800,
+          "source_height": 2400,
+          "oriented_width": 800,
+          "oriented_height": 2400,
+          "output_size": null,
+          "output_width": 800,
+          "output_height": 2400,
+          "output_format": "JPEG",
+          "action": "DRY_RUN",
+          "warnings": [
+            "SRGB_ASSUMED"
+          ],
+          "error": null
+        },
+        {
+          "source_path": "small.png",
+          "source_sha256": "3be1bba13305062496158dad3d0f5c311371b49e5a2974ec00bc6a98cbfa2e4e",
+          "source_size": 1586,
+          "source_width": 600,
+          "source_height": 400,
+          "oriented_width": 600,
+          "oriented_height": 400,
+          "output_size": null,
+          "output_width": 600,
+          "output_height": 400,
+          "output_format": "JPEG",
+          "action": "DRY_RUN",
+          "warnings": [
+            "SRGB_ASSUMED"
+          ],
+          "error": null
+        },
+        {
+          "source_path": "synthetic.heic",
+          "source_sha256": "eabe06811362ee534c124f6958e6f850307fa7f0190b3f4cbd4182e3afda3dfd",
+          "source_size": 1225,
+          "source_width": 320,
+          "source_height": 180,
+          "oriented_width": 320,
+          "oriented_height": 180,
+          "output_size": null,
+          "output_width": 320,
+          "output_height": 180,
+          "output_format": "JPEG",
+          "action": "DRY_RUN",
+          "warnings": [],
+          "error": null
+        }
+      ]
+    },
+    "graphic": {
+      "recipe": {
+        "version": 2,
+        "kind": "graphic",
+        "width": 1400,
+        "rounding": "half-up-min1",
+        "upscale": false,
+        "crop": false,
+        "format": "PNG",
+        "jpeg": {
+          "quality": 90,
+          "subsampling": 0,
+          "optimize": true,
+          "progressive": true
+        },
+        "png": {
+          "compress_level": 6
+        },
+        "color": "8bit-sRGB-perceptual",
+        "alpha": "preserve-or-reject-photo",
+        "metadata": "new-sRGB-only",
+        "resampling": "Pillow-LANCZOS"
+      },
+      "recipe_hash": "5b65cf5e8b2ac52a2318e665d6279b9fcb17ab07cd395e32e3a3c2bf878e347e",
+      "engine_versions": {
+        "Pillow": "12.3.0",
+        "pillow-heif": "1.5.0",
+        "LittleCMS": "2.19",
+        "libjpeg": "8.0",
+        "zlib": "1.3.1.zlib-ng",
+        "libheif": "1.23.1"
+      },
+      "schema_version": 1,
+      "first_exit": 1,
+      "reuse_exit": 1,
+      "dry_exit": 1,
+      "dry_no_writes": true,
+      "old_run_unchanged": true,
+      "reuse_bytes_equal": true,
+      "first": [
+        {
+          "source_path": "alpha.png",
+          "source_sha256": "f61250cfdd63a0fc6d827fa3e3c9fd4b2e44d92e01e71d4c1ec838c127204bd3",
+          "source_size": 8567,
+          "source_width": 900,
+          "source_height": 1500,
+          "oriented_width": 900,
+          "oriented_height": 1500,
+          "output_size": 8915,
+          "output_width": 900,
+          "output_height": 1500,
+          "output_format": "PNG",
+          "action": "CONVERTED",
+          "warnings": [
+            "SRGB_ASSUMED",
+            "OUTPUT_LARGER_THAN_SOURCE"
+          ],
+          "error": null,
+          "image": {
+            "format": "PNG",
+            "dimensions": [
+              900,
+              1500
+            ],
+            "mode": "RGBA",
+            "pixels_sha256": "add02589750acb096c86510eec069564801bb11b28bbaf1497da4330e03b9713",
+            "icc_color_sha256": "215d9fadbfc938862a82f2633b51fee128b58767f7d7ac55d32cb7e00031bb0d",
+            "metadata_keys": [
+              "icc_profile"
+            ],
+            "exif": [],
+            "text": {},
+            "sampling": null,
+            "progressive": false
+          }
+        },
+        {
+          "source_path": "broken.jpg",
+          "source_sha256": "5464533c9647b67eb320c40ccc5959537c09102ae75388f6a7675b433e745c9d",
+          "source_size": 12,
+          "source_width": null,
+          "source_height": null,
+          "oriented_width": null,
+          "oriented_height": null,
+          "output_size": null,
+          "output_width": null,
+          "output_height": null,
+          "output_format": null,
+          "action": "ERROR",
+          "warnings": [],
+          "error": {
+            "code": "CONVERSION_FAILED",
+            "message": "画像の読込み・変換・検証・保存に失敗しました"
+          }
+        },
+        {
+          "source_path": "cmyk.jpg",
+          "source_sha256": "6f7ffc769488e2a11812ca73e8ed2f831174597937a836f5a41dfe5889a47621",
+          "source_size": 384,
+          "source_width": null,
+          "source_height": null,
+          "oriented_width": null,
+          "oriented_height": null,
+          "output_size": null,
+          "output_width": null,
+          "output_height": null,
+          "output_format": null,
+          "action": "ERROR",
+          "warnings": [],
+          "error": {
+            "code": "UNSUPPORTED_COLOR",
+            "message": "色情報を安全に変換できません。sRGBのJPEG/PNGとして編集ソフトから書き出してください"
+          }
+        },
+        {
+          "source_path": "lab.tiff",
+          "source_sha256": "fe9bfe7760d4ee691df61a77412b50d3329266a611203b775d3252c601802869",
+          "source_size": 90724,
+          "source_width": 200,
+          "source_height": 150,
+          "oriented_width": 200,
+          "oriented_height": 150,
+          "output_size": 853,
+          "output_width": 200,
+          "output_height": 150,
+          "output_format": "PNG",
+          "action": "CONVERTED",
+          "warnings": [],
+          "error": null,
+          "image": {
+            "format": "PNG",
+            "dimensions": [
+              200,
+              150
+            ],
+            "mode": "RGB",
+            "pixels_sha256": "e5920ffc091ef8bb6381b01fc6d5ba29656eac9b8784f4dc980873d67e3acf4a",
+            "icc_color_sha256": "215d9fadbfc938862a82f2633b51fee128b58767f7d7ac55d32cb7e00031bb0d",
+            "metadata_keys": [
+              "icc_profile"
+            ],
+            "exif": [],
+            "text": {},
+            "sampling": null,
+            "progressive": false
+          }
+        },
+        {
+          "source_path": "landscape.jpg",
+          "source_sha256": "e39a9e1352b328437ac299b14ae5c5fc985de7eb285a3ea5e7655ceefd21db0d",
+          "source_size": 264323,
+          "source_width": 2801,
+          "source_height": 1500,
+          "oriented_width": 2801,
+          "oriented_height": 1500,
+          "output_size": 7170,
+          "output_width": 1400,
+          "output_height": 750,
+          "output_format": "PNG",
+          "action": "CONVERTED",
+          "warnings": [
+            "SRGB_ASSUMED"
+          ],
+          "error": null,
+          "image": {
+            "format": "PNG",
+            "dimensions": [
+              1400,
+              750
+            ],
+            "mode": "RGB",
+            "pixels_sha256": "cfc1ecad787301c847c9f883e6621df9514fec7632347f62b96eb165c5a02598",
+            "icc_color_sha256": "215d9fadbfc938862a82f2633b51fee128b58767f7d7ac55d32cb7e00031bb0d",
+            "metadata_keys": [
+              "icc_profile"
+            ],
+            "exif": [],
+            "text": {},
+            "sampling": null,
+            "progressive": false
+          }
+        },
+        {
+          "source_path": "lines.png",
+          "source_sha256": "ad1e8aeae89e39f5c4c0f53f3662ad5e22e8e3557ec132def1fd0a5e17b8b214",
+          "source_size": 8648,
+          "source_width": 2800,
+          "source_height": 800,
+          "oriented_width": 2800,
+          "oriented_height": 800,
+          "output_size": 3077,
+          "output_width": 1400,
+          "output_height": 400,
+          "output_format": "PNG",
+          "action": "CONVERTED",
+          "warnings": [
+            "SRGB_ASSUMED"
+          ],
+          "error": null,
+          "image": {
+            "format": "PNG",
+            "dimensions": [
+              1400,
+              400
+            ],
+            "mode": "RGB",
+            "pixels_sha256": "0065ecaf04c836cc44e499ec17e988b2f1d91cbdd6e00a1509069358f633d002",
+            "icc_color_sha256": "215d9fadbfc938862a82f2633b51fee128b58767f7d7ac55d32cb7e00031bb0d",
+            "metadata_keys": [
+              "icc_profile"
+            ],
+            "exif": [],
+            "text": {},
+            "sampling": null,
+            "progressive": false
+          }
+        },
+        {
+          "source_path": "orientation.png",
+          "source_sha256": "555274130315a5c0b8f20a6467993978705164096ce098481acffe8f55fabd99",
+          "source_size": 11692,
+          "source_width": 2800,
+          "source_height": 1000,
+          "oriented_width": 1000,
+          "oriented_height": 2800,
+          "output_size": 15010,
+          "output_width": 1000,
+          "output_height": 2800,
+          "output_format": "PNG",
+          "action": "CONVERTED",
+          "warnings": [
+            "SRGB_ASSUMED",
+            "OUTPUT_LARGER_THAN_SOURCE"
+          ],
+          "error": null,
+          "image": {
+            "format": "PNG",
+            "dimensions": [
+              1000,
+              2800
+            ],
+            "mode": "RGB",
+            "pixels_sha256": "e5a0e6ec55a8865782eae36ac87e5c2c59bedb3fe313f5f5c41c12353c10983b",
+            "icc_color_sha256": "215d9fadbfc938862a82f2633b51fee128b58767f7d7ac55d32cb7e00031bb0d",
+            "metadata_keys": [
+              "icc_profile"
+            ],
+            "exif": [],
+            "text": {},
+            "sampling": null,
+            "progressive": false
+          }
+        },
+        {
+          "source_path": "portrait.png",
+          "source_sha256": "5638e5ea9fe08f6a14178c256b3daea7fb22393e030a4eca262020c80fa2fb59",
+          "source_size": 10881,
+          "source_width": 800,
+          "source_height": 2400,
+          "oriented_width": 800,
+          "oriented_height": 2400,
+          "output_size": 11267,
+          "output_width": 800,
+          "output_height": 2400,
+          "output_format": "PNG",
+          "action": "CONVERTED",
+          "warnings": [
+            "SRGB_ASSUMED",
+            "OUTPUT_LARGER_THAN_SOURCE"
+          ],
+          "error": null,
+          "image": {
+            "format": "PNG",
+            "dimensions": [
+              800,
+              2400
+            ],
+            "mode": "RGB",
+            "pixels_sha256": "9373f6077b8344d1f60d63a95cba9a30f12ff8fd4238d41580aa739c811b5c63",
+            "icc_color_sha256": "215d9fadbfc938862a82f2633b51fee128b58767f7d7ac55d32cb7e00031bb0d",
+            "metadata_keys": [
+              "icc_profile"
+            ],
+            "exif": [],
+            "text": {},
+            "sampling": null,
+            "progressive": false
+          }
+        },
+        {
+          "source_path": "small.png",
+          "source_sha256": "3be1bba13305062496158dad3d0f5c311371b49e5a2974ec00bc6a98cbfa2e4e",
+          "source_size": 1586,
+          "source_width": 600,
+          "source_height": 400,
+          "oriented_width": 600,
+          "oriented_height": 400,
+          "output_size": 1972,
+          "output_width": 600,
+          "output_height": 400,
+          "output_format": "PNG",
+          "action": "CONVERTED",
+          "warnings": [
+            "SRGB_ASSUMED",
+            "OUTPUT_LARGER_THAN_SOURCE"
+          ],
+          "error": null,
+          "image": {
+            "format": "PNG",
+            "dimensions": [
+              600,
+              400
+            ],
+            "mode": "RGB",
+            "pixels_sha256": "4f58e9deca0208dfd523369cfe933c6dd9f052000f6e4ed30931fb02bd3d733d",
+            "icc_color_sha256": "215d9fadbfc938862a82f2633b51fee128b58767f7d7ac55d32cb7e00031bb0d",
+            "metadata_keys": [
+              "icc_profile"
+            ],
+            "exif": [],
+            "text": {},
+            "sampling": null,
+            "progressive": false
+          }
+        },
+        {
+          "source_path": "synthetic.heic",
+          "source_sha256": "eabe06811362ee534c124f6958e6f850307fa7f0190b3f4cbd4182e3afda3dfd",
+          "source_size": 1225,
+          "source_width": 320,
+          "source_height": 180,
+          "oriented_width": 320,
+          "oriented_height": 180,
+          "output_size": 993,
+          "output_width": 320,
+          "output_height": 180,
+          "output_format": "PNG",
+          "action": "CONVERTED",
+          "warnings": [],
+          "error": null,
+          "image": {
+            "format": "PNG",
+            "dimensions": [
+              320,
+              180
+            ],
+            "mode": "RGB",
+            "pixels_sha256": "75cce7bbc04caae72602d81b641630f187fe656af500d10baceb293251b79d2b",
+            "icc_color_sha256": "215d9fadbfc938862a82f2633b51fee128b58767f7d7ac55d32cb7e00031bb0d",
+            "metadata_keys": [
+              "icc_profile"
+            ],
+            "exif": [],
+            "text": {},
+            "sampling": null,
+            "progressive": false
+          }
+        }
+      ],
+      "reuse": [
+        {
+          "source_path": "alpha.png",
+          "source_sha256": "f61250cfdd63a0fc6d827fa3e3c9fd4b2e44d92e01e71d4c1ec838c127204bd3",
+          "source_size": 8567,
+          "source_width": 900,
+          "source_height": 1500,
+          "oriented_width": 900,
+          "oriented_height": 1500,
+          "output_size": 8915,
+          "output_width": 900,
+          "output_height": 1500,
+          "output_format": "PNG",
+          "action": "SKIPPED_COMPLETE",
+          "warnings": [
+            "SRGB_ASSUMED",
+            "OUTPUT_LARGER_THAN_SOURCE"
+          ],
+          "error": null,
+          "image": {
+            "format": "PNG",
+            "dimensions": [
+              900,
+              1500
+            ],
+            "mode": "RGBA",
+            "pixels_sha256": "add02589750acb096c86510eec069564801bb11b28bbaf1497da4330e03b9713",
+            "icc_color_sha256": "215d9fadbfc938862a82f2633b51fee128b58767f7d7ac55d32cb7e00031bb0d",
+            "metadata_keys": [
+              "icc_profile"
+            ],
+            "exif": [],
+            "text": {},
+            "sampling": null,
+            "progressive": false
+          }
+        },
+        {
+          "source_path": "broken.jpg",
+          "source_sha256": "5464533c9647b67eb320c40ccc5959537c09102ae75388f6a7675b433e745c9d",
+          "source_size": 12,
+          "source_width": null,
+          "source_height": null,
+          "oriented_width": null,
+          "oriented_height": null,
+          "output_size": null,
+          "output_width": null,
+          "output_height": null,
+          "output_format": null,
+          "action": "ERROR",
+          "warnings": [],
+          "error": {
+            "code": "CONVERSION_FAILED",
+            "message": "画像の読込み・変換・検証・保存に失敗しました"
+          }
+        },
+        {
+          "source_path": "cmyk.jpg",
+          "source_sha256": "6f7ffc769488e2a11812ca73e8ed2f831174597937a836f5a41dfe5889a47621",
+          "source_size": 384,
+          "source_width": null,
+          "source_height": null,
+          "oriented_width": null,
+          "oriented_height": null,
+          "output_size": null,
+          "output_width": null,
+          "output_height": null,
+          "output_format": null,
+          "action": "ERROR",
+          "warnings": [],
+          "error": {
+            "code": "UNSUPPORTED_COLOR",
+            "message": "色情報を安全に変換できません。sRGBのJPEG/PNGとして編集ソフトから書き出してください"
+          }
+        },
+        {
+          "source_path": "lab.tiff",
+          "source_sha256": "fe9bfe7760d4ee691df61a77412b50d3329266a611203b775d3252c601802869",
+          "source_size": 90724,
+          "source_width": 200,
+          "source_height": 150,
+          "oriented_width": 200,
+          "oriented_height": 150,
+          "output_size": 853,
+          "output_width": 200,
+          "output_height": 150,
+          "output_format": "PNG",
+          "action": "SKIPPED_COMPLETE",
+          "warnings": [],
+          "error": null,
+          "image": {
+            "format": "PNG",
+            "dimensions": [
+              200,
+              150
+            ],
+            "mode": "RGB",
+            "pixels_sha256": "e5920ffc091ef8bb6381b01fc6d5ba29656eac9b8784f4dc980873d67e3acf4a",
+            "icc_color_sha256": "215d9fadbfc938862a82f2633b51fee128b58767f7d7ac55d32cb7e00031bb0d",
+            "metadata_keys": [
+              "icc_profile"
+            ],
+            "exif": [],
+            "text": {},
+            "sampling": null,
+            "progressive": false
+          }
+        },
+        {
+          "source_path": "landscape.jpg",
+          "source_sha256": "e39a9e1352b328437ac299b14ae5c5fc985de7eb285a3ea5e7655ceefd21db0d",
+          "source_size": 264323,
+          "source_width": 2801,
+          "source_height": 1500,
+          "oriented_width": 2801,
+          "oriented_height": 1500,
+          "output_size": 7170,
+          "output_width": 1400,
+          "output_height": 750,
+          "output_format": "PNG",
+          "action": "SKIPPED_COMPLETE",
+          "warnings": [
+            "SRGB_ASSUMED"
+          ],
+          "error": null,
+          "image": {
+            "format": "PNG",
+            "dimensions": [
+              1400,
+              750
+            ],
+            "mode": "RGB",
+            "pixels_sha256": "cfc1ecad787301c847c9f883e6621df9514fec7632347f62b96eb165c5a02598",
+            "icc_color_sha256": "215d9fadbfc938862a82f2633b51fee128b58767f7d7ac55d32cb7e00031bb0d",
+            "metadata_keys": [
+              "icc_profile"
+            ],
+            "exif": [],
+            "text": {},
+            "sampling": null,
+            "progressive": false
+          }
+        },
+        {
+          "source_path": "lines.png",
+          "source_sha256": "ad1e8aeae89e39f5c4c0f53f3662ad5e22e8e3557ec132def1fd0a5e17b8b214",
+          "source_size": 8648,
+          "source_width": 2800,
+          "source_height": 800,
+          "oriented_width": 2800,
+          "oriented_height": 800,
+          "output_size": 3077,
+          "output_width": 1400,
+          "output_height": 400,
+          "output_format": "PNG",
+          "action": "SKIPPED_COMPLETE",
+          "warnings": [
+            "SRGB_ASSUMED"
+          ],
+          "error": null,
+          "image": {
+            "format": "PNG",
+            "dimensions": [
+              1400,
+              400
+            ],
+            "mode": "RGB",
+            "pixels_sha256": "0065ecaf04c836cc44e499ec17e988b2f1d91cbdd6e00a1509069358f633d002",
+            "icc_color_sha256": "215d9fadbfc938862a82f2633b51fee128b58767f7d7ac55d32cb7e00031bb0d",
+            "metadata_keys": [
+              "icc_profile"
+            ],
+            "exif": [],
+            "text": {},
+            "sampling": null,
+            "progressive": false
+          }
+        },
+        {
+          "source_path": "orientation.png",
+          "source_sha256": "555274130315a5c0b8f20a6467993978705164096ce098481acffe8f55fabd99",
+          "source_size": 11692,
+          "source_width": 2800,
+          "source_height": 1000,
+          "oriented_width": 1000,
+          "oriented_height": 2800,
+          "output_size": 15010,
+          "output_width": 1000,
+          "output_height": 2800,
+          "output_format": "PNG",
+          "action": "SKIPPED_COMPLETE",
+          "warnings": [
+            "SRGB_ASSUMED",
+            "OUTPUT_LARGER_THAN_SOURCE"
+          ],
+          "error": null,
+          "image": {
+            "format": "PNG",
+            "dimensions": [
+              1000,
+              2800
+            ],
+            "mode": "RGB",
+            "pixels_sha256": "e5a0e6ec55a8865782eae36ac87e5c2c59bedb3fe313f5f5c41c12353c10983b",
+            "icc_color_sha256": "215d9fadbfc938862a82f2633b51fee128b58767f7d7ac55d32cb7e00031bb0d",
+            "metadata_keys": [
+              "icc_profile"
+            ],
+            "exif": [],
+            "text": {},
+            "sampling": null,
+            "progressive": false
+          }
+        },
+        {
+          "source_path": "portrait.png",
+          "source_sha256": "5638e5ea9fe08f6a14178c256b3daea7fb22393e030a4eca262020c80fa2fb59",
+          "source_size": 10881,
+          "source_width": 800,
+          "source_height": 2400,
+          "oriented_width": 800,
+          "oriented_height": 2400,
+          "output_size": 11267,
+          "output_width": 800,
+          "output_height": 2400,
+          "output_format": "PNG",
+          "action": "SKIPPED_COMPLETE",
+          "warnings": [
+            "SRGB_ASSUMED",
+            "OUTPUT_LARGER_THAN_SOURCE"
+          ],
+          "error": null,
+          "image": {
+            "format": "PNG",
+            "dimensions": [
+              800,
+              2400
+            ],
+            "mode": "RGB",
+            "pixels_sha256": "9373f6077b8344d1f60d63a95cba9a30f12ff8fd4238d41580aa739c811b5c63",
+            "icc_color_sha256": "215d9fadbfc938862a82f2633b51fee128b58767f7d7ac55d32cb7e00031bb0d",
+            "metadata_keys": [
+              "icc_profile"
+            ],
+            "exif": [],
+            "text": {},
+            "sampling": null,
+            "progressive": false
+          }
+        },
+        {
+          "source_path": "small.png",
+          "source_sha256": "3be1bba13305062496158dad3d0f5c311371b49e5a2974ec00bc6a98cbfa2e4e",
+          "source_size": 1586,
+          "source_width": 600,
+          "source_height": 400,
+          "oriented_width": 600,
+          "oriented_height": 400,
+          "output_size": 1972,
+          "output_width": 600,
+          "output_height": 400,
+          "output_format": "PNG",
+          "action": "SKIPPED_COMPLETE",
+          "warnings": [
+            "SRGB_ASSUMED",
+            "OUTPUT_LARGER_THAN_SOURCE"
+          ],
+          "error": null,
+          "image": {
+            "format": "PNG",
+            "dimensions": [
+              600,
+              400
+            ],
+            "mode": "RGB",
+            "pixels_sha256": "4f58e9deca0208dfd523369cfe933c6dd9f052000f6e4ed30931fb02bd3d733d",
+            "icc_color_sha256": "215d9fadbfc938862a82f2633b51fee128b58767f7d7ac55d32cb7e00031bb0d",
+            "metadata_keys": [
+              "icc_profile"
+            ],
+            "exif": [],
+            "text": {},
+            "sampling": null,
+            "progressive": false
+          }
+        },
+        {
+          "source_path": "synthetic.heic",
+          "source_sha256": "eabe06811362ee534c124f6958e6f850307fa7f0190b3f4cbd4182e3afda3dfd",
+          "source_size": 1225,
+          "source_width": 320,
+          "source_height": 180,
+          "oriented_width": 320,
+          "oriented_height": 180,
+          "output_size": 993,
+          "output_width": 320,
+          "output_height": 180,
+          "output_format": "PNG",
+          "action": "SKIPPED_COMPLETE",
+          "warnings": [],
+          "error": null,
+          "image": {
+            "format": "PNG",
+            "dimensions": [
+              320,
+              180
+            ],
+            "mode": "RGB",
+            "pixels_sha256": "75cce7bbc04caae72602d81b641630f187fe656af500d10baceb293251b79d2b",
+            "icc_color_sha256": "215d9fadbfc938862a82f2633b51fee128b58767f7d7ac55d32cb7e00031bb0d",
+            "metadata_keys": [
+              "icc_profile"
+            ],
+            "exif": [],
+            "text": {},
+            "sampling": null,
+            "progressive": false
+          }
+        }
+      ],
+      "dry": [
+        {
+          "source_path": "alpha.png",
+          "source_sha256": "f61250cfdd63a0fc6d827fa3e3c9fd4b2e44d92e01e71d4c1ec838c127204bd3",
+          "source_size": 8567,
+          "source_width": 900,
+          "source_height": 1500,
+          "oriented_width": 900,
+          "oriented_height": 1500,
+          "output_size": null,
+          "output_width": 900,
+          "output_height": 1500,
+          "output_format": "PNG",
+          "action": "DRY_RUN",
+          "warnings": [
+            "SRGB_ASSUMED"
+          ],
+          "error": null
+        },
+        {
+          "source_path": "broken.jpg",
+          "source_sha256": "5464533c9647b67eb320c40ccc5959537c09102ae75388f6a7675b433e745c9d",
+          "source_size": 12,
+          "source_width": null,
+          "source_height": null,
+          "oriented_width": null,
+          "oriented_height": null,
+          "output_size": null,
+          "output_width": null,
+          "output_height": null,
+          "output_format": null,
+          "action": "ERROR",
+          "warnings": [],
+          "error": {
+            "code": "CONVERSION_FAILED",
+            "message": "画像の読込み・変換・検証・保存に失敗しました"
+          }
+        },
+        {
+          "source_path": "cmyk.jpg",
+          "source_sha256": "6f7ffc769488e2a11812ca73e8ed2f831174597937a836f5a41dfe5889a47621",
+          "source_size": 384,
+          "source_width": null,
+          "source_height": null,
+          "oriented_width": null,
+          "oriented_height": null,
+          "output_size": null,
+          "output_width": null,
+          "output_height": null,
+          "output_format": null,
+          "action": "ERROR",
+          "warnings": [],
+          "error": {
+            "code": "UNSUPPORTED_COLOR",
+            "message": "色情報を安全に変換できません。sRGBのJPEG/PNGとして編集ソフトから書き出してください"
+          }
+        },
+        {
+          "source_path": "lab.tiff",
+          "source_sha256": "fe9bfe7760d4ee691df61a77412b50d3329266a611203b775d3252c601802869",
+          "source_size": 90724,
+          "source_width": 200,
+          "source_height": 150,
+          "oriented_width": 200,
+          "oriented_height": 150,
+          "output_size": null,
+          "output_width": 200,
+          "output_height": 150,
+          "output_format": "PNG",
+          "action": "DRY_RUN",
+          "warnings": [],
+          "error": null
+        },
+        {
+          "source_path": "landscape.jpg",
+          "source_sha256": "e39a9e1352b328437ac299b14ae5c5fc985de7eb285a3ea5e7655ceefd21db0d",
+          "source_size": 264323,
+          "source_width": 2801,
+          "source_height": 1500,
+          "oriented_width": 2801,
+          "oriented_height": 1500,
+          "output_size": null,
+          "output_width": 1400,
+          "output_height": 750,
+          "output_format": "PNG",
+          "action": "DRY_RUN",
+          "warnings": [
+            "SRGB_ASSUMED"
+          ],
+          "error": null
+        },
+        {
+          "source_path": "lines.png",
+          "source_sha256": "ad1e8aeae89e39f5c4c0f53f3662ad5e22e8e3557ec132def1fd0a5e17b8b214",
+          "source_size": 8648,
+          "source_width": 2800,
+          "source_height": 800,
+          "oriented_width": 2800,
+          "oriented_height": 800,
+          "output_size": null,
+          "output_width": 1400,
+          "output_height": 400,
+          "output_format": "PNG",
+          "action": "DRY_RUN",
+          "warnings": [
+            "SRGB_ASSUMED"
+          ],
+          "error": null
+        },
+        {
+          "source_path": "orientation.png",
+          "source_sha256": "555274130315a5c0b8f20a6467993978705164096ce098481acffe8f55fabd99",
+          "source_size": 11692,
+          "source_width": 2800,
+          "source_height": 1000,
+          "oriented_width": 1000,
+          "oriented_height": 2800,
+          "output_size": null,
+          "output_width": 1000,
+          "output_height": 2800,
+          "output_format": "PNG",
+          "action": "DRY_RUN",
+          "warnings": [
+            "SRGB_ASSUMED"
+          ],
+          "error": null
+        },
+        {
+          "source_path": "portrait.png",
+          "source_sha256": "5638e5ea9fe08f6a14178c256b3daea7fb22393e030a4eca262020c80fa2fb59",
+          "source_size": 10881,
+          "source_width": 800,
+          "source_height": 2400,
+          "oriented_width": 800,
+          "oriented_height": 2400,
+          "output_size": null,
+          "output_width": 800,
+          "output_height": 2400,
+          "output_format": "PNG",
+          "action": "DRY_RUN",
+          "warnings": [
+            "SRGB_ASSUMED"
+          ],
+          "error": null
+        },
+        {
+          "source_path": "small.png",
+          "source_sha256": "3be1bba13305062496158dad3d0f5c311371b49e5a2974ec00bc6a98cbfa2e4e",
+          "source_size": 1586,
+          "source_width": 600,
+          "source_height": 400,
+          "oriented_width": 600,
+          "oriented_height": 400,
+          "output_size": null,
+          "output_width": 600,
+          "output_height": 400,
+          "output_format": "PNG",
+          "action": "DRY_RUN",
+          "warnings": [
+            "SRGB_ASSUMED"
+          ],
+          "error": null
+        },
+        {
+          "source_path": "synthetic.heic",
+          "source_sha256": "eabe06811362ee534c124f6958e6f850307fa7f0190b3f4cbd4182e3afda3dfd",
+          "source_size": 1225,
+          "source_width": 320,
+          "source_height": 180,
+          "oriented_width": 320,
+          "oriented_height": 180,
+          "output_size": null,
+          "output_width": 320,
+          "output_height": 180,
+          "output_format": "PNG",
+          "action": "DRY_RUN",
+          "warnings": [],
+          "error": null
+        }
+      ]
+    }
+  },
+  "resize": {
+    "standard": [
+      {
+        "exit": 0,
+        "rows": [
+          {
+            "source_path": "landscape.jpg",
+            "source_size": "264323",
+            "source_sha256": "e39a9e1352b328437ac299b14ae5c5fc985de7eb285a3ea5e7655ceefd21db0d",
+            "output_size": "15717",
+            "action": "CONVERTED",
+            "error": "",
+            "preset": "standard",
+            "recipe_hash": "2f60924f29b4cedccd15bd92d6dab4da72b22c1358c23e2edf1174fa3b70f420",
+            "output_format": "jpeg",
+            "strip_exif": "false",
+            "orig_width": "2801",
+            "orig_height": "1500",
+            "new_width": "1280",
+            "new_height": "685",
+            "image": {
+              "format": "JPEG",
+              "dimensions": [
+                1280,
+                685
+              ],
+              "mode": "RGB",
+              "pixels_sha256": "1a77757cc79d04bea743a6d4bc9508fcd4351c31b4a37e31bbe3649669949379",
+              "icc_color_sha256": null,
+              "metadata_keys": [
+                "comment",
+                "jfif",
+                "jfif_density",
+                "jfif_unit",
+                "jfif_version",
+                "progression",
+                "progressive"
+              ],
+              "exif": [],
+              "text": {},
+              "sampling": 2,
+              "progressive": true
+            }
+          },
+          {
+            "source_path": "orientation.png",
+            "source_size": "11692",
+            "source_sha256": "555274130315a5c0b8f20a6467993978705164096ce098481acffe8f55fabd99",
+            "output_size": "13520",
+            "action": "CONVERTED",
+            "error": "",
+            "preset": "standard",
+            "recipe_hash": "2f60924f29b4cedccd15bd92d6dab4da72b22c1358c23e2edf1174fa3b70f420",
+            "output_format": "jpeg",
+            "strip_exif": "false",
+            "orig_width": "2800",
+            "orig_height": "1000",
+            "new_width": "457",
+            "new_height": "1280",
+            "image": {
+              "format": "JPEG",
+              "dimensions": [
+                457,
+                1280
+              ],
+              "mode": "RGB",
+              "pixels_sha256": "0964d45de2363483a764857997155f07bc925195f93eabc63769499a605e075b",
+              "icc_color_sha256": null,
+              "metadata_keys": [
+                "comment",
+                "dpi",
+                "exif",
+                "jfif",
+                "jfif_density",
+                "jfif_unit",
+                "jfif_version",
+                "progression",
+                "progressive"
+              ],
+              "exif": [
+                270
+              ],
+              "text": {},
+              "sampling": 2,
+              "progressive": true
+            }
+          },
+          {
+            "source_path": "portrait.png",
+            "source_size": "10881",
+            "source_sha256": "5638e5ea9fe08f6a14178c256b3daea7fb22393e030a4eca262020c80fa2fb59",
+            "output_size": "3985",
+            "action": "CONVERTED",
+            "error": "",
+            "preset": "standard",
+            "recipe_hash": "2f60924f29b4cedccd15bd92d6dab4da72b22c1358c23e2edf1174fa3b70f420",
+            "output_format": "jpeg",
+            "strip_exif": "false",
+            "orig_width": "800",
+            "orig_height": "2400",
+            "new_width": "427",
+            "new_height": "1280",
+            "image": {
+              "format": "JPEG",
+              "dimensions": [
+                427,
+                1280
+              ],
+              "mode": "RGB",
+              "pixels_sha256": "d647c23eab016738c861035510c3055a3194812e1e3e1fce6e99582f835811e9",
+              "icc_color_sha256": null,
+              "metadata_keys": [
+                "comment",
+                "jfif",
+                "jfif_density",
+                "jfif_unit",
+                "jfif_version",
+                "progression",
+                "progressive"
+              ],
+              "exif": [],
+              "text": {},
+              "sampling": 2,
+              "progressive": true
+            }
+          },
+          {
+            "source_path": "small.png",
+            "source_size": "1586",
+            "source_sha256": "3be1bba13305062496158dad3d0f5c311371b49e5a2974ec00bc6a98cbfa2e4e",
+            "output_size": "2170",
+            "action": "CONVERTED",
+            "error": "",
+            "preset": "standard",
+            "recipe_hash": "2f60924f29b4cedccd15bd92d6dab4da72b22c1358c23e2edf1174fa3b70f420",
+            "output_format": "jpeg",
+            "strip_exif": "false",
+            "orig_width": "600",
+            "orig_height": "400",
+            "new_width": "600",
+            "new_height": "400",
+            "image": {
+              "format": "JPEG",
+              "dimensions": [
+                600,
+                400
+              ],
+              "mode": "RGB",
+              "pixels_sha256": "5bf4e35ef83e3018b59e7312dbe8f76efcc20b9e0692674b9c85265433e0aaa9",
+              "icc_color_sha256": null,
+              "metadata_keys": [
+                "comment",
+                "jfif",
+                "jfif_density",
+                "jfif_unit",
+                "jfif_version",
+                "progression",
+                "progressive"
+              ],
+              "exif": [],
+              "text": {},
+              "sampling": 2,
+              "progressive": true
+            }
+          }
+        ]
+      },
+      {
+        "exit": 0,
+        "rows": [
+          {
+            "source_path": "landscape.jpg",
+            "source_size": "264323",
+            "source_sha256": "e39a9e1352b328437ac299b14ae5c5fc985de7eb285a3ea5e7655ceefd21db0d",
+            "output_size": "15717",
+            "action": "SKIPPED_COMPLETE",
+            "error": "",
+            "preset": "standard",
+            "recipe_hash": "2f60924f29b4cedccd15bd92d6dab4da72b22c1358c23e2edf1174fa3b70f420",
+            "output_format": "jpeg",
+            "strip_exif": "false",
+            "orig_width": "2801",
+            "orig_height": "1500",
+            "new_width": "1280",
+            "new_height": "685",
+            "image": {
+              "format": "JPEG",
+              "dimensions": [
+                1280,
+                685
+              ],
+              "mode": "RGB",
+              "pixels_sha256": "1a77757cc79d04bea743a6d4bc9508fcd4351c31b4a37e31bbe3649669949379",
+              "icc_color_sha256": null,
+              "metadata_keys": [
+                "comment",
+                "jfif",
+                "jfif_density",
+                "jfif_unit",
+                "jfif_version",
+                "progression",
+                "progressive"
+              ],
+              "exif": [],
+              "text": {},
+              "sampling": 2,
+              "progressive": true
+            }
+          },
+          {
+            "source_path": "orientation.png",
+            "source_size": "11692",
+            "source_sha256": "555274130315a5c0b8f20a6467993978705164096ce098481acffe8f55fabd99",
+            "output_size": "13520",
+            "action": "SKIPPED_COMPLETE",
+            "error": "",
+            "preset": "standard",
+            "recipe_hash": "2f60924f29b4cedccd15bd92d6dab4da72b22c1358c23e2edf1174fa3b70f420",
+            "output_format": "jpeg",
+            "strip_exif": "false",
+            "orig_width": "2800",
+            "orig_height": "1000",
+            "new_width": "457",
+            "new_height": "1280",
+            "image": {
+              "format": "JPEG",
+              "dimensions": [
+                457,
+                1280
+              ],
+              "mode": "RGB",
+              "pixels_sha256": "0964d45de2363483a764857997155f07bc925195f93eabc63769499a605e075b",
+              "icc_color_sha256": null,
+              "metadata_keys": [
+                "comment",
+                "dpi",
+                "exif",
+                "jfif",
+                "jfif_density",
+                "jfif_unit",
+                "jfif_version",
+                "progression",
+                "progressive"
+              ],
+              "exif": [
+                270
+              ],
+              "text": {},
+              "sampling": 2,
+              "progressive": true
+            }
+          },
+          {
+            "source_path": "portrait.png",
+            "source_size": "10881",
+            "source_sha256": "5638e5ea9fe08f6a14178c256b3daea7fb22393e030a4eca262020c80fa2fb59",
+            "output_size": "3985",
+            "action": "SKIPPED_COMPLETE",
+            "error": "",
+            "preset": "standard",
+            "recipe_hash": "2f60924f29b4cedccd15bd92d6dab4da72b22c1358c23e2edf1174fa3b70f420",
+            "output_format": "jpeg",
+            "strip_exif": "false",
+            "orig_width": "800",
+            "orig_height": "2400",
+            "new_width": "427",
+            "new_height": "1280",
+            "image": {
+              "format": "JPEG",
+              "dimensions": [
+                427,
+                1280
+              ],
+              "mode": "RGB",
+              "pixels_sha256": "d647c23eab016738c861035510c3055a3194812e1e3e1fce6e99582f835811e9",
+              "icc_color_sha256": null,
+              "metadata_keys": [
+                "comment",
+                "jfif",
+                "jfif_density",
+                "jfif_unit",
+                "jfif_version",
+                "progression",
+                "progressive"
+              ],
+              "exif": [],
+              "text": {},
+              "sampling": 2,
+              "progressive": true
+            }
+          },
+          {
+            "source_path": "small.png",
+            "source_size": "1586",
+            "source_sha256": "3be1bba13305062496158dad3d0f5c311371b49e5a2974ec00bc6a98cbfa2e4e",
+            "output_size": "2170",
+            "action": "SKIPPED_COMPLETE",
+            "error": "",
+            "preset": "standard",
+            "recipe_hash": "2f60924f29b4cedccd15bd92d6dab4da72b22c1358c23e2edf1174fa3b70f420",
+            "output_format": "jpeg",
+            "strip_exif": "false",
+            "orig_width": "600",
+            "orig_height": "400",
+            "new_width": "600",
+            "new_height": "400",
+            "image": {
+              "format": "JPEG",
+              "dimensions": [
+                600,
+                400
+              ],
+              "mode": "RGB",
+              "pixels_sha256": "5bf4e35ef83e3018b59e7312dbe8f76efcc20b9e0692674b9c85265433e0aaa9",
+              "icc_color_sha256": null,
+              "metadata_keys": [
+                "comment",
+                "jfif",
+                "jfif_density",
+                "jfif_unit",
+                "jfif_version",
+                "progression",
+                "progressive"
+              ],
+              "exif": [],
+              "text": {},
+              "sampling": 2,
+              "progressive": true
+            }
+          }
+        ]
+      }
+    ],
+    "compact": [
+      {
+        "exit": 0,
+        "rows": [
+          {
+            "source_path": "landscape.jpg",
+            "source_size": "264323",
+            "source_sha256": "e39a9e1352b328437ac299b14ae5c5fc985de7eb285a3ea5e7655ceefd21db0d",
+            "output_size": "10316",
+            "action": "CONVERTED",
+            "error": "",
+            "preset": "compact",
+            "recipe_hash": "c5233dcedea2119fbfa723eb7020ba4f295d0fbcb0881ec8340f389614a26ddd",
+            "output_format": "jpeg",
+            "strip_exif": "false",
+            "orig_width": "2801",
+            "orig_height": "1500",
+            "new_width": "1024",
+            "new_height": "548",
+            "image": {
+              "format": "JPEG",
+              "dimensions": [
+                1024,
+                548
+              ],
+              "mode": "RGB",
+              "pixels_sha256": "40f808176074574cfc6db3c89c1e1343ef55b762ce7e4c47089e8422d0783b18",
+              "icc_color_sha256": null,
+              "metadata_keys": [
+                "comment",
+                "jfif",
+                "jfif_density",
+                "jfif_unit",
+                "jfif_version",
+                "progression",
+                "progressive"
+              ],
+              "exif": [],
+              "text": {},
+              "sampling": 2,
+              "progressive": true
+            }
+          },
+          {
+            "source_path": "orientation.png",
+            "source_size": "11692",
+            "source_sha256": "555274130315a5c0b8f20a6467993978705164096ce098481acffe8f55fabd99",
+            "output_size": "8954",
+            "action": "CONVERTED",
+            "error": "",
+            "preset": "compact",
+            "recipe_hash": "c5233dcedea2119fbfa723eb7020ba4f295d0fbcb0881ec8340f389614a26ddd",
+            "output_format": "jpeg",
+            "strip_exif": "false",
+            "orig_width": "2800",
+            "orig_height": "1000",
+            "new_width": "366",
+            "new_height": "1024",
+            "image": {
+              "format": "JPEG",
+              "dimensions": [
+                366,
+                1024
+              ],
+              "mode": "RGB",
+              "pixels_sha256": "36ed7519d1ad4a0afe20176d7af385b6057f464c553f12b007ea72790d2e1f6a",
+              "icc_color_sha256": null,
+              "metadata_keys": [
+                "comment",
+                "dpi",
+                "exif",
+                "jfif",
+                "jfif_density",
+                "jfif_unit",
+                "jfif_version",
+                "progression",
+                "progressive"
+              ],
+              "exif": [
+                270
+              ],
+              "text": {},
+              "sampling": 2,
+              "progressive": true
+            }
+          },
+          {
+            "source_path": "portrait.png",
+            "source_size": "10881",
+            "source_sha256": "5638e5ea9fe08f6a14178c256b3daea7fb22393e030a4eca262020c80fa2fb59",
+            "output_size": "2858",
+            "action": "CONVERTED",
+            "error": "",
+            "preset": "compact",
+            "recipe_hash": "c5233dcedea2119fbfa723eb7020ba4f295d0fbcb0881ec8340f389614a26ddd",
+            "output_format": "jpeg",
+            "strip_exif": "false",
+            "orig_width": "800",
+            "orig_height": "2400",
+            "new_width": "341",
+            "new_height": "1024",
+            "image": {
+              "format": "JPEG",
+              "dimensions": [
+                341,
+                1024
+              ],
+              "mode": "RGB",
+              "pixels_sha256": "afe96d23425b6348bcf1d5daae47644abfe725302eac90f43bd12b6834feae2c",
+              "icc_color_sha256": null,
+              "metadata_keys": [
+                "comment",
+                "jfif",
+                "jfif_density",
+                "jfif_unit",
+                "jfif_version",
+                "progression",
+                "progressive"
+              ],
+              "exif": [],
+              "text": {},
+              "sampling": 2,
+              "progressive": true
+            }
+          },
+          {
+            "source_path": "small.png",
+            "source_size": "1586",
+            "source_sha256": "3be1bba13305062496158dad3d0f5c311371b49e5a2974ec00bc6a98cbfa2e4e",
+            "output_size": "2170",
+            "action": "CONVERTED",
+            "error": "",
+            "preset": "compact",
+            "recipe_hash": "c5233dcedea2119fbfa723eb7020ba4f295d0fbcb0881ec8340f389614a26ddd",
+            "output_format": "jpeg",
+            "strip_exif": "false",
+            "orig_width": "600",
+            "orig_height": "400",
+            "new_width": "600",
+            "new_height": "400",
+            "image": {
+              "format": "JPEG",
+              "dimensions": [
+                600,
+                400
+              ],
+              "mode": "RGB",
+              "pixels_sha256": "5bf4e35ef83e3018b59e7312dbe8f76efcc20b9e0692674b9c85265433e0aaa9",
+              "icc_color_sha256": null,
+              "metadata_keys": [
+                "comment",
+                "jfif",
+                "jfif_density",
+                "jfif_unit",
+                "jfif_version",
+                "progression",
+                "progressive"
+              ],
+              "exif": [],
+              "text": {},
+              "sampling": 2,
+              "progressive": true
+            }
+          }
+        ]
+      },
+      {
+        "exit": 0,
+        "rows": [
+          {
+            "source_path": "landscape.jpg",
+            "source_size": "264323",
+            "source_sha256": "e39a9e1352b328437ac299b14ae5c5fc985de7eb285a3ea5e7655ceefd21db0d",
+            "output_size": "10316",
+            "action": "SKIPPED_COMPLETE",
+            "error": "",
+            "preset": "compact",
+            "recipe_hash": "c5233dcedea2119fbfa723eb7020ba4f295d0fbcb0881ec8340f389614a26ddd",
+            "output_format": "jpeg",
+            "strip_exif": "false",
+            "orig_width": "2801",
+            "orig_height": "1500",
+            "new_width": "1024",
+            "new_height": "548",
+            "image": {
+              "format": "JPEG",
+              "dimensions": [
+                1024,
+                548
+              ],
+              "mode": "RGB",
+              "pixels_sha256": "40f808176074574cfc6db3c89c1e1343ef55b762ce7e4c47089e8422d0783b18",
+              "icc_color_sha256": null,
+              "metadata_keys": [
+                "comment",
+                "jfif",
+                "jfif_density",
+                "jfif_unit",
+                "jfif_version",
+                "progression",
+                "progressive"
+              ],
+              "exif": [],
+              "text": {},
+              "sampling": 2,
+              "progressive": true
+            }
+          },
+          {
+            "source_path": "orientation.png",
+            "source_size": "11692",
+            "source_sha256": "555274130315a5c0b8f20a6467993978705164096ce098481acffe8f55fabd99",
+            "output_size": "8954",
+            "action": "SKIPPED_COMPLETE",
+            "error": "",
+            "preset": "compact",
+            "recipe_hash": "c5233dcedea2119fbfa723eb7020ba4f295d0fbcb0881ec8340f389614a26ddd",
+            "output_format": "jpeg",
+            "strip_exif": "false",
+            "orig_width": "2800",
+            "orig_height": "1000",
+            "new_width": "366",
+            "new_height": "1024",
+            "image": {
+              "format": "JPEG",
+              "dimensions": [
+                366,
+                1024
+              ],
+              "mode": "RGB",
+              "pixels_sha256": "36ed7519d1ad4a0afe20176d7af385b6057f464c553f12b007ea72790d2e1f6a",
+              "icc_color_sha256": null,
+              "metadata_keys": [
+                "comment",
+                "dpi",
+                "exif",
+                "jfif",
+                "jfif_density",
+                "jfif_unit",
+                "jfif_version",
+                "progression",
+                "progressive"
+              ],
+              "exif": [
+                270
+              ],
+              "text": {},
+              "sampling": 2,
+              "progressive": true
+            }
+          },
+          {
+            "source_path": "portrait.png",
+            "source_size": "10881",
+            "source_sha256": "5638e5ea9fe08f6a14178c256b3daea7fb22393e030a4eca262020c80fa2fb59",
+            "output_size": "2858",
+            "action": "SKIPPED_COMPLETE",
+            "error": "",
+            "preset": "compact",
+            "recipe_hash": "c5233dcedea2119fbfa723eb7020ba4f295d0fbcb0881ec8340f389614a26ddd",
+            "output_format": "jpeg",
+            "strip_exif": "false",
+            "orig_width": "800",
+            "orig_height": "2400",
+            "new_width": "341",
+            "new_height": "1024",
+            "image": {
+              "format": "JPEG",
+              "dimensions": [
+                341,
+                1024
+              ],
+              "mode": "RGB",
+              "pixels_sha256": "afe96d23425b6348bcf1d5daae47644abfe725302eac90f43bd12b6834feae2c",
+              "icc_color_sha256": null,
+              "metadata_keys": [
+                "comment",
+                "jfif",
+                "jfif_density",
+                "jfif_unit",
+                "jfif_version",
+                "progression",
+                "progressive"
+              ],
+              "exif": [],
+              "text": {},
+              "sampling": 2,
+              "progressive": true
+            }
+          },
+          {
+            "source_path": "small.png",
+            "source_size": "1586",
+            "source_sha256": "3be1bba13305062496158dad3d0f5c311371b49e5a2974ec00bc6a98cbfa2e4e",
+            "output_size": "2170",
+            "action": "SKIPPED_COMPLETE",
+            "error": "",
+            "preset": "compact",
+            "recipe_hash": "c5233dcedea2119fbfa723eb7020ba4f295d0fbcb0881ec8340f389614a26ddd",
+            "output_format": "jpeg",
+            "strip_exif": "false",
+            "orig_width": "600",
+            "orig_height": "400",
+            "new_width": "600",
+            "new_height": "400",
+            "image": {
+              "format": "JPEG",
+              "dimensions": [
+                600,
+                400
+              ],
+              "mode": "RGB",
+              "pixels_sha256": "5bf4e35ef83e3018b59e7312dbe8f76efcc20b9e0692674b9c85265433e0aaa9",
+              "icc_color_sha256": null,
+              "metadata_keys": [
+                "comment",
+                "jfif",
+                "jfif_density",
+                "jfif_unit",
+                "jfif_version",
+                "progression",
+                "progressive"
+              ],
+              "exif": [],
+              "text": {},
+              "sampling": 2,
+              "progressive": true
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "originals_unchanged": true,
+  "cli_exit": [
+    0,
+    1,
+    2
+  ]
+}

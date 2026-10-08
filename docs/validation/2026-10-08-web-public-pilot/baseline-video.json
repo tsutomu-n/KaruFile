@@ -1,0 +1,9 @@
+{
+  "ended": "2026-10-08T13:58:40.5698413+09:00",
+  "started": "2026-10-08T13:58:36.2713129+09:00",
+  "phase": "baseline",
+  "log": "baseline-video.log",
+  "command": "uv run --project video-shrink python -m pytest -q video-shrink/tests",
+  "exit_code": 0,
+  "workdir": "C:\\Users\\tn\\c_projects\\KaruFile"
+}

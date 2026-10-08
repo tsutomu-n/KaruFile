@@ -9,7 +9,13 @@
 
 画像パッケージだけの`python -m media_shrink web-public`と`gui`。root presetは増やさない。
 `web_public.py`は固定recipe・変換・候補検証、`web_public_batch.py`は選択・新run・再利用・manifest、
-`gui.py`は日本語画面とバックグラウンド実行を担当する。既存image.py/utils.pyのfingerprint/path/staged replaceを再利用する。
+`gui.py`は日本語画面とバックグラウンド実行を担当する。source fingerprintは`file_identity.py`、
+path guardは既存`utils.py`、staged replaceは既存`image.py`を使う。
+`file_identity.py`の公開名は`SourceChangedError`、`SourceFingerprint`、`sha256_file`、
+`stat_signature`、`capture_source_fingerprint`、`assert_source_unchanged`。
+通常resizeとweb-publicが共有し、Pillow/HEIF/NiceGUIや画像変換には依存しない。
+旧`image.py`の例外・型・private関数名はalias/薄い委譲で維持し、既存のhash/capture/change-checkのmonkeypatch経路を保つ。
+recipe・manifest schema・staged publicationの契約はこの移設で変更しない。
 
 | 引数 | 契約 |
 |---|---|
@@ -60,6 +66,8 @@ dry-run結果はメモリ内DRY_RUN、予定寸法/形式だけでoutput_path=nu
 
 再利用は前manifest成功行のみ。source相対名/SHA/size、recipe本体/hash、engine_versions、output SHA/size/寸法/形式、
 現在の出力ポリシー検証が必要。前outputの相対path・通常file・非linkを検査し、バイトを新runへコピー、hardlinkは使わない。
+コピー前後の安定性はSHAとstat署名（dev、ino、size、mtime_ns、ctime_ns）で照合し、コピー先のSHAも一致させる。
+読取りによるatimeだけの変化は再利用を拒否する理由にしない。
 manifestの欠落/旧schema/破損/不適合は原本から再生成。画像内markerだけでは省略しない。
 recipe hashは用途/幅/丸め/拡大crop禁止/形式/JPEG・PNG設定/色alpha metadata/resampling/recipe versionを含む。
 現在はrecipe version2。BMP/Exif色検査の修正前のversion1とは再利用互換性を持たず、原本から再生成する。
@@ -70,6 +78,7 @@ Windowsのctimeだけで同size/同mtime変更を判定しない。一時JSON再
 確定失敗は終了1、前manifestを保持する。画像ごとの失敗は他の処理を止めない。
 処理後の不適合が見つかった今回自身の出力はfilesから外しERRORにする。過去の出力には触れない。
 ファイルはロックしないため、他プロセスによる同時編集は運用上避ける。
+共通化・通常resizeとの比較・全回帰の新規証拠は[2026-10-08の検証記録](validation/2026-10-08-web-public-pilot/README.md)を参照する。
 
 ### GUIと配布
 

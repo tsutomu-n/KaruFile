@@ -17,10 +17,10 @@ from PIL import Image, ImageCms, ImageOps, JpegImagePlugin, features
 import PIL
 import pillow_heif
 
-from .image import (
-    SourceChangedError, _capture_source_fingerprint, _assert_source_unchanged,
-    _replace_staged,
+from .file_identity import (
+    SourceChangedError, capture_source_fingerprint, assert_source_unchanged,
 )
+from .image import _replace_staged
 from .utils import has_link_component, staged_path, validate_source_path
 
 MAX_BYTES = 64 * 1024 * 1024
@@ -420,7 +420,7 @@ def process_web_public_image(source, destination, config, *, input_root, output_
         validate_source_path(input_root, source)
         if source.stat().st_size > MAX_BYTES:
             raise PublicImageError("INPUT_LIMIT", "画像は64 MiB以内にしてください")
-        fingerprint = _capture_source_fingerprint(source)
+        fingerprint = capture_source_fingerprint(source)
         if fingerprint.stat.st_size > MAX_BYTES:
             raise PublicImageError("INPUT_LIMIT", "画像は64 MiB以内にしてください")
         result.update(source_sha256=fingerprint.sha256, source_size=fingerprint.stat.st_size,
@@ -431,7 +431,7 @@ def process_web_public_image(source, destination, config, *, input_root, output_
             oriented_width=oriented_size[0], oriented_height=oriented_size[1], warnings=warnings)
         if dry_run:
             stage = "source_recheck"
-            _assert_source_unchanged(source, fingerprint, input_root)
+            assert_source_unchanged(source, fingerprint, input_root)
             result.update(action="DRY_RUN", output_width=clean.width,
                           output_height=clean.height, output_format=config.output_format)
             return result
@@ -447,7 +447,7 @@ def process_web_public_image(source, destination, config, *, input_root, output_
                 _save_public(clean, temporary, config)
             stage = "validate"
             verify_public(temporary, config, clean.size, clean)
-            output_fp = _capture_source_fingerprint(temporary)
+            output_fp = capture_source_fingerprint(temporary)
             stage = "publish"
             _replace_staged(temporary, destination, input_root, output_root, source, fingerprint)
         result.update(output_path=destination.relative_to(output_root).as_posix(),

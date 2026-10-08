@@ -1,0 +1,5 @@
+{
+  "exit_code": 0,
+  "log": "compile-video.log",
+  "command": "uv run --project video-shrink python -m compileall -q video-shrink/src video-shrink/tests"
+}

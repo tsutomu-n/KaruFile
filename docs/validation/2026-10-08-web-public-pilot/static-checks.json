@@ -1,0 +1,16 @@
+{
+  "captured_jst": "2026-10-08T14:57:09.364185+09:00",
+  "exit_code": 0,
+  "git_diff_check_exit": 0,
+  "markdown_files": 12,
+  "local_paths_checked": 190,
+  "markdown_anchors_checked": 14,
+  "architecture_sources_checked": 100,
+  "architecture_sha_match": true,
+  "full_suite_receipts_exit_zero": true,
+  "comparison_equal": true,
+  "cli_help_equal": true,
+  "python_3_11_syntax": true,
+  "python_3_11_runtime": "NOT_RUN",
+  "zip_members_unchanged": 10
+}

@@ -10,8 +10,8 @@ from pathlib import Path, PurePosixPath, PureWindowsPath
 import shutil
 import uuid
 
-from .image import (IMAGE_EXTENSIONS, collect_images, _capture_source_fingerprint,
-                    _validate_replaceable_file)
+from .file_identity import capture_source_fingerprint
+from .image import IMAGE_EXTENSIONS, collect_images, _validate_replaceable_file
 from .utils import (PathValidationError, has_link_component, staged_path,
                     validate_input_output, validate_source_path, validate_output_destination)
 from .web_public import (WebPublicConfig, process_web_public_image, engine_versions,
@@ -154,7 +154,7 @@ def _reuser(root, out, config, row):
                 return False
             previous = out / rel
             _checked_output(root, out, previous)
-            before = _capture_source_fingerprint(previous)
+            before = capture_source_fingerprint(previous)
             if (before.sha256 != row.get("output_sha256") or before.stat.st_size != row.get("output_size")
                     or row.get("output_width") != clean.width or row.get("output_height") != clean.height
                     or row.get("output_format") != config.output_format):
@@ -162,9 +162,10 @@ def _reuser(root, out, config, row):
             verify_public(previous, config, clean.size, clean)
             shutil.copyfile(previous, temporary)
             _checked_output(root, out, previous)
-            after = _capture_source_fingerprint(previous)
-            copied = _capture_source_fingerprint(temporary)
-            if (before != after or copied.sha256 != before.sha256):
+            after = capture_source_fingerprint(previous)
+            copied = capture_source_fingerprint(temporary)
+            if (before.stat_signature != after.stat_signature
+                    or before.sha256 != after.sha256 or copied.sha256 != before.sha256):
                 return False
             return True
         except (OSError, ValueError, TypeError, KeyError, IndexError):
@@ -207,8 +208,8 @@ def _write_manifest(root, out, config, engines, result):
             _no_links(source)
             validate_source_path(root, source)
             _checked_output(root, out, output)
-            src = _capture_source_fingerprint(source)
-            dst = _capture_source_fingerprint(output)
+            src = capture_source_fingerprint(source)
+            dst = capture_source_fingerprint(output)
             if ((src.sha256, src.stat.st_size, src.stat.st_mtime_ns) !=
                     (row["source_sha256"], row["source_size"], row["source_mtime_ns"])
                     or (dst.sha256, dst.stat.st_size) != (row["output_sha256"], row["output_size"])):
@@ -236,7 +237,7 @@ def _write_manifest(root, out, config, engines, result):
         # The final sweep also covers changes while later rows were being inspected.
         for path, fingerprint in snapshots:
             _no_links(path)
-            observed = _capture_source_fingerprint(path)
+            observed = capture_source_fingerprint(path)
             if observed.sha256 != fingerprint.sha256 or observed.stat_signature != fingerprint.stat_signature:
                 raise ValueError("manifest検証中にファイルが変更されました")
         _checked_output(root, out, manifest)

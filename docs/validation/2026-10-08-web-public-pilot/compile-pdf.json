@@ -1,0 +1,5 @@
+{
+  "exit_code": 0,
+  "command": "uv run --project pdf-shrink python -m compileall -q pdf-shrink/src pdf-shrink/tests",
+  "log": "compile-pdf.log"
+}

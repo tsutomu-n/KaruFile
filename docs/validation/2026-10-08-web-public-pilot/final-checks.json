@@ -1,0 +1,27 @@
+[
+  {
+    "command": "uv run --project pdf-shrink python -m compileall -q karufile.py orchestrator",
+    "log": "compile-root-orchestrator.log",
+    "exit_code": 0
+  },
+  {
+    "command": "uv run --project media-shrink-tool python -m media_shrink web-public --help",
+    "log": "final-web-public-help.txt",
+    "exit_code": 0
+  },
+  {
+    "command": "uv run --project media-shrink-tool python -m media_shrink resize --help",
+    "log": "final-resize-help.txt",
+    "exit_code": 0
+  },
+  {
+    "command": "uv run --script karufile.py --help",
+    "log": "final-root-help.txt",
+    "exit_code": 0
+  },
+  {
+    "command": "uv lock --check --project media-shrink-tool",
+    "log": "final-lock.log",
+    "exit_code": 0
+  }
+]

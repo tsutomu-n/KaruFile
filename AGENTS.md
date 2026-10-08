@@ -22,6 +22,10 @@ document in the same change. Do not invent setup, behavior, guarantees, or valid
   before combining results; do not replace this with stdout parsing or approximate counts.
 - `pdf-shrink/`: only PDF processor; owns PDF state and reports.
 - `media-shrink-tool/`: only standalone-image processor; outputs selectable JPEG/PNG/WebP and owns image error reports/manifests.
+- `media-shrink-tool/src/media_shrink/file_identity.py`: shared SHA/stat/source-fingerprint checks for normal images
+  and web-public; depends on the existing path guards, without Pillow/HEIF/NiceGUI or image conversion.
+  Keep the legacy image.py names and monkeypatch call paths through aliases/thin wrappers. Keep staged publication
+  in its existing owner; do not add unused recipe/plugin/publish abstractions.
 - `excel-shrink/`: only Excel processor; owns bounded OOXML parsing, image resizing, reports and temporary workspace.
 - `video-shrink/`: only standalone-video processor; owns video state and reports and calls external FFmpeg tools.
 
@@ -62,6 +66,7 @@ The root CLI's `standard` preset does not discover or copy videos. The standalon
   New exclusive random run, flat neutral `runs/<run-id>/files/img-<run-id>-NNNN.jpg|png`; never overwrite old runs.
   Independent schema1 UTF-8 manifest.web-public.json is internal only, bounded16MiB and atomically replaced.
   Reuse requires source/output SHA, recipe/engines and current output validation; copy bytes to a new run, no hardlinks.
+  Reuse stability compares SHA and dev/ino/size/mtime_ns/ctime_ns; reading-induced atime changes alone are not changes.
   Final manifest sweep rehashes source/output (Windows ctime cannot detect same-size/restored-mtime writes).
   No original fallback. Preserve previous manifest on write failure. Keep successful images and errors distinct.
   NiceGUI is optional gui extra, loopback127.0.0.1:8080, local Host/Origin checks, no NAS static-directory mount.

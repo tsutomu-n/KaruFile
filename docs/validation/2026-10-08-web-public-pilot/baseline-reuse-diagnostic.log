@@ -1,0 +1,397 @@
+web-public failure stage=decode_color exception=PublicImageError code=TRANSPARENT_PHOTO source='alpha.png'
+web-public failure stage=decode_color exception=UnidentifiedImageError code=CONVERSION_FAILED source='broken.jpg'
+web-public failure stage=decode_color exception=PublicImageError code=UNSUPPORTED_COLOR source='cmyk.jpg'
+web-public failure stage=decode_color exception=PublicImageError code=TRANSPARENT_PHOTO source='alpha.png'
+web-public failure stage=decode_color exception=UnidentifiedImageError code=CONVERSION_FAILED source='broken.jpg'
+web-public failure stage=decode_color exception=PublicImageError code=UNSUPPORTED_COLOR source='cmyk.jpg'
+web-public failure stage=decode_color exception=PublicImageError code=TRANSPARENT_PHOTO source='alpha.png'
+web-public failure stage=decode_color exception=UnidentifiedImageError code=CONVERSION_FAILED source='broken.jpg'
+web-public failure stage=decode_color exception=PublicImageError code=UNSUPPORTED_COLOR source='cmyk.jpg'
+web-public failure stage=decode_color exception=PublicImageError code=TRANSPARENT_PHOTO source='alpha.png'
+web-public failure stage=decode_color exception=UnidentifiedImageError code=CONVERSION_FAILED source='broken.jpg'
+web-public failure stage=decode_color exception=PublicImageError code=UNSUPPORTED_COLOR source='cmyk.jpg'
+web-public failure stage=decode_color exception=PublicImageError code=TRANSPARENT_PHOTO source='alpha.png'
+web-public failure stage=decode_color exception=UnidentifiedImageError code=CONVERSION_FAILED source='broken.jpg'
+web-public failure stage=decode_color exception=PublicImageError code=UNSUPPORTED_COLOR source='cmyk.jpg'
+web-public failure stage=decode_color exception=PublicImageError code=TRANSPARENT_PHOTO source='alpha.png'
+web-public failure stage=decode_color exception=UnidentifiedImageError code=CONVERSION_FAILED source='broken.jpg'
+web-public failure stage=decode_color exception=PublicImageError code=UNSUPPORTED_COLOR source='cmyk.jpg'
+round 0 [('lab.tiff', 'SKIPPED_COMPLETE'), ('landscape.jpg', 'SKIPPED_COMPLETE'), ('lines.png', 'SKIPPED_COMPLETE'), ('orientation.png', 'SKIPPED_COMPLETE'), ('portrait.png', 'SKIPPED_COMPLETE'), ('small.png', 'SKIPPED_COMPLETE'), ('synthetic.heic', 'SKIPPED_COMPLETE')]
+round 1 [('lab.tiff', 'SKIPPED_COMPLETE'), ('landscape.jpg', 'SKIPPED_COMPLETE'), ('lines.png', 'SKIPPED_COMPLETE'), ('orientation.png', 'SKIPPED_COMPLETE'), ('portrait.png', 'SKIPPED_COMPLETE'), ('small.png', 'SKIPPED_COMPLETE'), ('synthetic.heic', 'SKIPPED_COMPLETE')]
+round 2 [('lab.tiff', 'SKIPPED_COMPLETE'), ('landscape.jpg', 'SKIPPED_COMPLETE'), ('lines.png', 'SKIPPED_COMPLETE'), ('orientation.png', 'SKIPPED_COMPLETE'), ('portrait.png', 'SKIPPED_COMPLETE'), ('small.png', 'SKIPPED_COMPLETE'), ('synthetic.heic', 'SKIPPED_COMPLETE')]
+{
+  "fingerprint_deltas": [
+    {
+      "file": "img-a1981d12ee7e471dbcb522e383b255bd-0005.jpg",
+      "signature_equal": true,
+      "sha_equal": true,
+      "changed_stat_fields": [
+        [
+          7,
+          1791435967,
+          1791435968
+        ]
+      ]
+    },
+    {
+      "file": "img-a1981d12ee7e471dbcb522e383b255bd-0006.jpg",
+      "signature_equal": true,
+      "sha_equal": true,
+      "changed_stat_fields": [
+        [
+          7,
+          1791435967,
+          1791435968
+        ]
+      ]
+    },
+    {
+      "file": "img-a1981d12ee7e471dbcb522e383b255bd-0007.jpg",
+      "signature_equal": true,
+      "sha_equal": true,
+      "changed_stat_fields": [
+        [
+          7,
+          1791435967,
+          1791435968
+        ]
+      ]
+    },
+    {
+      "file": "img-a1981d12ee7e471dbcb522e383b255bd-0008.jpg",
+      "signature_equal": true,
+      "sha_equal": true,
+      "changed_stat_fields": [
+        [
+          7,
+          1791435967,
+          1791435968
+        ]
+      ]
+    },
+    {
+      "file": "img-a1981d12ee7e471dbcb522e383b255bd-0009.jpg",
+      "signature_equal": true,
+      "sha_equal": true,
+      "changed_stat_fields": [
+        [
+          7,
+          1791435967,
+          1791435968
+        ]
+      ]
+    },
+    {
+      "file": "img-a1981d12ee7e471dbcb522e383b255bd-0010.jpg",
+      "signature_equal": true,
+      "sha_equal": true,
+      "changed_stat_fields": [
+        [
+          7,
+          1791435967,
+          1791435968
+        ]
+      ]
+    },
+    {
+      "file": "lab.tiff",
+      "signature_equal": true,
+      "sha_equal": true,
+      "changed_stat_fields": [
+        [
+          7,
+          1791435967,
+          1791435968
+        ]
+      ]
+    },
+    {
+      "file": "landscape.jpg",
+      "signature_equal": true,
+      "sha_equal": true,
+      "changed_stat_fields": [
+        [
+          7,
+          1791435967,
+          1791435968
+        ]
+      ]
+    },
+    {
+      "file": "lines.png",
+      "signature_equal": true,
+      "sha_equal": true,
+      "changed_stat_fields": [
+        [
+          7,
+          1791435967,
+          1791435968
+        ]
+      ]
+    },
+    {
+      "file": "orientation.png",
+      "signature_equal": true,
+      "sha_equal": true,
+      "changed_stat_fields": [
+        [
+          7,
+          1791435967,
+          1791435968
+        ]
+      ]
+    },
+    {
+      "file": "portrait.png",
+      "signature_equal": true,
+      "sha_equal": true,
+      "changed_stat_fields": [
+        [
+          7,
+          1791435967,
+          1791435968
+        ]
+      ]
+    },
+    {
+      "file": "small.png",
+      "signature_equal": true,
+      "sha_equal": true,
+      "changed_stat_fields": [
+        [
+          7,
+          1791435967,
+          1791435968
+        ]
+      ]
+    },
+    {
+      "file": "synthetic.heic",
+      "signature_equal": true,
+      "sha_equal": true,
+      "changed_stat_fields": [
+        [
+          7,
+          1791435967,
+          1791435968
+        ]
+      ]
+    },
+    {
+      "file": "img-ac246d288df7418bbfc55ff98af4ac77-0007.jpg",
+      "signature_equal": true,
+      "sha_equal": true,
+      "changed_stat_fields": [
+        [
+          7,
+          1791435968,
+          1791435969
+        ]
+      ]
+    },
+    {
+      "file": "img-ac246d288df7418bbfc55ff98af4ac77-0008.jpg",
+      "signature_equal": true,
+      "sha_equal": true,
+      "changed_stat_fields": [
+        [
+          7,
+          1791435968,
+          1791435969
+        ]
+      ]
+    },
+    {
+      "file": "img-ac246d288df7418bbfc55ff98af4ac77-0009.jpg",
+      "signature_equal": true,
+      "sha_equal": true,
+      "changed_stat_fields": [
+        [
+          7,
+          1791435968,
+          1791435969
+        ]
+      ]
+    },
+    {
+      "file": "img-ac246d288df7418bbfc55ff98af4ac77-0010.jpg",
+      "signature_equal": true,
+      "sha_equal": true,
+      "changed_stat_fields": [
+        [
+          7,
+          1791435968,
+          1791435969
+        ]
+      ]
+    },
+    {
+      "file": "lab.tiff",
+      "signature_equal": true,
+      "sha_equal": true,
+      "changed_stat_fields": [
+        [
+          7,
+          1791435968,
+          1791435969
+        ]
+      ]
+    },
+    {
+      "file": "landscape.jpg",
+      "signature_equal": true,
+      "sha_equal": true,
+      "changed_stat_fields": [
+        [
+          7,
+          1791435968,
+          1791435969
+        ]
+      ]
+    },
+    {
+      "file": "lines.png",
+      "signature_equal": true,
+      "sha_equal": true,
+      "changed_stat_fields": [
+        [
+          7,
+          1791435968,
+          1791435969
+        ]
+      ]
+    },
+    {
+      "file": "orientation.png",
+      "signature_equal": true,
+      "sha_equal": true,
+      "changed_stat_fields": [
+        [
+          7,
+          1791435968,
+          1791435969
+        ]
+      ]
+    },
+    {
+      "file": "portrait.png",
+      "signature_equal": true,
+      "sha_equal": true,
+      "changed_stat_fields": [
+        [
+          7,
+          1791435968,
+          1791435969
+        ]
+      ]
+    },
+    {
+      "file": "small.png",
+      "signature_equal": true,
+      "sha_equal": true,
+      "changed_stat_fields": [
+        [
+          7,
+          1791435968,
+          1791435969
+        ]
+      ]
+    },
+    {
+      "file": "synthetic.heic",
+      "signature_equal": true,
+      "sha_equal": true,
+      "changed_stat_fields": [
+        [
+          7,
+          1791435968,
+          1791435969
+        ]
+      ]
+    },
+    {
+      "file": "lab.tiff",
+      "signature_equal": true,
+      "sha_equal": true,
+      "changed_stat_fields": [
+        [
+          7,
+          1791435969,
+          1791435970
+        ]
+      ]
+    },
+    {
+      "file": "landscape.jpg",
+      "signature_equal": true,
+      "sha_equal": true,
+      "changed_stat_fields": [
+        [
+          7,
+          1791435969,
+          1791435970
+        ]
+      ]
+    },
+    {
+      "file": "lines.png",
+      "signature_equal": true,
+      "sha_equal": true,
+      "changed_stat_fields": [
+        [
+          7,
+          1791435969,
+          1791435970
+        ]
+      ]
+    },
+    {
+      "file": "orientation.png",
+      "signature_equal": true,
+      "sha_equal": true,
+      "changed_stat_fields": [
+        [
+          7,
+          1791435969,
+          1791435970
+        ]
+      ]
+    },
+    {
+      "file": "portrait.png",
+      "signature_equal": true,
+      "sha_equal": true,
+      "changed_stat_fields": [
+        [
+          7,
+          1791435969,
+          1791435970
+        ]
+      ]
+    },
+    {
+      "file": "small.png",
+      "signature_equal": true,
+      "sha_equal": true,
+      "changed_stat_fields": [
+        [
+          7,
+          1791435969,
+          1791435970
+        ]
+      ]
+    },
+    {
+      "file": "synthetic.heic",
+      "signature_equal": true,
+      "sha_equal": true,
+      "changed_stat_fields": [
+        [
+          7,
+          1791435969,
+          1791435970
+        ]
+      ]
+    }
+  ]
+}

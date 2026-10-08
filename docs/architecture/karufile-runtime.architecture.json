@@ -201,6 +201,7 @@
       "title": "入力保護と公開用契約",
       "items": [
         "path・link・SHAを検査し原本を保全",
+        "画像のSHA/stat共有：file_identity.py",
         "掲載写真JPEG、透過PNG、横幅1400まで",
         "metadataを継承せず、過去runは自動削除しない"
       ]
@@ -211,7 +212,7 @@
       "items": [
         "CLIとGUIは同じ公開用バッチを使用",
         "JSON manifestは社内用、CMSへ入稿しない",
-        "2026-10-07作業ツリー。未commitの追加を含む"
+        "2026-10-08：79df924a＋未commit差分"
       ]
     }
   ]

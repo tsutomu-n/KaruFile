@@ -1,0 +1,11 @@
+{
+  "ended": "2026-10-08T14:14:02.4488764+09:00",
+  "python_io_encoding": "utf-8",
+  "exit_code": 0,
+  "phase": "final",
+  "log": "final-excel.log",
+  "python_utf8": "1",
+  "workdir": "C:\\Users\\tn\\c_projects\\KaruFile",
+  "command": "uv run --project excel-shrink python -m pytest -q -rs excel-shrink/tests",
+  "started": "2026-10-08T14:13:50.9066018+09:00"
+}

@@ -1,0 +1,26 @@
+F                                                                        [100%]
+================================== FAILURES ===================================
+________ test_identity_import_does_not_load_image_or_gui_dependencies _________
+
+    def test_identity_import_does_not_load_image_or_gui_dependencies():
+        probe = subprocess.run([sys.executable, "-c", """
+    import sys
+    from media_shrink.file_identity import capture_source_fingerprint
+    assert 'media_shrink.image' not in sys.modules
+    assert not any(name == 'PIL' or name.startswith('PIL.') for name in sys.modules)
+    assert not any(name == 'nicegui' or name.startswith('nicegui.') for name in sys.modules)
+    assert not any(name == 'pillow_heif' or name.startswith('pillow_heif.') for name in sys.modules)
+    """], capture_output=True, text=True)
+>       assert probe.returncode == 0, probe.stderr
+E       AssertionError: Traceback (most recent call last):
+E           File "<string>", line 3, in <module>
+E             from media_shrink.file_identity import capture_source_fingerprint
+E         ModuleNotFoundError: No module named 'media_shrink.file_identity'
+E         
+E       assert 1 == 0
+E        +  where 1 = CompletedProcess(args=['C:\\Users\\tn\\c_projects\\KaruFile\\media-shrink-tool\\.venv\\Scripts\\python.exe', '-c', "\n...ile_identity import capture_source_fingerprint\nModuleNotFoundError: No module named \'media_shrink.file_identity\'\n').returncode
+
+media-shrink-tool\tests\test_file_identity.py:27: AssertionError
+=========================== short test summary info ===========================
+FAILED media-shrink-tool\tests\test_file_identity.py::test_identity_import_does_not_load_image_or_gui_dependencies
+1 failed in 0.11s

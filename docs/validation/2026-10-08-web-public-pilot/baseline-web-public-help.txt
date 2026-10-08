@@ -1,0 +1,12 @@
+usage: media-shrink web-public [-h] -i INPUT [-o OUTPUT]
+                               [--kind {photo,graphic}] [--file FILE]
+                               [-j {1,2,3,4}] [--dry-run]
+
+options:
+  -h, --help            show this help message and exit
+  -i, --input INPUT     入力フォルダー
+  -o, --output OUTPUT   出力ルート (既定: <入力名>_HP掲載用)
+  --kind {photo,graphic}
+  --file FILE           入力ルート相対の画像ファイル名（繰り返し可）
+  -j, --workers {1,2,3,4}
+  --dry-run             検査のみ。出力・manifestを書き込まない
