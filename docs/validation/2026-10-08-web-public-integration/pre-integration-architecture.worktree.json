@@ -1,23 +1,19 @@
 {
   "schema_version": 1,
-  "captured_utc": "2026-10-08T06:16:24.362756+00:00",
-  "basis": "Integration worktree: runtime sources committed at 61871c6; local documentation/receipts captured before integration commit.",
-  "base_revision": "61871c6c45edc22e280b57dc2c45ed76af3abdcc",
-  "source_links": "Committed runtime revision plus local worktree SHA evidence; source hashes are raw bytes at capture time.",
-  "specification_sha256": "248c91e653d17945bd48b0ab4dacc2c0efd3cd48474cfd0fd442389a11409a74",
-  "artifact_sha256": "7df545de324a9dbd86a151e6aebf2506329424b1c758899c1c30ea1f322bf3ac",
+  "captured_utc": "2026-10-08T05:37:47.151762+00:00",
+  "basis": "Working tree after 2026-10-08 source identity extraction and atime-only reuse fix; recipes and runtime paths unchanged; not committed.",
+  "base_revision": "79df924a924808b4aa7601d7aa797d15ecfd4dcc",
+  "source_links": "Local worktree SHA evidence; no remote links asserted for uncommitted files.",
+  "specification_sha256": "479acc53faea7a2ddbef71a0d5833c813b21009e71d7ab9ac5d02164092b4654",
+  "artifact_sha256": "ecb0dcd0aca7f19bd9ba3c89d2300f838913fdf3754b0d8fa87b4816aa762ba5",
   "files": [
-    {
-      "path": ".agent/execplans/2026-10-08-web-public-integration.md",
-      "sha256": "199606213710f31ae9322baec23dbc39ec3af2a76a14bb0ab72a66399c8125b6"
-    },
     {
       "path": ".agent/execplans/2026-10-08-web-public-pilot.md",
       "sha256": "c47edbb1e0daf41b9bd48108024facfe4806650d0a9927f1b439b9277113eafc"
     },
     {
       "path": ".agent/execplans/README.md",
-      "sha256": "1f5314a6ce11bb82e1fd2f6a23e70e8ed452f22eb0a32a2ce070f07911df132f"
+      "sha256": "9dd3682831b031dee0da1524c0300ee224addf11f57552399c74d2a22bea79fb"
     },
     {
       "path": ".gitattributes",
@@ -37,7 +33,7 @@
     },
     {
       "path": "docs/README.md",
-      "sha256": "46e279413758d4720d90262805208e47d5e6b07b134532a392c59dadfb78a443"
+      "sha256": "a4fb9440a9b3b63d03521815e78ec8d2b4a1df4d73a25dc97536e94b0a205f2c"
     },
     {
       "path": "docs/REFERENCE.md",
@@ -48,24 +44,12 @@
       "sha256": "945bb17d3d203b9fd1d61333495f9e4f5c9ab9ac330e44f0a02f3e2d8a6c27eb"
     },
     {
-      "path": "docs/validation/2026-10-08-web-public-integration/README.md",
-      "sha256": "d35e7813727e80c2058ced6e5712e474dd415c2d8491f14799c78b19d7f3b04a"
-    },
-    {
-      "path": "docs/validation/2026-10-08-web-public-integration/production-runtime.json",
-      "sha256": "bba5f6a4c1edff01ff8dd8fd144ffd0f02eff7eb4916c2ee37ef907e9adfa5a2"
-    },
-    {
-      "path": "docs/validation/2026-10-08-web-public-integration/tested-source-sha256.json",
-      "sha256": "d9945333931d8f8341461402ee3ccd9c60c6203147a077fbbd14c7f8afc1131e"
-    },
-    {
       "path": "docs/validation/2026-10-08-web-public-pilot/DOWNSTREAM_HANDOFF.md",
       "sha256": "e54f697571ece908c11679a87941278734de6e40dae9bcd2a0c2be139051f404"
     },
     {
       "path": "docs/validation/2026-10-08-web-public-pilot/FINAL_REPORT.md",
-      "sha256": "ad1f1e2847f96c1e2d9152909c371bd990f65cb09d579a3c083688fdcaf21dcc"
+      "sha256": "3754aecc9837eed982ffd9c6af6eb2c217a8f478106e6362b7090eead4ce4fbd"
     },
     {
       "path": "docs/validation/2026-10-08-web-public-pilot/PILOT_CASES.csv",
@@ -73,7 +57,7 @@
     },
     {
       "path": "docs/validation/2026-10-08-web-public-pilot/README.md",
-      "sha256": "9e067bc0747b87400b7c4d79018e6fe9c208b74b14acc86cff680cf1262e84dd"
+      "sha256": "884103a83d0be4e8c767684071fb84d23e458d96640b276851ebad9ec7fadb18"
     },
     {
       "path": "docs/validation/2026-10-08-web-public-pilot/compare_synthetic.py",
@@ -423,6 +407,5 @@
       "path": "video-shrink/uv.lock",
       "sha256": "a9c8a535c154a2c960934ac7b589dddf261bd8f37930c6c70a4bb511543f051a"
     }
-  ],
-  "runtime_revision": "61871c6c45edc22e280b57dc2c45ed76af3abdcc"
+  ]
 }

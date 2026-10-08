@@ -1,7 +1,7 @@
 {
   "log": "final-image.log",
   "python_utf8": "1",
-  "workdir": "C:\\Users\\tn\\c_projects\\KaruFile",
+  "workdir": "<repo-root>",
   "exit_code": 0,
   "command": "uv run --project media-shrink-tool --extra dev --extra gui python -m pytest -q -rs media-shrink-tool/tests",
   "phase": "final",

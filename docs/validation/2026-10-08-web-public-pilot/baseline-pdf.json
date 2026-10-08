@@ -2,7 +2,7 @@
   "log": "baseline-pdf.log",
   "started": "2026-10-08T13:58:36.1909737+09:00",
   "phase": "baseline",
-  "workdir": "C:\\Users\\tn\\c_projects\\KaruFile",
+  "workdir": "<repo-root>",
   "exit_code": 0,
   "ended": "2026-10-08T13:59:25.6661441+09:00",
   "command": "uv run --project pdf-shrink python -m pytest -q pdf-shrink/tests"

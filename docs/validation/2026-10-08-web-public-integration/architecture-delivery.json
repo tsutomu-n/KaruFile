@@ -3,8 +3,8 @@
   "ok": true,
   "command": "deliver",
   "type": "architecture",
-  "input": "C:\\Users\\tn\\c_projects\\KaruFile\\docs\\architecture\\karufile-runtime.architecture.json",
-  "output": "C:\\Users\\tn\\c_projects\\KaruFile\\docs\\architecture\\karufile-runtime.compact.html",
+  "input": "<repo-root>\\docs\\architecture\\karufile-runtime.architecture.json",
+  "output": "<repo-root>\\docs\\architecture\\karufile-runtime.compact.html",
   "specification": {
     "sha256": "248c91e653d17945bd48b0ab4dacc2c0efd3cd48474cfd0fd442389a11409a74",
     "bytes": 4835

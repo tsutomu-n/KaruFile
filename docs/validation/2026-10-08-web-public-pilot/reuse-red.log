@@ -2,7 +2,7 @@ F                                                                        [100%]
 ================================== FAILURES ===================================
 ______ test_reuse_ignores_read_access_time_when_identity_and_bytes_match ______
 
-inputs = (WindowsPath('C:/Users/tn/AppData/Local/Temp/pytest-of-tn/pytest-490/test_reuse_ignores_read_access0/案件 写真'), WindowsPath('C:/Users/tn/AppData/Local/Temp/pytest-of-tn/pytest-490/test_reuse_ignores_read_access0/掲載 用'))
+inputs = (WindowsPath('<temp-root>/pytest-of-tn/pytest-490/test_reuse_ignores_read_access0/案件 写真'), WindowsPath('<temp-root>/pytest-of-tn/pytest-490/test_reuse_ignores_read_access0/掲載 用'))
 monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x0000025E1A56F360>
 
     def test_reuse_ignores_read_access_time_when_identity_and_bytes_match(inputs, monkeypatch):
@@ -14,13 +14,13 @@ monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x0000025E1A56F360>
         original_capture = batch._capture_source_fingerprint
         original_copy = batch.shutil.copyfile
         copied = False
-    
+
         def copy(source, destination):
             nonlocal copied
             original_copy(source, destination)
             if source == previous:
                 copied = True
-    
+
         def capture(path):
             fingerprint = original_capture(path)
             if path == previous and copied:
@@ -34,10 +34,10 @@ monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x0000025E1A56F360>
                 })
                 return type(fingerprint)(stat=observed_stat, sha256=fingerprint.sha256)
             return fingerprint
-    
+
         def forbid_encode(*args):
             raise RuntimeError("A validated identical file must be reused")
-    
+
         monkeypatch.setattr(batch.shutil, "copyfile", copy)
         monkeypatch.setattr(batch, "_capture_source_fingerprint", capture)
         monkeypatch.setattr(wp, "_save_public", forbid_encode)
@@ -46,7 +46,7 @@ monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x0000025E1A56F360>
 >       assert row["action"] == "SKIPPED_COMPLETE", row
 E       AssertionError: {'source_path': '前/private.png', 'source_sha256': 'fc56d6f7f5af79221d6f3be69127005fce1a6de5eba120a33be4d7e6f3fde787', 'source_size': 113, 'source_mtime_ns': 1791436062108305100, ...}
 E       assert 'ERROR' == 'SKIPPED_COMPLETE'
-E         
+E
 E         - SKIPPED_COMPLETE
 E         + ERROR
 

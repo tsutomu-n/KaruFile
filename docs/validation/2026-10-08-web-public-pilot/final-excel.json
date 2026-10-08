@@ -5,7 +5,7 @@
   "phase": "final",
   "log": "final-excel.log",
   "python_utf8": "1",
-  "workdir": "C:\\Users\\tn\\c_projects\\KaruFile",
+  "workdir": "<repo-root>",
   "command": "uv run --project excel-shrink python -m pytest -q -rs excel-shrink/tests",
   "started": "2026-10-08T14:13:50.9066018+09:00"
 }

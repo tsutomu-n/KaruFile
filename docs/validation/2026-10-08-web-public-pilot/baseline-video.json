@@ -5,5 +5,5 @@
   "log": "baseline-video.log",
   "command": "uv run --project video-shrink python -m pytest -q video-shrink/tests",
   "exit_code": 0,
-  "workdir": "C:\\Users\\tn\\c_projects\\KaruFile"
+  "workdir": "<repo-root>"
 }

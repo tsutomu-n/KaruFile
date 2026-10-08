@@ -127,3 +127,6 @@ Astro/Sharp AVIF/WebP検証: **PENDING_DOWNSTREAM**。公式Astro v5 APIを照�
 commit: **未実施**（開始/終了HEAD同一） / push: **未実施** / PR: **未実施** / 本番公開: **未実施**。
 
 最終検証日時は[final-boundary.json](final-boundary.json)の`captured_jst`に記録（東京、日本）。
+
+後続のcommit/push/mergeと現在のWindows PCへの運用反映は追加の明示承認を受けた。
+上記の未実施記述は先行報告時点の履歴で、最新結果は[統合記録](../2026-10-08-web-public-integration/README.md)を参照。

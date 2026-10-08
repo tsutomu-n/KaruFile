@@ -1,0 +1,10 @@
+{
+  "checkout": "<repo-root>",
+  "stopped_processes": [],
+  "source_update_route": "same checkout plus prepared editable .venv",
+  "requested_target": "current Windows PC checkout",
+  "gui_processes": [],
+  "port8080_owner_pids": [],
+  "captured_jst": "2026-10-08T15:01:35.0325538+09:00",
+  "restart_required_for_running_gui": false
+}

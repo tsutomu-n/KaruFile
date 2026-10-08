@@ -16,9 +16,9 @@ E       AssertionError: Traceback (most recent call last):
 E           File "<string>", line 3, in <module>
 E             from media_shrink.file_identity import capture_source_fingerprint
 E         ModuleNotFoundError: No module named 'media_shrink.file_identity'
-E         
+E
 E       assert 1 == 0
-E        +  where 1 = CompletedProcess(args=['C:\\Users\\tn\\c_projects\\KaruFile\\media-shrink-tool\\.venv\\Scripts\\python.exe', '-c', "\n...ile_identity import capture_source_fingerprint\nModuleNotFoundError: No module named \'media_shrink.file_identity\'\n').returncode
+E        +  where 1 = CompletedProcess(args=['<repo-root>\\media-shrink-tool\\.venv\\Scripts\\python.exe', '-c', "\n...ile_identity import capture_source_fingerprint\nModuleNotFoundError: No module named \'media_shrink.file_identity\'\n').returncode
 
 media-shrink-tool\tests\test_file_identity.py:27: AssertionError
 =========================== short test summary info ===========================

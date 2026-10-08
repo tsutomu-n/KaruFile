@@ -5,7 +5,7 @@
   "status": "pass",
   "visualReview": "pending",
   "artifact": {
-    "path": "C:\\Users\\tn\\c_projects\\KaruFile\\docs\\architecture\\karufile-runtime.compact.html",
+    "path": "<repo-root>\\docs\\architecture\\karufile-runtime.compact.html",
     "sha256": "7df545de324a9dbd86a151e6aebf2506329424b1c758899c1c30ea1f322bf3ac",
     "bytes": 649617
   },

@@ -137,9 +137,9 @@ AGENTS/MANUAL/REFERENCE/WEB_PUBLIC/docs index/ExecPlanを更新した。
 通常root経路と画像専用経路の責務・パスは維持し、旧`karufile-runtime.html`は変更していない。
 
 ```powershell
-node C:/Users/tn/.agents/skills/archify/bin/archify.mjs validate architecture docs/architecture/karufile-runtime.architecture.json --repo-root . --quality showcase --json
-node C:/Users/tn/.agents/skills/archify/bin/archify.mjs deliver architecture docs/architecture/karufile-runtime.architecture.json docs/architecture/karufile-runtime.compact.html --repo-root . --quality showcase --json
-node C:/Users/tn/.agents/skills/archify/bin/archify.mjs visual-check docs/architecture/karufile-runtime.compact.html --json
+node <user-home>/.agents/skills/archify/bin/archify.mjs validate architecture docs/architecture/karufile-runtime.architecture.json --repo-root . --quality showcase --json
+node <user-home>/.agents/skills/archify/bin/archify.mjs deliver architecture docs/architecture/karufile-runtime.architecture.json docs/architecture/karufile-runtime.compact.html --repo-root . --quality showcase --json
+node <user-home>/.agents/skills/archify/bin/archify.mjs visual-check docs/architecture/karufile-runtime.compact.html --json
 ```
 
 すべてexit0。validate/deliverは9/9、errors/warnings 0。4 viewportでoverflowなし。
@@ -166,3 +166,13 @@ node C:/Users/tn/.agents/skills/archify/bin/archify.mjs visual-check docs/archit
 不足する実環境を理由に共通化・回帰・文書作業を途中で止めず、依頼済みの実行可能範囲を完了した。
 
 記録日：2026-10-08（東京、日本）。最終時刻とHEAD/書込み範囲はFINAL_REPORT.mdを参照。
+
+## 後続のGit統合・運用反映
+
+この記録の「未commit/push/公開」は先行作業の報告時点を示す。
+その後ユーザーがcommit/push/mergeと、このWindows PCの現在のKaruFileへの反映を明示承認した。
+後続のfresh検証・Git結果・運用状態は[統合記録](../2026-10-08-web-public-integration/README.md)を参照する。
+GitHubへの書込み前に作業者固有のpathを`<repo-root>`/`<temp-root>`/`<user-home>`へ正規化し、
+元ログはローカルに保管した。実行結果・件数・SHAは変えていない。
+ここにあるverify_final.pyは開始HEADの未stage状態を検証する当時の手順であり、merge後のHEAD用ではない。
+14:57時点の構成図source snapshotは統合記録のpre-integration-architecture.worktree.jsonへ保管した。

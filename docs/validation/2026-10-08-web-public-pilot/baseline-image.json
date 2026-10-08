@@ -1,6 +1,6 @@
 {
   "phase": "baseline",
-  "workdir": "C:\\Users\\tn\\c_projects\\KaruFile",
+  "workdir": "<repo-root>",
   "log": "baseline-image.log",
   "exit_code": 0,
   "started": "2026-10-08T13:58:36.1623298+09:00",
